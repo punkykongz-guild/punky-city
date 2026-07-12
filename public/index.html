@@ -626,10 +626,18 @@
     lastSceneStage = st;
     var sc = SCENES[st];
     var tz = $("tapZone");
+    // 등급 변경: 이전 등급의 AI 합성 장면 해제 (새 등급 합성은 아래서 재요청)
+    var hi=$("heroImg");
+    if(hi.dataset.ai==="1"){
+      hi.dataset.ai="0"; hi.style.display="";
+      $("heroShadow").style.display=""; $("heroDeco").style.display="";
+    }
+    setTimeout(function(){ try{ checkAiAvatar(); }catch(e){} }, 50);
 
     // 실제 배경 일러스트 우선 사용, 실패 시 이모지+그라데이션 폴백
     var bgUrl = "assets/bg/stage" + st + ".webp";
     function useArt(){
+      if($("heroImg").dataset.ai==="1") return; // AI 합성 장면 유지
       tz.style.background = "linear-gradient(180deg," + sc.sky[0] + "," + sc.sky[1] + ")";
       tz.style.backgroundImage = "url(" + bgUrl + ")";
       tz.style.backgroundSize = "cover";
@@ -639,6 +647,7 @@
       $("ground").style.display = "none";
     }
     function useFallback(){
+      if($("heroImg").dataset.ai==="1") return; // AI 합성 장면 유지
       tz.style.backgroundImage = "none";
       tz.style.background = "linear-gradient(180deg," + sc.sky[0] + "," + sc.sky[1] + ")";
       $("skyline").style.display = ""; $("sceneProps").style.display = ""; $("ground").style.display = "";
@@ -768,7 +777,11 @@
     var s=0; for(var i=0;i<BIZ.length;i++) s+=bizIncome(i);
     return s*totalMult()*(Date.now()<incomeX2Until?2:1);
   }
-  function perTap(){ return (Math.max(1, perSec()*0.06))*(Date.now()<tapX2Until?2:1); } // 탭은 보조 수단 (방치 중심 밸런스)
+  function perTap(){
+    var lvSum=0; for(var i=0;i<S.levels.length;i++) lvSum+=S.levels[i];
+    var base = 1 + (S.stage-1)*0.6 + lvSum*0.05 + perSec()*0.06; // 등급·사업 레벨이 오를수록 탭도 강해짐
+    return base*(Date.now()<tapX2Until?2:1);
+  }
   function bizCost(i){ return BIZ[i].cost*Math.pow(COST_MULT, S.levels[i]); }
   function calcStage(){
     var st=1;

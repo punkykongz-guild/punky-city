@@ -866,7 +866,7 @@ async function generateAvatar(id, stage, srcImg) {
 app.get("/api/avatar-url", (req, res) => {
   if (!checkToken(req, res)) return;
   const id = parseInt(req.query.id, 10);
-  const stage = Math.min(24, Math.max(1, parseInt(req.query.stage, 10) || 1));
+  const stage = Math.min(30, Math.max(1, parseInt(req.query.stage, 10) || 1));
   if (!id || !GEMINI_API_KEY) return res.json({ ok: false });
   const file = avatarFile(id, stage);
   if (fs.existsSync(file)) return res.json({ ok: true, ready: true, url: `/gen/avatar_${id}_${stage}.png` });
