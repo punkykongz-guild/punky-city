@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>길드 지렁이 게임</title>
+<style>
+  html, body { margin:0; padding:0; background:#0e1420; color:#eee; font-family:"Malgun Gothic",sans-serif; overflow:hidden; height:100%; }
+  #lobby { max-width:420px; margin:40px auto; padding:20px; background:#161d2e; border-radius:12px; }
+  #lobby h1 { font-size:20px; margin-bottom:4px; }
+  #lobby .sub { color:#9aa4b8; font-size:13px; margin-bottom:16px; }
+  #roomList { max-height:180px; overflow-y:auto; margin-bottom:14px; }
+  .roomRow { display:flex; justify-content:space-between; align-items:center; background:#1f2840; padding:8px 12px; border-radius:8px; margin-bottom:6px; font-size:14px; }
+  .roomRow button { background:#3a7bd5; border:none; color:#fff; padding:5px 10px; border-radius:6px; cursor:pointer; }
+  .buffRow { display:flex; justify-content:space-between; align-items:center; padding:6px 0; font-size:14px; border-bottom:1px solid #263049; }
+  .buffRow label { display:flex; gap:8px; align-items:center; }
+  #enterBtn { width:100%; margin-top:16px; padding:12px; font-size:16px; font-weight:bold; background:#00897B; border:none; color:#fff; border-radius:8px; cursor:pointer; }
+  #autoBtn { width:100%; margin-top:8px; padding:9px; background:#2b3550; border:none; color:#cfd6e6; border-radius:8px; cursor:pointer; }
+  #msg { min-height:20px; color:#ff8080; font-size:13px; margin-top:10px; }
+  #nameBox { width:100%; box-sizing:border-box; padding:8px; border-radius:6px; border:1px solid #333; background:#0e1420; color:#fff; margin-bottom:10px; }
+
+  #gameWrap { display:none; position:fixed; inset:0; }
+  #canvas { display:block; background:#0b1220; width:100%; height:100%; }
+  #hud { position:absolute; top:10px; left:10px; background:rgba(10,15,25,.6); padding:8px 12px; border-radius:8px; font-size:13px; }
+  #leaveBtn { position:absolute; top:10px; right:10px; background:#442; background:#8a2a2a; border:none; color:#fff; padding:8px 12px; border-radius:8px; cursor:pointer; }
+  /* 반투명 순위판 — 게임 조작 방해 없음 (클릭 통과) */
+  #board { position:absolute; top:10px; left:50%; transform:translateX(-50%);
+    background:rgba(10,15,25,.38); border:1px solid rgba(255,255,255,.10);
+    border-radius:10px; padding:7px 14px; font-size:12px; line-height:1.55;
+    pointer-events:none; min-width:170px; backdrop-filter:blur(2px); }
+  #board .bTitle { font-size:10.5px; color:rgba(255,255,255,.55); letter-spacing:1px; text-align:center; margin-bottom:2px; }
+  #board .row { display:flex; justify-content:space-between; gap:12px; color:rgba(255,255,255,.75); white-space:nowrap; }
+  #board .row.me { color:#ffd54a; font-weight:bold; }
+  #board .row .nm { overflow:hidden; text-overflow:ellipsis; max-width:120px; }
+
+  #deathOverlay { display:none; position:absolute; inset:0; background:rgba(5,8,15,.85); align-items:center; justify-content:center; flex-direction:column; }
+  #deathOverlay .box { background:#161d2e; padding:24px 32px; border-radius:12px; text-align:center; }
+  #deathOverlay button { margin-top:14px; padding:10px 20px; background:#00897B; border:none; color:#fff; border-radius:8px; cursor:pointer; font-size:14px; }
+</style>
+</head>
+<body>
+
+<div id="lobby">
+  <h1>🐍 길드 지렁이 게임</h1>
+  <div class="sub">참가비: 50P + ₭콩달러 (포인트 없으면 ₭만으로 입장 가능)<br>방 최대 15명 + AI 5마리</div>
+  <input id="nameBox" placeholder="이름(카톡대화명)" />
+
+  <div id="roomList"></div>
+  <button id="autoBtn">🎲 빈 방 자동 입장</button>
+
+  <div style="margin-top:14px;">
+    <div class="buffRow"><label><input type="checkbox" id="buffMagnet"/> 자석범위 강화</label><span>+30P</span></div>
+    <div class="buffRow"><label><input type="checkbox" id="buffSize"/> 시작크기 강화</label><span>+30P</span></div>
+    <div class="buffRow"><label><input type="checkbox" id="buffShield"/> 쉴드(1회 부활)</label><span>+100P</span></div>
+  </div>
+
+  <button id="enterBtn">선택한 방으로 입장</button>
+  <div id="msg"></div>
+</div>
+
+<div id="gameWrap">
+  <canvas id="canvas"></canvas>
+  <div id="hud"></div>
+  <div id="board"></div>
+  <button id="leaveBtn">나가기</button>
+  <div id="deathOverlay">
+    <div class="box">
+      <div style="font-size:20px;font-weight:bold;">💀 게임 종료</div>
+      <div id="deathScore" style="margin-top:8px;font-size:15px;color:#9aa4b8;"></div>
+      <button id="backToLobbyBtn">로비로 돌아가기</button>
+    </div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/client.js"></script>
+</body>
+</html>

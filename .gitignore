@@ -1,0 +1,11 @@
+node_modules/
+.env
+data/
+public/gen/
+public/assets/bg_raw/
+gen_bg.py
+gen_bg2.py
+gen_bg3.py
+gen_logo.py
+gen_char.py
+compress_bg.py

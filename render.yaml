@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: punky-city
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: APPS_SCRIPT_URL
+        sync: false
+      - key: BOT_TOKEN
+        sync: false
+      - key: HELIUS_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: TEST_WALLET
+        sync: false
+      - key: TEST_MODE
+        value: "1"
