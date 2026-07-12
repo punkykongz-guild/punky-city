@@ -232,6 +232,8 @@
   </div>
   <img id="logoBanner" src="assets/ui/logo.webp" alt="PUNKY CITY" onerror="this.style.display='none'" />
 
+  <button id="setBtn" style="position:absolute;top:14px;right:16px;z-index:20;background:rgba(22,13,44,.7);
+    border:1px solid var(--line);color:#fff;border-radius:10px;padding:6px 9px;cursor:pointer;font-size:14px">⚙</button>
   <div id="topbar">
     <div id="avatar" class="silhouette"></div>
     <div id="topInfo">
@@ -290,6 +292,16 @@
       <h3>📣 자랑하기</h3>
       <p class="muted">내 등급·자산을 카톡방에 공유해보세요</p>
       <button class="bigBtn purple" id="bragBtn2">자랑 문구 만들기</button>
+    </div>
+  </div>
+
+  <div id="setModal" style="position:fixed;inset:0;background:rgba(5,2,15,.8);display:none;z-index:70;align-items:center;justify-content:center;padding:20px">
+    <div style="background:#231240;border:1px solid var(--purple);border-radius:16px;padding:20px;width:260px">
+      <h2 style="margin:0 0 12px;font-size:16px">⚙ 설정</h2>
+      <label style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px">🎵 배경음악 <input type="checkbox" id="optBgm"></label>
+      <label style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px">🔊 효과음 <input type="checkbox" id="optSfx"></label>
+      <label style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px">📳 진동 <input type="checkbox" id="optVib"></label>
+      <button class="bigBtn" id="setClose" style="margin-top:12px">닫기</button>
     </div>
   </div>
 
@@ -378,6 +390,44 @@
 <script>
 (function(){
   // ===== 설정 =====
+  // ===== 설정 & 사운드 (웹오디오 합성 — 파일 없음) =====
+  var OPT=JSON.parse(localStorage.getItem("pkc_opt")||'{"bgm":true,"sfx":true,"vib":true}');
+  function saveOpt(){ localStorage.setItem("pkc_opt",JSON.stringify(OPT)); }
+  var AC=null, bgmTimer=null, bgmGain=null;
+  function ac(){ if(!AC){ AC=new (window.AudioContext||window.webkitAudioContext)(); } if(AC.state==="suspended")AC.resume(); return AC; }
+  function beep(f,d,type,v){ if(!OPT.sfx)return; try{ var a=ac(),o=a.createOscillator(),g=a.createGain();
+    o.type=type||"square"; o.frequency.value=f; g.gain.value=v||0.05;
+    g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+d); o.connect(g).connect(a.destination);
+    o.start(); o.stop(a.currentTime+d);}catch(e){} }
+  function vib(ms){ if(OPT.vib&&navigator.vibrate) navigator.vibrate(ms); }
+  // 등급대별 분위기: [스케일(주파수들), 박자ms, 파형]
+  function bgmParamsFor(st){
+    if(st<=6)  return [[196,233,262,311],700,"triangle"];   // 골목 — 쓸쓸
+    if(st<=13) return [[262,330,392,440],450,"square"];     // 도심 — 경쾌
+    if(st<=21) return [[294,370,440,554],500,"sine"];       // 부촌 — 세련
+    if(st<=26) return [[220,277,330,415],800,"sine"];       // 우주 — 몽환
+    return [[330,415,494,659],550,"triangle"];              // 펑키버스 — 웅장
+  }
+  var bgmStage=-1;
+  function startBgm(){
+    if(!OPT.bgm||!S){ stopBgm(); return; }
+    var p=bgmParamsFor(S.stage);
+    if(bgmStage===S.stage&&bgmTimer) return;
+    stopBgm(); bgmStage=S.stage;
+    var a=ac(), i=0;
+    bgmTimer=setInterval(function(){
+      if(!OPT.bgm){stopBgm();return;}
+      try{ var o=a.createOscillator(),g=a.createGain();
+        o.type=p[2]; o.frequency.value=p[0][i%p[0].length]*(i%8===7?0.5:1);
+        g.gain.value=0.025; g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+p[1]/1000*0.9);
+        o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime+p[1]/1000);
+      }catch(e){}
+      i++;
+    },p[1]);
+  }
+  function stopBgm(){ if(bgmTimer){clearInterval(bgmTimer);bgmTimer=null;} bgmStage=-1; }
+  document.addEventListener("click",function once(){ ac(); startBgm(); },{once:true});
+
   var qs = new URLSearchParams(location.search);
   var NAME = (qs.get("name")||"").trim();
   var TOKEN = (qs.get("token")||"").trim();
@@ -547,6 +597,7 @@
     else if (!hero.classList.contains("silhouette")) hero.style.filter = look[0];
     hero.style.borderColor = look[1];
     $("heroDeco").textContent = look[2];
+    startBgm();
   }
 
   // 등급별 탭 대사 (거지키우기 감성)
@@ -753,6 +804,7 @@
   $("tapZone").addEventListener("click",function(e){
     if(e.target&&e.target.id==="stageUpBtn") return; // 승급 버튼은 별도 처리
     var v=perTap(); S.money+=v; S.lifetime+=v;
+    beep(600+Math.random()*300,0.06); vib(12);
     if(Math.random()<0.5) showBubble(); // 절반 확률로 캐릭터 대사
     var hero=$("heroImg");
     hero.classList.add("pop");
@@ -1181,6 +1233,14 @@
   });
 
   $("bragBtn2").addEventListener("click",function(){ $("bragBtn").click(); });
+
+  // ===== 설정 =====
+  $("optBgm").checked=OPT.bgm; $("optSfx").checked=OPT.sfx; $("optVib").checked=OPT.vib;
+  $("setBtn").onclick=function(){ $("setModal").style.display="flex"; };
+  $("setClose").onclick=function(){ $("setModal").style.display="none"; };
+  $("optBgm").onchange=function(){ OPT.bgm=this.checked; saveOpt(); this.checked?startBgm():stopBgm(); };
+  $("optSfx").onchange=function(){ OPT.sfx=this.checked; saveOpt(); beep(700,0.08); };
+  $("optVib").onchange=function(){ OPT.vib=this.checked; saveOpt(); vib(30); };
 
   // ===== 자랑하기: 카톡방 공유 (모바일 공유시트 → 카톡 선택 / PC는 복사) =====
   $("bragBtn").addEventListener("click",function(ev){
