@@ -777,15 +777,17 @@ const AD_DAILY_CAP = 1; // 트윗 참여 보너스: 하루 1회
 app.post("/api/ad/watch", (req, res) => {
   if (!checkToken(req, res)) return;
   const name = String((req.body.name || "")).trim();
+  const type = req.body.type === "yt" ? "yt" : "x"; // x(트위터) / yt(유튜브) 각각 하루 1회
   if (!name) return res.json({ ok: false });
   if (!db.players[name]) db.players[name] = {};
   const p = db.players[name];
   const today = todayStr();
-  if (p.adDate !== today) { p.adDate = today; p.adCount = 0; }
-  if (p.adCount >= AD_DAILY_CAP) return res.json({ ok: false, error: "오늘 트윗 보너스는 이미 받으셨어요! 내일 또 참여해주세요 🐦" });
-  p.adCount++;
+  if (p.bonusDate !== today) { p.bonusDate = today; p.bx = 0; p.byt = 0; }
+  const key = type === "yt" ? "byt" : "bx";
+  if (p[key] >= 1) return res.json({ ok: false, error: (type==="yt"?"유튜브":"트윗") + " 보너스는 오늘 이미 받으셨어요! 내일 또 💛" });
+  p[key] = 1;
   markDirty();
-  res.json({ ok: true, left: AD_DAILY_CAP - p.adCount, n: p.adCount });
+  res.json({ ok: true });
 });
 
 // 길드타워 현황
