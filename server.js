@@ -593,16 +593,8 @@ function validSig(name, sig) {
   return crypto.createHash("sha256").update(name + LINK_SECRET, "utf8").digest("hex") === String(sig).toLowerCase();
 }
 function checkDev(name, key, sig) {
-  if (!name || !key) return false;
-  const owner = findNameByKey(key);
-  if (owner && owner !== name) return false; // 이 기기는 이미 다른 계정 소유 → 본인 계정으로 우회
-  if (!db.players[name]) db.players[name] = {};
-  const p = db.players[name];
-  if (!p.devKey) {
-    if (!validSig(name, sig)) return false; // 서명 없는 링크로는 최초 등록 불가 (선점 차단)
-    p.devKey = key; markDirty(); return true;
-  }
-  return p.devKey === key;
+  // 단순 모드: 링크의 닉네임 = 계정. 잠금 없음 (링크 공유 금지 공지로 관리)
+  return !!name;
 }
 const LOCK_MSG = "이 계정은 다른 기기에 연결되어 있어요. 본인 카톡의 [게임시작] 링크로 접속해주세요! (기기 변경은 관리자 문의)";
 // 이 기기가 주인인 계정 찾기 (타인 링크 → 내 계정 자동 우회용)
