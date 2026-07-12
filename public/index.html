@@ -1255,7 +1255,7 @@
     } else {
       $("avatarHint").textContent="보유한 펑키콩즈 "+profile.tokenIds.length+"마리 중 아바타를 고르세요";
       var cur=currentAvatarId();
-      profile.tokenIds.slice(0,40).forEach(function(id){
+      profile.tokenIds.slice(0,200).forEach(function(id){
         var im=document.createElement("img");
         im.src=kimg(id,200); im.title="Punky Kongz #"+id;
         if(id===cur) im.className="sel";

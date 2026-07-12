@@ -610,7 +610,7 @@ app.get("/api/profile", async (req, res) => {
   if (profile.wallet) tokenIds = await getOwnedTokenIds(profile.wallet);
   // 시트 NFT 수량이 없으면(미연동/테스트) 지갑 실보유 수로 동료 보너스 계산
   if (!profile.nft && tokenIds.length) profile.nft = tokenIds.length;
-  res.json({ ...profile, tokenIds: tokenIds.slice(0, 60), imageBase: "https://punkykongz.com/nft/punkykongz/image/" });
+  res.json({ ...profile, tokenIds: tokenIds.slice(0, 200), imageBase: "https://punkykongz.com/nft/punkykongz/image/" });
 });
 
 // 세이브 로드/저장
