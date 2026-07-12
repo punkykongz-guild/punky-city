@@ -782,7 +782,12 @@ app.post("/api/idle/collect", async (req, res) => {
 // =====================================================================
 // AI 아바타 변신 (Gemini) — 등급에 맞는 콩즈 모습 생성 + 영구 캐싱
 // =====================================================================
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+// 여러 키 지원: 쉼표로 구분해 넣으면 순환 사용 + 한도 소진 시 다음 키로 폴백
+// (실제 무료 용량이 늘려면 서로 다른 구글 계정의 키여야 함)
+const GEMINI_KEYS = (process.env.GEMINI_API_KEY || "").split(",").map((k) => k.trim()).filter(Boolean);
+const GEMINI_API_KEY = GEMINI_KEYS[0] || ""; // 하위호환(존재 확인용)
+let geminiKeyIdx = 0;
+const geminiKeyDead = new Set(); // 오늘 한도 소진/무효 키 (자정 초기화)
 const AVATAR_DIR = path.join(__dirname, "public", "gen");
 if (!fs.existsSync(AVATAR_DIR)) fs.mkdirSync(AVATAR_DIR, { recursive: true });
 const AVATAR_DAILY_CAP = 30; // 하루 생성 상한 (무료 티어 보호)
@@ -828,8 +833,8 @@ function avatarFile(id, stage) { return path.join(AVATAR_DIR, `avatar_${id}_${st
 async function generateAvatar(id, stage, srcImg) {
   const key = `${id}_${stage}`;
   if (avatarPending.has(key)) return;
-  if (avatarGen.date !== todayStr()) avatarGen = { date: todayStr(), n: 0 };
-  if (avatarGen.n >= AVATAR_DAILY_CAP) return;
+  if (avatarGen.date !== todayStr()) { avatarGen = { date: todayStr(), n: 0 }; geminiKeyDead.clear(); } // 자정: 카운터+죽은키 초기화
+  if (avatarGen.n >= AVATAR_DAILY_CAP * Math.max(1, GEMINI_KEYS.length)) return; // 키 수만큼 상한 확대
   avatarPending.add(key);
   avatarGen.n++;
   try {
@@ -844,8 +849,11 @@ async function generateAvatar(id, stage, srcImg) {
       `Take the gorilla character from the first image and place him naturally INTO the scene of the second image, ` +
       `dressed and acting as ${STAGE_OUTFITS[stage]}. ` +
       "Keep the gorilla's face, fur color and identity clearly recognizable. " +
-      "Full-body or three-quarter view, positioned center-bottom, interacting with the environment naturally, " +
+      "The character must be FULLY visible from head to FEET, standing ON the ground surface — " +
+      "never buried in the ground, never cropped by the frame edges. " +
+      "Position him center, feet clearly on the floor, interacting with the environment naturally, " +
       "matching the scene's lighting, perspective and art style. Keep the background composition. " +
+      "The artwork must FILL the entire canvas edge-to-edge: no white borders, no margins, no letterboxing. " +
       "Wide 3:2 landscape, no text, no watermark.";
 
     const parts = [{ text: prompt }, { inline_data: { mime_type: "image/jpeg", data: b64 } }];
@@ -857,21 +865,37 @@ async function generateAvatar(id, stage, srcImg) {
       contents: [{ parts }],
       generationConfig: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: "3:2" } },
     };
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GEMINI_API_KEY}`,
-      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
-    );
-    const json = await res.json();
-    const outParts = (((json.candidates || [])[0] || {}).content || {}).parts || [];
-    for (const p of outParts) {
-      if (p.inlineData && p.inlineData.data) {
-        fs.writeFileSync(avatarFile(id, stage), Buffer.from(p.inlineData.data, "base64"));
-        console.log(`AI 아바타 생성: 콩즈#${id} 등급${stage} (오늘 ${avatarGen.n}/${AVATAR_DAILY_CAP})`);
+    // 살아있는 키들을 순환하며 시도 — 한도/무효 키는 오늘 제외하고 다음 키로
+    const live = GEMINI_KEYS.filter((k) => !geminiKeyDead.has(k));
+    if (live.length === 0) { lastAvatarErr = "all-keys-dead: 모든 키가 소진/무효"; return; }
+    for (let attempt = 0; attempt < live.length; attempt++) {
+      const key = live[geminiKeyIdx % live.length];
+      geminiKeyIdx++;
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${key}`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
+      );
+      const json = await res.json();
+      const outParts = (((json.candidates || [])[0] || {}).content || {}).parts || [];
+      let got = null;
+      for (const p of outParts) { if (p.inlineData && p.inlineData.data) { got = p.inlineData.data; break; } }
+      if (got) {
+        fs.writeFileSync(avatarFile(id, stage), Buffer.from(got, "base64"));
+        console.log(`AI 아바타 생성: 콩즈#${id} 등급${stage} (키${(geminiKeyIdx - 1) % live.length + 1}/${live.length}, 오늘 ${avatarGen.n}/${AVATAR_DAILY_CAP})`);
         return;
       }
+      // 실패 원인 분석: 한도(429)·무효(400 API_KEY) 키는 오늘 제외하고 다음 키로 재시도
+      const code = (json.error && json.error.code) || res.status;
+      const reason = ((json.error && json.error.status) || "") + " " + ((json.error && json.error.message) || "");
+      if (code === 429 || /RESOURCE_EXHAUSTED|quota/i.test(reason) || /API_KEY_INVALID|API key not valid/i.test(reason)) {
+        geminiKeyDead.add(key);
+        lastAvatarErr = `key-dead(${key.slice(0, 8)}…): ${reason.slice(0, 120)}`;
+        continue; // 다음 키로
+      }
+      lastAvatarErr = "no-image: " + JSON.stringify(json).slice(0, 300);
+      console.warn("아바타 생성 응답에 이미지 없음:", JSON.stringify(json).slice(0, 200));
+      break; // 한도/무효가 아닌 다른 오류면 중단
     }
-    lastAvatarErr = "no-image: " + JSON.stringify(json).slice(0, 300);
-    console.warn("아바타 생성 응답에 이미지 없음:", JSON.stringify(json).slice(0, 200));
   } catch (e) {
     lastAvatarErr = "exception: " + e.message;
     console.warn("아바타 생성 실패:", e.message);
@@ -886,7 +910,8 @@ app.get("/api/avatar-debug", (req, res) => {
   let genDir = [];
   try { genDir = fs.readdirSync(path.join(__dirname, "public", "gen")); } catch (e) { genDir = ["(폴더 없음: " + e.message + ")"]; }
   res.json({ ok: true, date: avatarGen.date, n: avatarGen.n, cap: AVATAR_DAILY_CAP,
-    pending: Array.from(avatarPending), lastErr: lastAvatarErr, hasKey: !!GEMINI_API_KEY, files: genDir.slice(0, 20) });
+    pending: Array.from(avatarPending), lastErr: lastAvatarErr, keyCount: GEMINI_KEYS.length,
+    deadKeys: geminiKeyDead.size, hasKey: !!GEMINI_API_KEY, files: genDir.slice(0, 20) });
 });
 
 // 아바타 변신 이미지 조회 (없으면 백그라운드 생성 시작)

@@ -4,7 +4,9 @@ require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_KEYS = (process.env.GEMINI_API_KEY || "").split(",").map((k) => k.trim()).filter(Boolean);
+let keyIdx = 0;
+const GEMINI_API_KEY = GEMINI_KEYS[keyIdx % GEMINI_KEYS.length]; // 폴백용 첫 키
 const src = fs.readFileSync(path.join(__dirname, "server.js"), "utf8");
 const outfitsCode = src.match(/const STAGE_OUTFITS = \[[\s\S]*?\];/)[0];
 eval(outfitsCode.replace("const STAGE_OUTFITS", "var STAGE_OUTFITS"));
@@ -21,20 +23,24 @@ async function gen(id, stage) {
   if (!imgRes.ok) { console.log(`원본 실패 ${id}: ${imgRes.status}`); return false; }
   const b64 = Buffer.from(await imgRes.arrayBuffer()).toString("base64");
 
-  const prompt =
-    `Take the gorilla character from the first image and place him naturally INTO the scene of the second image, ` +
-    `dressed and acting as ${STAGE_OUTFITS[stage]}. ` +
-    "Keep the gorilla's face, fur color and identity clearly recognizable. " +
-    "Full-body or three-quarter view, positioned center-bottom, interacting with the environment naturally, " +
-    "matching the scene's lighting, perspective and art style. Keep the background composition. " +
-    "Wide 3:2 landscape, no text, no watermark.";
+const prompt =
+      `Take the gorilla character from the first image and place him naturally INTO the scene of the second image, ` +
+      `dressed and acting as ${STAGE_OUTFITS[stage]}. ` +
+      "Keep the gorilla's face, fur color and identity clearly recognizable. " +
+      "The character must be FULLY visible from head to FEET, standing ON the ground surface — " +
+      "never buried in the ground, never cropped by the frame edges. " +
+      "Position him center, feet clearly on the floor, interacting with the environment naturally, " +
+      "matching the scene's lighting, perspective and art style. Keep the background composition. " +
+      "The artwork must FILL the entire canvas edge-to-edge: no white borders, no margins, no letterboxing. " +
+      "Wide 3:2 landscape, no text, no watermark.";
 
   const parts = [{ text: prompt }, { inline_data: { mime_type: "image/jpeg", data: b64 } }];
   const bgPath = path.join(__dirname, "public", "assets", "bg", `stage${stage}.webp`);
   if (fs.existsSync(bgPath)) parts.push({ inline_data: { mime_type: "image/webp", data: fs.readFileSync(bgPath).toString("base64") } });
 
+  const key = GEMINI_KEYS[keyIdx % GEMINI_KEYS.length]; keyIdx++; // 키 순환
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${key}`,
     { method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ contents: [{ parts }], generationConfig: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: "3:2" } } }) }
   );
