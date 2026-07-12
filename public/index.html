@@ -755,6 +755,7 @@
   function toast(msg){ var t=$("toast"); t.textContent=msg; t.classList.add("on");
     clearTimeout(t._tm); t._tm=setTimeout(function(){t.classList.remove("on");},2200); }
   function modal(title,body,cb){ $("mTitle").textContent=title; $("mBody").textContent=body;
+    $("mOk").disabled=false; $("mOk").textContent="확인";
     $("modal").classList.add("on"); $("mOk").onclick=function(){ $("modal").classList.remove("on"); if(cb)cb(); }; }
 
   // 매 틱(100ms) 도는 가벼운 렌더: 숫자만 갱신
@@ -1275,6 +1276,18 @@
   });
   $("avatarClose").onclick=function(){ $("avatarModal").classList.remove("on"); };
 
+  // SNS 보너스: 댓글 달 시간 확보용 20초 잠금 (거짓 클릭 방지)
+  function lockOk(sec){
+    var b=$("mOk"); b.disabled=true;
+    var left=sec;
+    b.textContent="댓글 작성 후 확인 ("+left+"초)";
+    var t=setInterval(function(){
+      left--;
+      if(left<=0){ clearInterval(t); b.disabled=false; b.textContent="댓글 달았어요 — 확인"; }
+      else b.textContent="댓글 작성 후 확인 ("+left+"초)";
+    },1000);
+  }
+
   // ===== 트윗 참여 보너스 (하루 1회) — 광고는 임시 제외, 코드 보관 =====
   var TWEET_URL="https://x.com/PKC_250";
   var YT_URL="https://www.youtube.com/@punkykongzclubTV";
@@ -1283,7 +1296,8 @@
     if(!S||!NAME) return;
     if(!PLAY_OK){ needWallet(); return; }
     window.open(TWEET_URL,"_blank");
-    modal("🐦 트윗 참여 보너스","공식 X가 열렸어요! 최신 글에 댓글을 남기고 [확인]을 눌러주세요. (관리자가 댓글 확인 — 거짓 클릭 제재 👀)");
+    modal("🐦 트윗 참여 보너스","공식 X가 열렸어요! 최신 글에 댓글을 남기고 돌아와 확인을 눌러주세요. 관리자가 실제 댓글을 대조하며, 허위 수령은 회수+제재됩니다 👀");
+    lockOk(20);
     $("mOk").onclick=function(){
       $("modal").classList.remove("on");
       fetch(API("/api/ad/watch"),{method:"POST",headers:{"Content-Type":"application/json"},
@@ -1306,7 +1320,8 @@
     if(!S||!NAME||!YT_URL) return;
     if(!PLAY_OK){ needWallet(); return; }
     window.open(YT_URL,"_blank");
-    modal("▶️ 유튜브 보너스","영상에 댓글(닉네임 포함)을 남기고 [확인]을 눌러주세요!");
+    modal("▶️ 유튜브 보너스","영상에 닉네임 포함 댓글을 남기고 돌아와 확인을 눌러주세요. 관리자가 대조합니다!");
+    lockOk(20);
     $("mOk").onclick=function(){
       $("modal").classList.remove("on");
       fetch(API("/api/ad/watch"),{method:"POST",headers:{"Content-Type":"application/json"},
