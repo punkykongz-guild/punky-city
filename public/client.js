@@ -164,6 +164,14 @@ var nameFromUrl = (savedId&&savedId.name) || qs.get("name") || "";
     lastAngle = Math.atan2(e.clientY - cy, e.clientX - cx);
   });
   canvas.addEventListener("mousedown", function () { boosting = true; });
+  // 모바일: 터치한 방향으로 조향, 두 손가락 = 부스트
+  function steerTouch(t) {
+    var cx = canvas.width / 2, cy = canvas.height / 2;
+    lastAngle = Math.atan2(t.clientY - cy, t.clientX - cx);
+  }
+  canvas.addEventListener("touchstart", function (e) { e.preventDefault(); if (e.touches[0]) steerTouch(e.touches[0]); boosting = e.touches.length >= 2; }, { passive: false });
+  canvas.addEventListener("touchmove", function (e) { e.preventDefault(); if (e.touches[0]) steerTouch(e.touches[0]); boosting = e.touches.length >= 2; }, { passive: false });
+  canvas.addEventListener("touchend", function (e) { e.preventDefault(); boosting = e.touches.length >= 2; }, { passive: false });
   window.addEventListener("mouseup", function () { boosting = false; });
   window.addEventListener("keydown", function (e) { if (e.code === "Space") boosting = true; });
   window.addEventListener("keyup", function (e) { if (e.code === "Space") boosting = false; });
@@ -203,6 +211,12 @@ var nameFromUrl = (savedId&&savedId.name) || qs.get("name") || "";
     for (var gy = offY; gy < h; gy += grid) { ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke(); }
 
     function toScreen(x, y) { return [x - camX + w / 2, y - camY + h / 2]; }
+
+    // 빨간 벽 (닿으면 죽음)
+    var w0 = toScreen(0, 0);
+    ctx.strokeStyle = "#e5484d";
+    ctx.lineWidth = 6;
+    ctx.strokeRect(w0[0], w0[1], latestState.worldSize, latestState.worldSize);
 
     // 먹이
     latestState.food.forEach(function (f) {
