@@ -262,6 +262,9 @@
     <div id="progressFill"></div>
     <div id="progressLabel"></div>
   </div>
+  <div id="walletCta" style="display:none;margin:8px 14px 0;padding:10px 14px;border-radius:12px;cursor:pointer;
+    background:linear-gradient(135deg,rgba(168,85,247,.25),rgba(74,222,128,.15));border:1px solid var(--purple);
+    font-size:12.5px;font-weight:700;text-align:center;"></div>
   <div id="newsBar">
     <span id="newsTag">펑키뉴스</span>
     <div id="newsWrap"><div id="newsText"></div></div>
@@ -1055,6 +1058,17 @@
   function applyProfile(p){
     profile=p;
     $("userName").textContent=NAME||"이름 없음";
+    var cta=$("walletCta");
+    if(p.tokenIds&&p.tokenIds.length){ cta.style.display="none"; }
+    else if(p.pending){
+      cta.style.display="block";
+      cta.textContent="⏳ 지갑 승인 대기중 — 관리자 승인 후 내 콩즈가 연결됩니다";
+      cta.onclick=null;
+    } else {
+      cta.style.display="block";
+      cta.textContent="🔗 지갑 등록이 필요합니다 — 여기를 눌러 신청하세요! (승인 후 웰컴 100P)";
+      cta.onclick=function(){ $("avatarBtn").click(); };
+    }
     if(p.tokenIds&&p.tokenIds.length){
       applyAvatarImage();
       $("matesInfo").textContent="(총 "+p.tokenIds.length+"마리 · 수입 +"+(p.nft*0.5).toFixed(1)+"% · 1마리당 +0.5%)";
@@ -1071,7 +1085,12 @@
     var grid=$("avatarGrid"); grid.innerHTML="";
     if(!profile.tokenIds||!profile.tokenIds.length){
       $("avatarHint").textContent="지갑을 등록하면 내 콩즈가 여기 나타나요!";
-      grid.innerHTML='<input id="wIn" placeholder="솔라나 지갑주소 붙여넣기" style="grid-column:1/-1;padding:10px;border-radius:8px;border:1px solid #444;background:#160d2c;color:#fff;font-size:12px">'+
+      grid.innerHTML='<div style="grid-column:1/-1;font-size:11.5px;color:#b9aed6;line-height:1.7;background:rgba(255,255,255,.05);border-radius:8px;padding:9px 11px">'+
+        '<b style="color:#fbbf24">등록 과정</b><br>'+
+        '① 아래에 솔라나 지갑주소 붙여넣고 [등록 신청]<br>'+
+        '② 관리자가 확인 후 승인 (시트에서 O)<br>'+
+        '③ 자동 연결! 내 콩즈 등장 + 웰컴 <b>100P</b> 🎉</div>'+
+        '<input id="wIn" placeholder="솔라나 지갑주소 붙여넣기" style="grid-column:1/-1;padding:10px;border-radius:8px;border:1px solid #444;background:#160d2c;color:#fff;font-size:12px">'+
         '<button id="wGo" style="grid-column:1/-1;padding:11px;border:none;border-radius:8px;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;font-weight:800;cursor:pointer">🔗 등록 신청 (승인 후 연결)</button>';
       setTimeout(function(){
         $("wGo").onclick=function(){
