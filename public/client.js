@@ -164,14 +164,37 @@ var nameFromUrl = (savedId&&savedId.name) || qs.get("name") || "";
     lastAngle = Math.atan2(e.clientY - cy, e.clientX - cx);
   });
   canvas.addEventListener("mousedown", function () { boosting = true; });
-  // 모바일: 터치한 방향으로 조향, 두 손가락 = 부스트
+  // 모바일 조작 2종: [터치 방향] 화면 누른 쪽으로 / [조이스틱] 누른 자리에 반투명 스틱
+  var ctrlMode = localStorage.getItem("pkc_ctrl") || "touch";
+  var radios = document.querySelectorAll('input[name="ctrl"]');
+  radios.forEach(function (r) {
+    r.checked = (r.value === ctrlMode);
+    r.addEventListener("change", function () { ctrlMode = r.value; localStorage.setItem("pkc_ctrl", ctrlMode); });
+  });
+  var joy = { active: false, ox: 0, oy: 0, cx: 0, cy: 0, R: 58 };
   function steerTouch(t) {
-    var cx = canvas.width / 2, cy = canvas.height / 2;
-    lastAngle = Math.atan2(t.clientY - cy, t.clientX - cx);
+    if (ctrlMode === "joy") {
+      joy.cx = t.clientX; joy.cy = t.clientY;
+      var dx = joy.cx - joy.ox, dy = joy.cy - joy.oy;
+      if (dx * dx + dy * dy > 100) lastAngle = Math.atan2(dy, dx);
+    } else {
+      var cx = canvas.width / 2, cy = canvas.height / 2;
+      lastAngle = Math.atan2(t.clientY - cy, t.clientX - cx);
+    }
   }
-  canvas.addEventListener("touchstart", function (e) { e.preventDefault(); if (e.touches[0]) steerTouch(e.touches[0]); boosting = e.touches.length >= 2; }, { passive: false });
+  canvas.addEventListener("touchstart", function (e) {
+    e.preventDefault();
+    var t = e.touches[0];
+    if (t && ctrlMode === "joy" && !joy.active) { joy.active = true; joy.ox = joy.cx = t.clientX; joy.oy = joy.cy = t.clientY; }
+    if (t) steerTouch(t);
+    boosting = e.touches.length >= 2;
+  }, { passive: false });
   canvas.addEventListener("touchmove", function (e) { e.preventDefault(); if (e.touches[0]) steerTouch(e.touches[0]); boosting = e.touches.length >= 2; }, { passive: false });
-  canvas.addEventListener("touchend", function (e) { e.preventDefault(); boosting = e.touches.length >= 2; }, { passive: false });
+  canvas.addEventListener("touchend", function (e) {
+    e.preventDefault();
+    if (e.touches.length === 0) joy.active = false;
+    boosting = e.touches.length >= 2;
+  }, { passive: false });
   window.addEventListener("mouseup", function () { boosting = false; });
   window.addEventListener("keydown", function (e) { if (e.code === "Space") boosting = true; });
   window.addEventListener("keyup", function (e) { if (e.code === "Space") boosting = false; });
@@ -274,6 +297,19 @@ var nameFromUrl = (savedId&&savedId.name) || qs.get("name") || "";
       }
       hud.textContent = "크기: " + me.mass + " | 모드: " + (mode === "paid" ? "정상" : "무료") +
         " | 버프: " + (buffs.join(",") || "없음") + (fxTxt ? " |" + fxTxt : "");
+    }
+
+    // 반투명 조이스틱 오버레이
+    if (joy.active && ctrlMode === "joy") {
+      var jdx = joy.cx - joy.ox, jdy = joy.cy - joy.oy;
+      var jd = Math.sqrt(jdx * jdx + jdy * jdy) || 1;
+      var kx = joy.ox + jdx / jd * Math.min(jd, joy.R);
+      var ky = joy.oy + jdy / jd * Math.min(jd, joy.R);
+      ctx.beginPath(); ctx.arc(joy.ox, joy.oy, joy.R, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255,255,255,0.08)"; ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.25)"; ctx.lineWidth = 2; ctx.stroke();
+      ctx.beginPath(); ctx.arc(kx, ky, 24, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255,255,255,0.30)"; ctx.fill();
     }
   }
   requestAnimationFrame(draw);
