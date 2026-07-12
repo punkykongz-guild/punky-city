@@ -863,6 +863,18 @@ app.post("/api/ad/watch", (req, res) => {
   res.json({ ok: true });
 });
 
+// 봇 링크로 세션 발급 (서명 = 본인 인증)
+app.post("/api/linklogin", (req, res) => {
+  const b = req.body || {};
+  const name = String(b.name || "").trim();
+  const ph = String(b.ph || "");
+  if (!name || !validSig(name, ph, String(b.sig || ""))) return res.status(403).json({ ok: false, message: "링크가 유효하지 않아요. 카톡에서 [게임시작]으로 새 링크를 받아주세요." });
+  const p = db.players[name] || (db.players[name] = {});
+  if (ph) { if (!p.ph) p.ph = ph; else if (p.ph !== ph) return res.json({ ok: false, message: "동일 닉네임 사칭이 의심돼요. 관리자에게 문의하세요." }); }
+  p.ses = makeSes(); markDirty();
+  res.json({ ok: true, ses: p.ses, name, token: BOT_TOKEN, needPin: !p.pinHash });
+});
+
 // 로그인 (닉네임+비밀번호 → 세션)
 app.post("/api/login", (req, res) => {
   const name = String((req.body && req.body.name) || "").trim();
@@ -871,7 +883,7 @@ app.post("/api/login", (req, res) => {
   if (!p || !p.pinHash) return res.json({ ok: false, error: "nopin", message: "비밀번호가 아직 없어요. 카카오톡에서 [게임시작] 링크로 접속해 먼저 비밀번호를 만들어주세요!" });
   if (pinHash(name, pin) !== p.pinHash) return res.json({ ok: false, error: "badpin", message: "닉네임 또는 비밀번호가 달라요." });
   p.ses = makeSes(); markDirty();
-  res.json({ ok: true, ses: p.ses, name });
+  res.json({ ok: true, ses: p.ses, name, token: BOT_TOKEN });
 });
 
 // 비밀번호 설정/변경 (봇 서명 링크 또는 기존 세션으로만 가능)
@@ -896,7 +908,12 @@ app.get("/api/admin/unbind", (req, res) => {
   const name = String(req.query.name || "").trim();
   if (name === "ALL") {
     let n = 0;
-    for (const p of Object.values(db.players || {})) { if (p && p.devKey) { delete p.devKey; n++; } }
+    const wipePin = String(req.query.pin || "") === "1";
+    for (const p of Object.values(db.players || {})) {
+      if (!p) continue;
+      if (p.devKey) { delete p.devKey; n++; }
+      if (wipePin) { delete p.pinHash; delete p.ses; delete p.ph; }
+    }
     markDirty();
     return res.json({ ok: true, cleared: n });
   }

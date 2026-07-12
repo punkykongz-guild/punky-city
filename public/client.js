@@ -42,7 +42,7 @@ var nameFromUrl = (loginId&&loginId.name) || (savedId&&savedId.name) || qs.get("
 
   // 내 등급 기준 입장료 표시
   (function loadFee(){
-    var tk = qs.get("token") || "";
+    var tk = qs.get("token") || (loginId&&loginId.token) || "";
     var nm = nameBox.value.trim();
     if (!nm) { document.getElementById("feeInfo").textContent = "이름이 있어야 입장료를 계산해요"; return; }
     fetch("/api/worm/fee?token=" + encodeURIComponent(tk) + "&name=" + encodeURIComponent(nm))

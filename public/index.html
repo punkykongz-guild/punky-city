@@ -308,6 +308,34 @@
     </div>
   </div>
 
+  <div id="authWrap" style="position:fixed;inset:0;background:#160b2e;display:none;z-index:90;align-items:center;justify-content:center;padding:24px">
+    <div style="background:#231240;border:1px solid var(--purple);border-radius:16px;padding:24px;width:300px;text-align:center">
+      <div style="font-size:36px">🦍</div>
+      <h2 style="margin:6px 0 2px;font-size:18px">펑키시티</h2>
+      <div id="authSub" style="font-size:12px;color:#b9a8e0;margin-bottom:14px"></div>
+      <div id="authChoice" style="display:none">
+        <div id="authChoiceTxt" style="font-size:14px;line-height:1.6;margin-bottom:14px"></div>
+        <button class="bigBtn" id="authYes">네, 제 계정입니다</button>
+        <button class="bigBtn" id="authNo" style="margin-top:8px;background:#5a5a72">아니요, 로그인할게요</button>
+      </div>
+      <div id="authLogin" style="display:none">
+        <input id="loginName" placeholder="닉네임 (카톡 대화명)" style="width:100%;box-sizing:border-box;padding:11px;margin-bottom:8px;border-radius:8px;border:1px solid #4a3b6e;background:#160b2e;color:#fff;font-size:14px"/>
+        <input id="loginPin" type="password" placeholder="비밀번호" style="width:100%;box-sizing:border-box;padding:11px;margin-bottom:8px;border-radius:8px;border:1px solid #4a3b6e;background:#160b2e;color:#fff;font-size:14px"/>
+        <button class="bigBtn" id="loginBtn">🔑 로그인</button>
+        <div style="font-size:11.5px;color:#9b8cc0;margin:10px 0 6px;line-height:1.6">처음이거나 비밀번호가 없다면?<br>카톡방에 <b>게임시작</b>을 쳐서 내 링크로 접속하세요!</div>
+        <button class="bigBtn" id="loginKakao" style="background:#5a5a72">💬 카카오톡 열기</button>
+      </div>
+      <div id="authPin" style="display:none">
+        <div style="font-size:13px;line-height:1.6;margin-bottom:10px">🔑 비밀번호를 만들면 어떤 폰·어떤 링크에서도 로그인해서 내 계정을 쓸 수 있어요!</div>
+        <input id="pinA" type="password" placeholder="비밀번호 (4자 이상)" style="width:100%;box-sizing:border-box;padding:11px;margin-bottom:8px;border-radius:8px;border:1px solid #4a3b6e;background:#160b2e;color:#fff;font-size:14px"/>
+        <input id="pinB" type="password" placeholder="비밀번호 확인" style="width:100%;box-sizing:border-box;padding:11px;margin-bottom:8px;border-radius:8px;border:1px solid #4a3b6e;background:#160b2e;color:#fff;font-size:14px"/>
+        <button class="bigBtn" id="pinBtn">설정 완료</button>
+        <button class="bigBtn" id="pinSkip" style="margin-top:8px;background:#5a5a72">나중에 할게요</button>
+      </div>
+      <div id="authMsg" style="min-height:16px;font-size:12px;color:#ff8f8f;margin-top:10px"></div>
+    </div>
+  </div>
+
   <div id="avatarModal"><div id="avatarBox">
     <h2>🦍 내 콩즈 선택</h2>
     <span class="muted" id="avatarHint">보유한 펑키콩즈 중 아바타를 고르세요</span>
@@ -459,11 +487,9 @@
   var SIG=(qs.get("sig")||"").trim();
   var PH=(qs.get("ph")||"").trim();
   // 이 폰에 저장된 내 신분증 — 있으면 어떤 링크를 열어도 항상 내 계정으로
-  var SAVED=null; try{ SAVED=JSON.parse(localStorage.getItem("pkc_id")||"null"); }catch(e){}
   var LOGIN=null; try{ LOGIN=JSON.parse(localStorage.getItem("pkc_login")||"null"); }catch(e){}
   var URL_NAME=NAME;
-  if(LOGIN&&LOGIN.name&&LOGIN.ses){ NAME=LOGIN.name; }
-  else if(SAVED&&SAVED.name&&SAVED.sig){ NAME=SAVED.name; SIG=SAVED.sig; PH=SAVED.ph||""; if(!TOKEN&&SAVED.token) TOKEN=SAVED.token; }
+  if(LOGIN&&LOGIN.name&&LOGIN.ses){ NAME=LOGIN.name; SIG=""; PH=""; if(LOGIN.token) TOKEN=LOGIN.token; }
   var SES=(LOGIN&&LOGIN.ses)||"";
   var API = function(p){ return p + (p.indexOf("?")>=0?"&":"?") + "token="+encodeURIComponent(TOKEN)+"&key="+encodeURIComponent(DEVKEY)+"&sig="+encodeURIComponent(SIG)+"&ph="+encodeURIComponent(PH)+"&ses="+encodeURIComponent(SES); };
 
@@ -1382,58 +1408,63 @@
     }
   });
 
-  function doLoginPrompt(){
-    var n=prompt("닉네임(카톡 대화명)을 입력하세요"); if(!n) return;
-    var pw=prompt("비밀번호를 입력하세요"); if(!pw) return;
-    fetch("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:n.trim(),pin:pw})})
-      .then(function(r){return r.json()}).then(function(d){
-        if(d.ok){ localStorage.setItem("pkc_login",JSON.stringify({name:d.name,ses:d.ses})); location.href=location.pathname+location.search; }
-        else alert(d.message||"로그인 실패");
-      }).catch(function(){ alert("서버 연결 오류"); });
+  function post(u,b,cb){
+    fetch(u,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)})
+      .then(function(r){return r.json()}).then(cb)
+      .catch(function(){ $("authMsg").textContent="서버 연결 오류 — 잠시 후 다시"; });
   }
-  function askPinSetup(){
-    if(LOGIN) return;
-    setTimeout(function(){
-      var pw=prompt("🔑 비밀번호를 만들어두면 어떤 폰/링크에서든 로그인해서 내 계정을 쓸 수 있어요! (4자 이상 입력, 나중에 하려면 취소)");
-      if(!pw||pw.length<4) return;
-      fetch("/api/pin/set",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:NAME,pin:pw,sig:SIG,ph:PH,ses:SES})})
-        .then(function(r){return r.json()}).then(function(d){
-          if(d.ok){ localStorage.setItem("pkc_login",JSON.stringify({name:NAME,ses:d.ses})); toast("🔑 비밀번호 설정 완료! 이제 어디서든 로그인 가능"); }
-          else if(d.message) alert(d.message);
-        });
-    },1200);
+  function showAuth(mode){
+    $("authWrap").style.display="flex";
+    ["authChoice","authLogin","authPin"].forEach(function(id){ $(id).style.display="none"; });
+    $("authMsg").textContent="";
+    if(mode==="choice"){ $("authSub").textContent="본인 확인"; $("authChoiceTxt").innerHTML="당신이 <b>[ "+URL_NAME+" ]</b> 님 본인인가요?"; $("authChoice").style.display="block"; }
+    else if(mode==="pin"){ $("authSub").textContent=NAME+"님, 환영해요!"; $("authPin").style.display="block"; }
+    else { $("authSub").textContent="로그인"; $("authLogin").style.display="block"; }
+  }
+  function hideAuth(){ $("authWrap").style.display="none"; }
+  function saveLogin(name,ses,token){ localStorage.setItem("pkc_login",JSON.stringify({name:name,ses:ses,token:token||TOKEN})); }
+  function wireAuth(){
+    $("authYes").onclick=function(){
+      $("authMsg").textContent="확인 중...";
+      post("/api/linklogin",{name:URL_NAME,sig:SIG,ph:PH},function(d){
+        if(!d.ok){ $("authMsg").textContent=d.message||"링크가 오래됐어요. 카톡에서 새 링크를 받아주세요."; return; }
+        NAME=d.name; SES=d.ses; if(d.token) TOKEN=d.token;
+        saveLogin(d.name,d.ses,d.token);
+        if(d.needPin){ showAuth("pin"); } else { hideAuth(); bootMain(); }
+      });
+    };
+    $("authNo").onclick=function(){ showAuth("login"); };
+    $("loginBtn").onclick=function(){
+      var n=$("loginName").value.trim(), pw=$("loginPin").value;
+      if(!n||!pw){ $("authMsg").textContent="닉네임과 비밀번호를 입력하세요"; return; }
+      $("authMsg").textContent="로그인 중...";
+      post("/api/login",{name:n,pin:pw},function(d){
+        if(!d.ok){ $("authMsg").textContent=d.message||"로그인 실패"; return; }
+        saveLogin(d.name,d.ses,d.token);
+        location.href=location.pathname;
+      });
+    };
+    $("loginKakao").onclick=function(){ location.href="kakaotalk://launch"; };
+    $("pinBtn").onclick=function(){
+      var a=$("pinA").value, b=$("pinB").value;
+      if(a.length<4){ $("authMsg").textContent="비밀번호는 4자 이상!"; return; }
+      if(a!==b){ $("authMsg").textContent="비밀번호가 서로 달라요"; return; }
+      post("/api/pin/set",{name:NAME,pin:a,ses:SES,sig:SIG,ph:PH},function(d){
+        if(!d.ok){ $("authMsg").textContent=d.message||"설정 실패"; return; }
+        SES=d.ses; saveLogin(NAME,d.ses,TOKEN);
+        hideAuth(); bootMain(); toast("🔑 비밀번호 설정 완료!");
+      });
+    };
+    $("pinSkip").onclick=function(){ hideAuth(); bootMain(); };
   }
   function boot(){
-    if(LOGIN&&LOGIN.name){
+    wireAuth();
+    if(LOGIN&&LOGIN.name&&LOGIN.ses){
       if(URL_NAME&&URL_NAME!==LOGIN.name) toast("🦍 "+LOGIN.name+"님 계정으로 접속했어요");
       bootMain(); return;
     }
-    if(SAVED&&SAVED.name&&!URL_NAME){ bootMain(); askPinSetup(); return; }
-    if(!NAME){
-      modal("🔐 로그인", "닉네임+비밀번호로 로그인하세요. 비밀번호가 아직 없다면 카카오톡 채팅방에 [게임시작] 을 입력해 내 링크로 접속하면 만들 수 있어요!");
-      var ok=$("mOk"); ok.textContent="🔑 로그인";
-      ok.onclick=function(){ doLoginPrompt(); };
-      var kk=document.createElement("button"); kk.className=ok.className; kk.textContent="💬 카카오톡 열기";
-      kk.style.cssText="margin-top:8px;background:#5a5a72";
-      ok.parentNode.insertBefore(kk, ok.nextSibling);
-      kk.onclick=function(){ location.href="kakaotalk://launch"; };
-      return;
-    }
-    // 봇 링크로 접속: 본인 확인 → 폰에 기억 + 비밀번호 만들기 유도
-    modal("👤 본인 확인", "당신이 ["+NAME+"] 님 본인인가요? [네]를 누르면 이 폰이 "+NAME+"님 계정을 기억합니다.");
-    var ok2=$("mOk"); ok2.textContent="네, 제 계정입니다";
-    var no=document.createElement("button"); no.className=ok2.className; no.textContent="아니요 (로그인할게요)";
-    no.style.cssText="margin-top:8px;background:#5a5a72";
-    ok2.parentNode.insertBefore(no, ok2.nextSibling);
-    ok2.onclick=function(){
-      localStorage.setItem("pkc_id", JSON.stringify({name:NAME,sig:SIG,ph:PH,token:TOKEN}));
-      no.remove(); ok2.textContent="확인"; $("modal").classList.remove("on");
-      bootMain(); askPinSetup();
-    };
-    no.onclick=function(){
-      no.remove(); ok2.textContent="확인"; $("modal").classList.remove("on");
-      doLoginPrompt();
-    };
+    if(URL_NAME&&SIG){ showAuth("choice"); return; }
+    showAuth("login");
   }
   function bootMain(){
     if(!NAME){
