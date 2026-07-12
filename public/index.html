@@ -79,9 +79,11 @@
   /* 행인 NPC */
   .walker{position:absolute;bottom:12%;font-size:34px;z-index:2;cursor:pointer;
     filter:drop-shadow(0 3px 4px rgba(0,0,0,.45));}
-  .walker.rich{font-size:40px;z-index:4;animation-name:walkL;filter:drop-shadow(0 0 14px rgba(251,191,36,.9));}
+  .walker.rich{font-size:40px;z-index:4;filter:drop-shadow(0 0 14px rgba(251,191,36,.9));}
+  .walker i{display:inline-block;font-style:normal;animation:wbob .38s ease-in-out infinite alternate;}
+  @keyframes wbob{from{transform:translateY(0) rotate(-7deg);}to{transform:translateY(-5px) rotate(7deg);}}
   @keyframes walkL{from{left:-14%;}to{left:108%;}}
-  @keyframes walkR{from{left:108%;transform:scaleX(-1);}to{left:-14%;transform:scaleX(-1);}}
+  @keyframes walkR{from{left:108%;}to{left:-14%;}}
   /* 병맛 뉴스 티커 */
   #newsBar{margin:8px 14px 0;background:rgba(5,8,18,.6);border:1px solid var(--line);
     border-radius:8px;overflow:hidden;height:26px;display:flex;align-items:center;}
@@ -426,7 +428,16 @@
     },p[1]);
   }
   function stopBgm(){ if(bgmTimer){clearInterval(bgmTimer);bgmTimer=null;} bgmStage=-1; }
-  document.addEventListener("click",function once(){ ac(); startBgm(); },{once:true});
+  var GREETS=["님, 펑키시티에 오신 것을 환영합니다!","님, 오늘도 부자되세요!","님 입장! 콩즈들이 반깁니다","님, 어서오세요. 폐지가 기다립니다","님, 펑키시티의 전설이 되어보세요!"];
+  function greet(){
+    if(!OPT.sfx||!window.speechSynthesis) return;
+    try{
+      var u=new SpeechSynthesisUtterance((NAME||"무명 콩즈")+GREETS[Math.floor(Math.random()*GREETS.length)]);
+      u.lang="ko-KR"; u.rate=1.05; u.pitch=1.1;
+      speechSynthesis.speak(u);
+    }catch(e){}
+  }
+  document.addEventListener("click",function once(){ ac(); startBgm(); greet(); },{once:true});
 
   var qs = new URLSearchParams(location.search);
   var NAME = (qs.get("name")||"").trim();
@@ -898,7 +909,13 @@
     var WS=walkersForStage(S.stage);
     w.textContent=isRich?"🤵":(special||WS[Math.floor(Math.random()*WS.length)]);
     if(special){ w.classList.add("rich"); }
-    w.style.animation="walk"+(Math.random()<0.5?"L":"R")+" "+dur+"s linear forwards";
+    var dirR=Math.random()<0.5;
+    w.style.animation="walk"+(dirR?"R":"L")+" "+dur+"s linear forwards";
+    var inner=document.createElement("i");
+    inner.textContent=w.textContent; w.textContent="";
+    if(dirR) inner.style.transform="scaleX(-1)"; // 진행방향 바라보게
+    inner.style.animationDuration=(0.3+Math.random()*0.15)+"s";
+    w.appendChild(inner);
     tz.appendChild(w);
     if(isRich){
       w.onclick=function(ev){
