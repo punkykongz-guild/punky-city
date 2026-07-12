@@ -460,9 +460,12 @@
   var PH=(qs.get("ph")||"").trim();
   // 이 폰에 저장된 내 신분증 — 있으면 어떤 링크를 열어도 항상 내 계정으로
   var SAVED=null; try{ SAVED=JSON.parse(localStorage.getItem("pkc_id")||"null"); }catch(e){}
+  var LOGIN=null; try{ LOGIN=JSON.parse(localStorage.getItem("pkc_login")||"null"); }catch(e){}
   var URL_NAME=NAME;
-  if(SAVED&&SAVED.name&&SAVED.sig){ NAME=SAVED.name; SIG=SAVED.sig; PH=SAVED.ph||""; if(!TOKEN&&SAVED.token) TOKEN=SAVED.token; }
-  var API = function(p){ return p + (p.indexOf("?")>=0?"&":"?") + "token="+encodeURIComponent(TOKEN)+"&key="+encodeURIComponent(DEVKEY)+"&sig="+encodeURIComponent(SIG)+"&ph="+encodeURIComponent(PH); };
+  if(LOGIN&&LOGIN.name&&LOGIN.ses){ NAME=LOGIN.name; }
+  else if(SAVED&&SAVED.name&&SAVED.sig){ NAME=SAVED.name; SIG=SAVED.sig; PH=SAVED.ph||""; if(!TOKEN&&SAVED.token) TOKEN=SAVED.token; }
+  var SES=(LOGIN&&LOGIN.ses)||"";
+  var API = function(p){ return p + (p.indexOf("?")>=0?"&":"?") + "token="+encodeURIComponent(TOKEN)+"&key="+encodeURIComponent(DEVKEY)+"&sig="+encodeURIComponent(SIG)+"&ph="+encodeURIComponent(PH)+"&ses="+encodeURIComponent(SES); };
 
   var STAGES = [
     null,
@@ -919,7 +922,7 @@
     modal("🎉 신분 상승!", "Lv."+S.stage+" "+STAGES[S.stage].nm+" 달성!\n"+STAGES[S.stage].scene);
     saveNow();
     fetch(API("/api/idle/stage"),{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH})})
+      body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH,ses:SES})})
       .then(function(r){return r.json();})
       .then(function(j){ if(j.ok&&j.granted>0){ toast("승급 보상 +"+j.granted+"P 지급!"); profile.point+=j.granted; render(); } })
       .catch(function(){});
@@ -1065,7 +1068,7 @@
   function saveNow(){
     if(!S||!NAME) return;
     S.lastSeen=Date.now();
-    var body=JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH,save:S});
+    var body=JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH,ses:SES,save:S});
     try{ navigator.sendBeacon("/api/idle/save?token="+encodeURIComponent(TOKEN), new Blob([body],{type:"application/json"})); }
     catch(e){ fetch(API("/api/idle/save"),{method:"POST",headers:{"Content-Type":"application/json"},body:body,keepalive:true}).catch(function(){}); }
   }
@@ -1078,7 +1081,7 @@
     saveNow();
     setTimeout(function(){
       fetch(API("/api/idle/collect"),{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH})})
+        body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH,ses:SES})})
         .then(function(r){return r.json();})
         .then(function(j){
           if(j.ok){ modal("💰 수금 완료!","길드 포인트 +"+j.points+"P 가 지급됐어요."); profile.point+=j.points; loadTower(); render(); }
@@ -1258,7 +1261,7 @@
           var w=$("wIn").value.trim();
           if(!w){ toast("지갑주소를 입력해주세요"); return; }
           fetch(API("/api/wallet/apply"),{method:"POST",headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH,wallet:w})})
+            body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH,ses:SES,wallet:w})})
             .then(function(r){return r.json();})
             .then(function(j){ $("avatarModal").classList.remove("on"); modal("🔗 지갑 신청", j.message||"완료"); })
             .catch(function(){ toast("서버 연결 실패"); });
@@ -1317,7 +1320,7 @@
     $("mOk").onclick=function(){
       $("modal").classList.remove("on");
       fetch(API("/api/ad/watch"),{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH})})
+        body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH,ses:SES})})
         .then(function(r){return r.json();})
         .then(function(j){
           if(!j.ok){ toast(j.error||"잠시 후 다시"); return; }
@@ -1341,7 +1344,7 @@
     $("mOk").onclick=function(){
       $("modal").classList.remove("on");
       fetch(API("/api/ad/watch"),{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH,type:"yt"})})
+        body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH,ses:SES,type:"yt"})})
         .then(function(r){return r.json();})
         .then(function(j){
           if(!j.ok){ toast(j.error||"잠시 후 다시"); return; }
@@ -1359,7 +1362,7 @@
   $("optBgm").checked=OPT.bgm; $("optSfx").checked=OPT.sfx; $("optVib").checked=OPT.vib;
   $("setBtn").onclick=function(){ $("setModal").style.display="flex"; };
   $("setClose").onclick=function(){ $("setModal").style.display="none"; };
-  $("acctReset").onclick=function(){ if(confirm("이 폰에 저장된 계정 기억을 지울까요? 다음 접속 때 다시 본인 확인을 합니다.")){ localStorage.removeItem("pkc_id"); location.href=location.pathname; } };
+  $("acctReset").onclick=function(){ if(confirm("이 폰에 저장된 계정/로그인 정보를 지울까요? 다음 접속 때 다시 로그인합니다.")){ localStorage.removeItem("pkc_id"); localStorage.removeItem("pkc_login"); location.href=location.pathname; } };
   $("optBgm").onchange=function(){ OPT.bgm=this.checked; saveOpt(); this.checked?startBgm():stopBgm(); };
   $("optSfx").onchange=function(){ OPT.sfx=this.checked; saveOpt(); beep(700,0.08); };
   $("optVib").onchange=function(){ OPT.vib=this.checked; saveOpt(); vib(30); };
@@ -1379,28 +1382,57 @@
     }
   });
 
+  function doLoginPrompt(){
+    var n=prompt("닉네임(카톡 대화명)을 입력하세요"); if(!n) return;
+    var pw=prompt("비밀번호를 입력하세요"); if(!pw) return;
+    fetch("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:n.trim(),pin:pw})})
+      .then(function(r){return r.json()}).then(function(d){
+        if(d.ok){ localStorage.setItem("pkc_login",JSON.stringify({name:d.name,ses:d.ses})); location.href=location.pathname+location.search; }
+        else alert(d.message||"로그인 실패");
+      }).catch(function(){ alert("서버 연결 오류"); });
+  }
+  function askPinSetup(){
+    if(LOGIN) return;
+    setTimeout(function(){
+      var pw=prompt("🔑 비밀번호를 만들어두면 어떤 폰/링크에서든 로그인해서 내 계정을 쓸 수 있어요! (4자 이상 입력, 나중에 하려면 취소)");
+      if(!pw||pw.length<4) return;
+      fetch("/api/pin/set",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:NAME,pin:pw,sig:SIG,ph:PH,ses:SES})})
+        .then(function(r){return r.json()}).then(function(d){
+          if(d.ok){ localStorage.setItem("pkc_login",JSON.stringify({name:NAME,ses:d.ses})); toast("🔑 비밀번호 설정 완료! 이제 어디서든 로그인 가능"); }
+          else if(d.message) alert(d.message);
+        });
+    },1200);
+  }
   function boot(){
-    if(SAVED&&SAVED.name){
-      if(URL_NAME&&URL_NAME!==SAVED.name) toast("🦍 "+SAVED.name+"님 계정으로 접속했어요");
+    if(LOGIN&&LOGIN.name){
+      if(URL_NAME&&URL_NAME!==LOGIN.name) toast("🦍 "+LOGIN.name+"님 계정으로 접속했어요");
       bootMain(); return;
     }
-    if(!NAME){ bootMain(); return; }
-    // 이 폰 최초 접속: 링크 주인이 본인인지 확인 후 폰에 기억
-    modal("👤 본인 확인", "당신이 ["+NAME+"] 님 본인인가요? [네]를 누르면 이 폰이 "+NAME+"님 계정을 기억하고, 앞으로 어떤 링크를 열어도 항상 내 계정으로 들어옵니다.");
-    var ok=$("mOk"); ok.textContent="네, 제 계정입니다";
-    var no=document.createElement("button"); no.className=ok.className; no.textContent="아니요, 저 아니에요";
+    if(SAVED&&SAVED.name&&!URL_NAME){ bootMain(); askPinSetup(); return; }
+    if(!NAME){
+      modal("🔐 로그인", "닉네임+비밀번호로 로그인하세요. 비밀번호가 아직 없다면 카카오톡 채팅방에 [게임시작] 을 입력해 내 링크로 접속하면 만들 수 있어요!");
+      var ok=$("mOk"); ok.textContent="🔑 로그인";
+      ok.onclick=function(){ doLoginPrompt(); };
+      var kk=document.createElement("button"); kk.className=ok.className; kk.textContent="💬 카카오톡 열기";
+      kk.style.cssText="margin-top:8px;background:#5a5a72";
+      ok.parentNode.insertBefore(kk, ok.nextSibling);
+      kk.onclick=function(){ location.href="kakaotalk://launch"; };
+      return;
+    }
+    // 봇 링크로 접속: 본인 확인 → 폰에 기억 + 비밀번호 만들기 유도
+    modal("👤 본인 확인", "당신이 ["+NAME+"] 님 본인인가요? [네]를 누르면 이 폰이 "+NAME+"님 계정을 기억합니다.");
+    var ok2=$("mOk"); ok2.textContent="네, 제 계정입니다";
+    var no=document.createElement("button"); no.className=ok2.className; no.textContent="아니요 (로그인할게요)";
     no.style.cssText="margin-top:8px;background:#5a5a72";
-    ok.parentNode.insertBefore(no, ok.nextSibling);
-    ok.onclick=function(){
+    ok2.parentNode.insertBefore(no, ok2.nextSibling);
+    ok2.onclick=function(){
       localStorage.setItem("pkc_id", JSON.stringify({name:NAME,sig:SIG,ph:PH,token:TOKEN}));
-      no.remove(); ok.textContent="확인"; $("modal").classList.remove("on");
-      bootMain();
+      no.remove(); ok2.textContent="확인"; $("modal").classList.remove("on");
+      bootMain(); askPinSetup();
     };
     no.onclick=function(){
-      no.remove(); $("modal").classList.remove("on");
-      modal("🔗 내 링크로 접속하세요", "카카오톡 채팅방에 [게임시작] 이라고 치면 내 전용 링크가 나와요. 폰마다 딱 한 번만 하면, 그 뒤로는 어떤 링크를 눌러도 항상 내 계정으로 들어옵니다!");
-      ok.textContent="💬 카카오톡 열기";
-      ok.onclick=function(){ location.href="kakaotalk://launch"; };
+      no.remove(); ok2.textContent="확인"; $("modal").classList.remove("on");
+      doLoginPrompt();
     };
   }
   function bootMain(){

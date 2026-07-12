@@ -599,10 +599,16 @@ function validSig(name, ph, sig) {
   if (!sig) return false;
   return crypto.createHash("sha256").update(name + "|" + ph + "|" + LINK_SECRET, "utf8").digest("hex") === String(sig).toLowerCase();
 }
-function checkDev(name, key, sig, ph) {
-  // 링크 닉네임 = 계정. 단, 서명(봇 발급) + 동일닉네임 사칭 차단
+function pinHash(name, pin) {
+  return crypto.createHash("sha256").update(pin + "|" + name, "utf8").digest("hex");
+}
+function makeSes() { return crypto.randomBytes(16).toString("hex"); }
+
+function checkDev(name, key, sig, ph, ses) {
   if (!name) return false;
-  if (!validSig(name, ph || "", sig)) return false; // 봇이 만든 링크만 유효
+  const ex = db.players[name];
+  if (ex && ex.ses && ses && ses === ex.ses) return true; // 로그인 세션
+  if (!validSig(name, ph || "", sig)) return false; // 아니면 봇이 만든 링크만 유효
   if (!db.players[name]) db.players[name] = {};
   const p = db.players[name];
   if (ph) {
@@ -651,7 +657,7 @@ app.get("/api/profile", async (req, res) => {
   if (!checkToken(req, res)) return;
   const name = String(req.query.name || "").trim();
   if (!name) return res.json({ ok: false, error: "이름 없음" });
-  if (!checkDev(name, String(req.query.key || ""), String(req.query.sig || ""), String(req.query.ph || ""))) return res.json({ ok: false, error: "locked", message: LOCK_MSG, yours: findNameByKey(String(req.query.key || (req.body&&req.body.key) || "")) });
+  if (!checkDev(name, String(req.query.key || ""), String(req.query.sig || ""), String(req.query.ph || ""), String(req.query.ses || ""))) return res.json({ ok: false, error: "locked", message: LOCK_MSG, yours: findNameByKey(String(req.query.key || (req.body&&req.body.key) || "")) });
   let profile = { ok: true, registered: false, nft: 0, point: 0, wallet: "" };
   const raw = await callBackend("profile", name, "");
   if (raw) { try { profile = JSON.parse(raw); } catch (e) { /* 구버전 배포면 기본값 유지 */ } }
@@ -671,14 +677,14 @@ app.get("/api/profile", async (req, res) => {
 app.get("/api/idle/load", (req, res) => {
   if (!checkToken(req, res)) return;
   const name = String(req.query.name || "").trim();
-  if (!checkDev(name, String(req.query.key || ""), String(req.query.sig || ""), String(req.query.ph || ""))) return res.json({ ok: false, error: "locked", message: LOCK_MSG, yours: findNameByKey(String(req.query.key || (req.body&&req.body.key) || "")) });
+  if (!checkDev(name, String(req.query.key || ""), String(req.query.sig || ""), String(req.query.ph || ""), String(req.query.ses || ""))) return res.json({ ok: false, error: "locked", message: LOCK_MSG, yours: findNameByKey(String(req.query.key || (req.body&&req.body.key) || "")) });
   res.json({ ok: true, save: db.players[name] || null, tower: db.tower });
 });
 
 app.post("/api/idle/save", (req, res) => {
   if (!checkToken(req, res)) return;
   const name = String((req.body.name || "")).trim();
-  if (!checkDev(name, String((req.body.key || "")), String((req.body.sig || "")), String((req.body.ph || "")))) return res.json({ ok: false, error: "locked", message: LOCK_MSG, yours: findNameByKey(String(req.query.key || (req.body&&req.body.key) || "")) });
+  if (!checkDev(name, String((req.body.key || "")), String((req.body.sig || "")), String((req.body.ph || "")), String((req.body.ses || "")))) return res.json({ ok: false, error: "locked", message: LOCK_MSG, yours: findNameByKey(String(req.query.key || (req.body&&req.body.key) || "")) });
   const save = req.body.save;
   if (!name || typeof save !== "object") return res.json({ ok: false });
   const prev = db.players[name] || {};
@@ -691,7 +697,7 @@ app.post("/api/idle/save", (req, res) => {
 app.post("/api/idle/stage", async (req, res) => {
   if (!checkToken(req, res)) return;
   const name = String((req.body.name || "")).trim();
-  if (!checkDev(name, String((req.body.key || "")), String((req.body.sig || "")), String((req.body.ph || "")))) return res.json({ ok: false, error: "locked", message: LOCK_MSG, yours: findNameByKey(String(req.query.key || (req.body&&req.body.key) || "")) });
+  if (!checkDev(name, String((req.body.key || "")), String((req.body.sig || "")), String((req.body.ph || "")), String((req.body.ses || "")))) return res.json({ ok: false, error: "locked", message: LOCK_MSG, yours: findNameByKey(String(req.query.key || (req.body&&req.body.key) || "")) });
   const p = db.players[name];
   if (!p) return res.json({ ok: false, error: "세이브 없음" });
   let granted = 0;
@@ -714,7 +720,7 @@ app.post("/api/idle/stage", async (req, res) => {
 app.post("/api/idle/collect", async (req, res) => {
   if (!checkToken(req, res)) return;
   const name = String((req.body.name || "")).trim();
-  if (!checkDev(name, String((req.body.key || "")), String((req.body.sig || "")), String((req.body.ph || "")))) return res.json({ ok: false, error: "locked", message: LOCK_MSG, yours: findNameByKey(String(req.query.key || (req.body&&req.body.key) || "")) });
+  if (!checkDev(name, String((req.body.key || "")), String((req.body.sig || "")), String((req.body.ph || "")), String((req.body.ses || "")))) return res.json({ ok: false, error: "locked", message: LOCK_MSG, yours: findNameByKey(String(req.query.key || (req.body&&req.body.key) || "")) });
   const p = db.players[name];
   if (!p) return res.json({ ok: false, error: "세이브 없음" });
   const today = todayStr();
@@ -843,7 +849,7 @@ const AD_DAILY_CAP = 1; // 트윗 참여 보너스: 하루 1회
 app.post("/api/ad/watch", (req, res) => {
   if (!checkToken(req, res)) return;
   const name = String((req.body.name || "")).trim();
-  if (!checkDev(name, String((req.body.key || "")), String((req.body.sig || "")), String((req.body.ph || "")))) return res.json({ ok: false, error: "locked", message: LOCK_MSG, yours: findNameByKey(String(req.query.key || (req.body&&req.body.key) || "")) });
+  if (!checkDev(name, String((req.body.key || "")), String((req.body.sig || "")), String((req.body.ph || "")), String((req.body.ses || "")))) return res.json({ ok: false, error: "locked", message: LOCK_MSG, yours: findNameByKey(String(req.query.key || (req.body&&req.body.key) || "")) });
   const type = req.body.type === "yt" ? "yt" : "x"; // x(트위터) / yt(유튜브) 각각 하루 1회
   if (!name) return res.json({ ok: false });
   if (!db.players[name]) db.players[name] = {};
@@ -857,6 +863,33 @@ app.post("/api/ad/watch", (req, res) => {
   res.json({ ok: true });
 });
 
+// 로그인 (닉네임+비밀번호 → 세션)
+app.post("/api/login", (req, res) => {
+  const name = String((req.body && req.body.name) || "").trim();
+  const pin = String((req.body && req.body.pin) || "");
+  const p = db.players[name];
+  if (!p || !p.pinHash) return res.json({ ok: false, error: "nopin", message: "비밀번호가 아직 없어요. 카카오톡에서 [게임시작] 링크로 접속해 먼저 비밀번호를 만들어주세요!" });
+  if (pinHash(name, pin) !== p.pinHash) return res.json({ ok: false, error: "badpin", message: "닉네임 또는 비밀번호가 달라요." });
+  p.ses = makeSes(); markDirty();
+  res.json({ ok: true, ses: p.ses, name });
+});
+
+// 비밀번호 설정/변경 (봇 서명 링크 또는 기존 세션으로만 가능)
+app.post("/api/pin/set", (req, res) => {
+  const b = req.body || {};
+  const name = String(b.name || "").trim();
+  const pin = String(b.pin || "");
+  if (!name || pin.length < 4) return res.json({ ok: false, message: "비밀번호는 4자 이상이어야 해요." });
+  const p = db.players[name] || (db.players[name] = {});
+  const authed = (p.ses && b.ses && b.ses === p.ses) || validSig(name, String(b.ph || ""), String(b.sig || ""));
+  if (!authed) return res.status(403).json({ ok: false, message: "본인 링크로 접속해야 비밀번호를 만들 수 있어요." });
+  const ph = String(b.ph || "");
+  if (ph) { if (!p.ph) p.ph = ph; else if (p.ph !== ph) return res.status(403).json({ ok: false, message: "사칭 의심 — 관리자에게 문의하세요." }); }
+  p.pinHash = pinHash(name, pin);
+  p.ses = makeSes(); markDirty();
+  res.json({ ok: true, ses: p.ses });
+});
+
 // 관리자: 기기 잠금 해제 (LINK_SECRET 필요 — 링크에 노출되지 않는 비밀)
 app.get("/api/admin/unbind", (req, res) => {
   if (!LINK_SECRET || String(req.query.secret || "") !== LINK_SECRET) return res.status(403).json({ ok: false });
@@ -867,7 +900,12 @@ app.get("/api/admin/unbind", (req, res) => {
     markDirty();
     return res.json({ ok: true, cleared: n });
   }
-  if (db.players[name] && db.players[name].devKey) { delete db.players[name].devKey; markDirty(); return res.json({ ok: true, cleared: 1 }); }
+  const t = db.players[name];
+  if (t) {
+    delete t.devKey;
+    if (String(req.query.pin || "") === "1") { delete t.pinHash; delete t.ses; delete t.ph; }
+    markDirty(); return res.json({ ok: true, cleared: 1 });
+  }
   res.json({ ok: true, cleared: 0 });
 });
 
@@ -881,7 +919,7 @@ app.get("/api/whoami", (req, res) => {
 app.post("/api/wallet/apply", async (req, res) => {
   if (!checkToken(req, res)) return;
   const name = String((req.body.name || "")).trim();
-  if (!checkDev(name, String((req.body.key || "")), String((req.body.sig || "")), String((req.body.ph || "")))) return res.json({ ok: false, error: "locked", message: LOCK_MSG, yours: findNameByKey(String(req.query.key || (req.body&&req.body.key) || "")) });
+  if (!checkDev(name, String((req.body.key || "")), String((req.body.sig || "")), String((req.body.ph || "")), String((req.body.ses || "")))) return res.json({ ok: false, error: "locked", message: LOCK_MSG, yours: findNameByKey(String(req.query.key || (req.body&&req.body.key) || "")) });
   const wallet = String((req.body.wallet || "")).trim();
   if (!name || !wallet) return res.json({ ok: false, message: "입력값 부족" });
   const raw = await callBackend("wallet_apply", name, wallet);
@@ -909,7 +947,7 @@ io.on("connection", (socket) => {
       const wantBuffs = (payload && Array.isArray(payload.buffs)) ? payload.buffs : [];
       const roomIdReq = payload && payload.roomId;
       if (!name) { socket.emit("joinError", "이름 정보가 없어요."); return; }
-      if (!checkDev(name, String((payload && payload.key) || ""), String((payload && payload.sig) || ""), String((payload && payload.ph) || ""))) { socket.emit("joinError", LOCK_MSG); return; }
+      if (!checkDev(name, String((payload && payload.key) || ""), String((payload && payload.sig) || ""), String((payload && payload.ph) || ""), String((payload && payload.ses) || ""))) { socket.emit("joinError", LOCK_MSG); return; }
 
       // 콩달러 입장료 (재산 비례 — 인플레 대응)
       const mySave = db.players[name] || {};

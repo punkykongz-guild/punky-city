@@ -1,7 +1,8 @@
 (function () {
   var qs = new URLSearchParams(location.search);
   var savedId=null; try{ savedId=JSON.parse(localStorage.getItem("pkc_id")||"null"); }catch(e){}
-var nameFromUrl = (savedId&&savedId.name) || qs.get("name") || "";
+var loginId=null; try{ loginId=JSON.parse(localStorage.getItem("pkc_login")||"null"); }catch(e){}
+var nameFromUrl = (loginId&&loginId.name) || (savedId&&savedId.name) || qs.get("name") || "";
 
   var lobby = document.getElementById("lobby");
   var gameWrap = document.getElementById("gameWrap");
@@ -133,7 +134,7 @@ var nameFromUrl = (savedId&&savedId.name) || qs.get("name") || "";
     });
 
     var devKey=localStorage.getItem("pkc_key")||"";
-    socket.emit("join", { name: name, buffs: wantedBuffs(), roomId: selectedRoomId, key: devKey, sig: (savedId&&savedId.sig)||qs.get("sig")||"", ph: (savedId&&savedId.ph)||qs.get("ph")||"" });
+    socket.emit("join", { name: name, buffs: wantedBuffs(), roomId: selectedRoomId, key: devKey, sig: (savedId&&savedId.sig)||qs.get("sig")||"", ph: (savedId&&savedId.ph)||qs.get("ph")||"", ses: (loginId&&loginId.ses)||"" });
   }
 
   function doLeave() {
