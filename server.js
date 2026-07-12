@@ -840,6 +840,12 @@ app.post("/api/ad/watch", (req, res) => {
   res.json({ ok: true });
 });
 
+// 이 기기의 주인 계정 조회 (링크 무시하고 내 계정으로 입장)
+app.get("/api/whoami", (req, res) => {
+  if (!checkToken(req, res)) return;
+  res.json({ ok: true, name: findNameByKey(String(req.query.key || "")) });
+});
+
 // 게임 내 지갑 신청 → 백엔드로 전달
 app.post("/api/wallet/apply", async (req, res) => {
   if (!checkToken(req, res)) return;

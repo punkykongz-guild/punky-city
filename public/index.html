@@ -1363,7 +1363,7 @@
     var NL=String.fromCharCode(10);
     var txt="🦍 펑키시티에서 Lv."+S.stage+" ["+STAGES[S.stage].nm+"] 달성!"+NL+
             "💰 총자산 ₭"+fmt(S.money)+" · 동료 콩즈 "+profile.nft+"마리"+NL+
-            "너도 키워봐 👉 "+location.origin;
+            "너도 키워봐 👉 "+location.origin+"/?token="+encodeURIComponent(TOKEN);
     if(navigator.share){
       navigator.share({text:txt}).catch(function(){});
     } else if(navigator.clipboard){
@@ -1372,6 +1372,17 @@
   });
 
   function boot(){
+    // 기기 주인 확인: 어떤 링크로 들어와도 내 계정으로 입장
+    fetch(API("/api/whoami")).then(function(r){return r.json();}).catch(function(){return {};})
+      .then(function(w){
+        if(w&&w.name&&w.name!==NAME){
+          NAME=w.name;
+          toast("🦍 "+NAME+"님 계정으로 접속했어요");
+        }
+        bootMain();
+      });
+  }
+  function bootMain(){
     if(!NAME){
       modal("👋 어서오세요","카톡에서 [게임시작]을 눌러 들어오면 내 콩즈와 포인트가 연결됩니다.\n지금은 구경 모드로 시작!");
       S=newSave(); $("nameTag").textContent="무명 콩즈 🦍"; renderBizInit(); render(); return;
