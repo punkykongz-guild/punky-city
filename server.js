@@ -730,22 +730,29 @@ async function generateAvatar(id, stage) {
     const b64 = Buffer.from(await imgRes.arrayBuffer()).toString("base64");
 
     const prompt =
-      `Transform this exact gorilla NFT character into ${STAGE_OUTFITS[stage]}. ` +
-      "Keep the same gorilla's face, fur color, expression style and identity clearly recognizable. " +
-      "Same premium 3D cartoon render style, bust portrait, centered, vivid solid color background " +
-      "matching the mood, square composition, no text, no watermark.";
+      `Take the gorilla character from the first image and place him naturally INTO the scene of the second image, ` +
+      `dressed and acting as ${STAGE_OUTFITS[stage]}. ` +
+      "Keep the gorilla's face, fur color and identity clearly recognizable. " +
+      "Full-body or three-quarter view, positioned center-bottom, interacting with the environment naturally, " +
+      "matching the scene's lighting, perspective and art style. Keep the background composition. " +
+      "Wide 3:2 landscape, no text, no watermark.";
 
+    const parts = [{ text: prompt }, { inline_data: { mime_type: "image/jpeg", data: b64 } }];
+    const bgPath = path.join(__dirname, "public", "assets", "bg", `stage${stage}.webp`);
+    if (fs.existsSync(bgPath)) {
+      parts.push({ inline_data: { mime_type: "image/webp", data: fs.readFileSync(bgPath).toString("base64") } });
+    }
     const body = {
-      contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: "image/jpeg", data: b64 } }] }],
-      generationConfig: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: "1:1" } },
+      contents: [{ parts }],
+      generationConfig: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: "3:2" } },
     };
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GEMINI_API_KEY}`,
       { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
     );
     const json = await res.json();
-    const parts = (((json.candidates || [])[0] || {}).content || {}).parts || [];
-    for (const p of parts) {
+    const outParts = (((json.candidates || [])[0] || {}).content || {}).parts || [];
+    for (const p of outParts) {
       if (p.inlineData && p.inlineData.data) {
         fs.writeFileSync(avatarFile(id, stage), Buffer.from(p.inlineData.data, "base64"));
         console.log(`AI 아바타 생성: 콩즈#${id} 등급${stage} (오늘 ${avatarGen.n}/${AVATAR_DAILY_CAP})`);
