@@ -300,6 +300,24 @@ var nameFromUrl = (loginId&&loginId.name) || (savedId&&savedId.name) || qs.get("
         " | 버프: " + (buffs.join(",") || "없음") + (fxTxt ? " |" + fxTxt : "");
     }
 
+    // 미니맵 (우측 하단, 반투명 — 전체 맵 + 내 위치)
+    var MM = 108, mmPad = 12;
+    var mmX = w - MM - mmPad, mmY = h - MM - mmPad;
+    ctx.fillStyle = "rgba(10,15,25,0.25)";
+    ctx.fillRect(mmX, mmY, MM, MM);
+    ctx.strokeStyle = "rgba(229,72,77,0.45)"; // 벽 색과 통일
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(mmX, mmY, MM, MM);
+    var mmS = MM / latestState.worldSize;
+    latestState.snakes.forEach(function (s) {
+      if (!s.alive) return;
+      var px = mmX + s.x * mmS, py = mmY + s.y * mmS;
+      ctx.beginPath();
+      if (s.id === myId) { ctx.arc(px, py, 3, 0, Math.PI * 2); ctx.fillStyle = "#ffd54a"; }
+      else { ctx.arc(px, py, 1.6, 0, Math.PI * 2); ctx.fillStyle = "rgba(255,255,255,0.35)"; }
+      ctx.fill();
+    });
+
     // 반투명 조이스틱 오버레이
     if (joy.active && ctrlMode === "joy") {
       var jdx = joy.cx - joy.ox, jdy = joy.cy - joy.oy;

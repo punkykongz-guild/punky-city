@@ -24,14 +24,14 @@
   #hud { position:absolute; top:10px; left:10px; background:rgba(10,15,25,.6); padding:8px 12px; border-radius:8px; font-size:13px; }
   #leaveBtn { position:absolute; top:10px; right:10px; background:#442; background:#8a2a2a; border:none; color:#fff; padding:8px 12px; border-radius:8px; cursor:pointer; }
   /* 반투명 순위판 — 게임 조작 방해 없음 (클릭 통과) */
-  #board { position:absolute; top:10px; left:50%; transform:translateX(-50%);
-    background:rgba(10,15,25,.38); border:1px solid rgba(255,255,255,.10);
-    border-radius:10px; padding:7px 14px; font-size:12px; line-height:1.55;
-    pointer-events:none; min-width:170px; backdrop-filter:blur(2px); }
+  #board { position:absolute; top:52px; right:10px;
+    background:rgba(10,15,25,.22); border:1px solid rgba(255,255,255,.07);
+    border-radius:10px; padding:6px 12px; font-size:11px; line-height:1.5;
+    pointer-events:none; min-width:145px; backdrop-filter:blur(2px); }
   #board .bTitle { font-size:10.5px; color:rgba(255,255,255,.55); letter-spacing:1px; text-align:center; margin-bottom:2px; }
   #board .row { display:flex; justify-content:space-between; gap:12px; color:rgba(255,255,255,.75); white-space:nowrap; }
   #board .row.me { color:#ffd54a; font-weight:bold; }
-  #board .row .nm { overflow:hidden; text-overflow:ellipsis; max-width:120px; }
+  #board .row .nm { overflow:hidden; text-overflow:ellipsis; max-width:100px; }
 
   #deathOverlay { display:none; position:absolute; inset:0; background:rgba(5,8,15,.85); align-items:center; justify-content:center; flex-direction:column; }
   #deathOverlay .box { background:#161d2e; padding:24px 32px; border-radius:12px; text-align:center; }
