@@ -607,14 +607,15 @@
     var boost = 1 + Math.floor(lv/25)*1.5; // 25레벨마다 보너스
     return base*lv*boost;
   }
+  var tapX2Until=0, incomeX2Until=0; // 행인 이벤트 버프
   function totalMult(){
     return (1 + profile.nft*0.005) * (1 + S.souls*0.1); // 동료 콩즈 1마리당 +0.5%
   }
   function perSec(){
     var s=0; for(var i=0;i<BIZ.length;i++) s+=bizIncome(i);
-    return s*totalMult();
+    return s*totalMult()*(Date.now()<incomeX2Until?2:1);
   }
-  function perTap(){ return Math.max(1, perSec()*0.06); } // 탭은 보조 수단 (방치 중심 밸런스)
+  function perTap(){ return (Math.max(1, perSec()*0.06))*(Date.now()<tapX2Until?2:1); } // 탭은 보조 수단 (방치 중심 밸런스)
   function bizCost(i){ return BIZ[i].cost*Math.pow(COST_MULT, S.levels[i]); }
   function calcStage(){
     var st=1;
@@ -811,11 +812,15 @@
   function spawnWalker(){
     if(!S||document.hidden) return;
     var tz=$("tapZone");
-    var isRich=Math.random()<0.1; // 10% 확률 부자 등장
+    var roll=Math.random();
+    var isRich=roll<0.08; // 8% 부자
+    var special=!isRich&&roll<0.22 ? ["🍀","🎁","⚡"][Math.floor(Math.random()*3)] : null; // 14% 이벤트 행인
     var w=document.createElement("span");
     var dur=isRich?7:(9+Math.random()*5);
     w.className="walker"+(isRich?" rich":"");
-    var WS=walkersForStage(S.stage); w.textContent=isRich?"🤵":WS[Math.floor(Math.random()*WS.length)];
+    var WS=walkersForStage(S.stage);
+    w.textContent=isRich?"🤵":(special||WS[Math.floor(Math.random()*WS.length)]);
+    if(special){ w.classList.add("rich"); }
     w.style.animation="walk"+(Math.random()<0.5?"L":"R")+" "+dur+"s linear forwards";
     tz.appendChild(w);
     if(isRich){
@@ -827,6 +832,17 @@
         var b=$("bubble"); b.textContent="부자: 이 구역 기운이 좋군! +₭"+fmt(bonus)+" 💰";
         b.style.opacity=1; clearTimeout(bubbleTimer);
         bubbleTimer=setTimeout(function(){b.style.opacity=0;},1500);
+        renderFast();
+      };
+    } else if(special){
+      w.onclick=function(ev){
+        ev.stopPropagation(); w.remove();
+        var b=$("bubble"); var msg;
+        if(special==="🍀"){ tapX2Until=Date.now()+10000; msg="🍀 행운! 10초간 탭 수입 2배!"; }
+        else if(special==="⚡"){ incomeX2Until=Date.now()+15000; msg="⚡ 번개! 15초간 모든 수입 2배!"; }
+        else { var g=Math.max(perTap()*10, perSec()*20); S.money+=g; S.lifetime+=g; msg="🎁 선물! +₭"+fmt(g); }
+        b.textContent=msg; b.style.opacity=1;
+        clearTimeout(bubbleTimer); bubbleTimer=setTimeout(function(){b.style.opacity=0;},1500);
         renderFast();
       };
     } else {
