@@ -1376,11 +1376,21 @@
     // 기기 주인 확인: 어떤 링크로 들어와도 내 계정으로 입장
     fetch(API("/api/whoami")).then(function(r){return r.json();}).catch(function(){return {};})
       .then(function(w){
-        if(w&&w.name&&w.name!==NAME){
-          NAME=w.name;
-          toast("🦍 "+NAME+"님 계정으로 접속했어요");
+        if(w&&w.name){
+          if(w.name!==NAME){ NAME=w.name; toast("🦍 "+NAME+"님 계정으로 접속했어요"); }
+          bootMain();
+        } else if(NAME){
+          // 이 기기 첫 등록: 본인 확인 (남의 링크 실수 클릭 → 선점 방지)
+          modal("👤 본인 확인", "당신이 ["+NAME+"] 님 본인이 맞나요? 이 기기가 이 계정의 주인으로 등록됩니다. 아니라면 카카오톡에서 [게임시작]을 입력해 내 링크로 접속하세요!");
+          $("mOk").textContent="네, 제 계정입니다";
+          $("mOk").onclick=function(){
+            $("modal").classList.remove("on");
+            $("mOk").textContent="확인";
+            bootMain();
+          };
+        } else {
+          bootMain();
         }
-        bootMain();
       });
   }
   function bootMain(){
