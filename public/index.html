@@ -364,7 +364,7 @@
     </div>
     <div class="card">
       <h3>✨ 환생 — 펑키소울</h3>
-      <p class="muted" id="soulInfo">펑키킹(24등급) 도달 시 환생 가능. 모든 재산을 잃지만 영구 수입 배수를 얻는다.</p>
+      <p class="muted" id="soulInfo">펑키킹(30등급) 도달 시 환생 가능. 모든 재산을 잃지만 영구 수입 배수를 얻는다.</p>
       <button class="bigBtn purple" id="prestigeBtn" disabled>환생하기</button>
     </div>
     <div class="card">
@@ -1503,7 +1503,7 @@
         return;
       }
       var loaded=res[1]&&res[1].save;
-      S=loaded||newSave();
+      S=(loaded&&Array.isArray(loaded.levels))?loaded:newSave(); // 게임 데이터 없는 껍데기 세이브 방어
       if(S.levels.length<BIZ.length){ while(S.levels.length<BIZ.length)S.levels.push(0); }
       applyProfile(res[0]||profile); // S 세팅 후에 아바타 적용 (avatarId 참조)
       // 오프라인 보상 (최대 8시간)
@@ -1516,6 +1516,10 @@
         }
       }
       renderBizInit(); render();
+    }).catch(function(e){
+      // 부팅 중 예외가 나도 화면이 죽지 않게
+      S=S||newSave(); applyProfile(profile); renderBizInit(); render();
+      toast("일부 데이터를 못 불러왔어요 — 새로고침 해보세요");
     });
   }
   boot();
