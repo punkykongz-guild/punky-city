@@ -850,6 +850,20 @@ app.post("/api/ad/watch", (req, res) => {
   res.json({ ok: true });
 });
 
+// 관리자: 기기 잠금 해제 (LINK_SECRET 필요 — 링크에 노출되지 않는 비밀)
+app.get("/api/admin/unbind", (req, res) => {
+  if (!LINK_SECRET || String(req.query.secret || "") !== LINK_SECRET) return res.status(403).json({ ok: false });
+  const name = String(req.query.name || "").trim();
+  if (name === "ALL") {
+    let n = 0;
+    for (const p of Object.values(db.players || {})) { if (p && p.devKey) { delete p.devKey; n++; } }
+    markDirty();
+    return res.json({ ok: true, cleared: n });
+  }
+  if (db.players[name] && db.players[name].devKey) { delete db.players[name].devKey; markDirty(); return res.json({ ok: true, cleared: 1 }); }
+  res.json({ ok: true, cleared: 0 });
+});
+
 // 이 기기의 주인 계정 조회 (링크 무시하고 내 계정으로 입장)
 app.get("/api/whoami", (req, res) => {
   if (!checkToken(req, res)) return;
