@@ -1489,6 +1489,12 @@
       fetch(API("/api/idle/load")+"&name="+encodeURIComponent(NAME)).then(function(r){return r.json();}).catch(function(){return {};})
     ]).then(function(res){
       if((res[0]&&res[0].error==="locked")||(res[1]&&res[1].error==="locked")){
+        if(LOGIN){ // 세션 만료: 저장된 로그인 지우고 로그인 화면으로
+          localStorage.removeItem("pkc_login");
+          modal("🔐 세션 만료","보안을 위해 다시 로그인해주세요!");
+          $("mOk").onclick=function(){ location.href=location.pathname; };
+          return;
+        }
         var yours=(res[0]&&res[0].yours)||(res[1]&&res[1].yours);
         if(yours){
           // 이 기기의 주인 계정으로 자동 우회

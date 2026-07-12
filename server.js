@@ -634,10 +634,24 @@ function pinHash(name, pin) {
 }
 function makeSes() { return crypto.randomBytes(16).toString("hex"); }
 
+function validSes(p, ses) {
+  if (!p || !ses) return false;
+  if (p.ses && ses === p.ses) return true; // 구버전 단일 세션 호환
+  return Array.isArray(p.sess) && p.sess.indexOf(ses) >= 0;
+}
+function pushSes(p) {
+  const ses = makeSes();
+  if (!Array.isArray(p.sess)) p.sess = p.ses ? [p.ses] : [];
+  p.sess.push(ses);
+  if (p.sess.length > 5) p.sess = p.sess.slice(-5); // 기기 5대까지 동시 로그인
+  delete p.ses;
+  markDirty();
+  return ses;
+}
+
 function checkDev(name, key, sig, ph, ses) {
   if (!name) return false;
-  const ex = db.players[name];
-  if (ex && ex.ses && ses && ses === ex.ses) return true; // 로그인 세션
+  if (validSes(db.players[name], ses)) return true; // 로그인 세션
   if (!validSig(name, ph || "", sig)) return false; // 아니면 봇이 만든 링크만 유효
   if (!db.players[name]) db.players[name] = {};
   const p = db.players[name];
@@ -913,8 +927,8 @@ app.post("/api/linklogin", (req, res) => {
   if (!name || !validSig(name, ph, String(b.sig || ""))) return res.status(403).json({ ok: false, message: "링크가 유효하지 않아요. 카톡에서 [게임시작]으로 새 링크를 받아주세요." });
   const p = db.players[name] || (db.players[name] = {});
   if (ph) { if (!p.ph) p.ph = ph; else if (p.ph !== ph) return res.json({ ok: false, message: "동일 닉네임 사칭이 의심돼요. 관리자에게 문의하세요." }); }
-  p.ses = makeSes(); markDirty();
-  res.json({ ok: true, ses: p.ses, name, token: BOT_TOKEN, needPin: !p.pinHash });
+  const ses = pushSes(p);
+  res.json({ ok: true, ses, name, token: BOT_TOKEN, needPin: !p.pinHash });
 });
 
 // 로그인 (닉네임+비밀번호 → 세션)
@@ -924,8 +938,8 @@ app.post("/api/login", (req, res) => {
   const p = db.players[name];
   if (!p || !p.pinHash) return res.json({ ok: false, error: "nopin", message: "비밀번호가 아직 없어요. 카카오톡에서 [게임시작] 링크로 접속해 먼저 비밀번호를 만들어주세요!" });
   if (pinHash(name, pin) !== p.pinHash) return res.json({ ok: false, error: "badpin", message: "닉네임 또는 비밀번호가 달라요." });
-  p.ses = makeSes(); markDirty();
-  res.json({ ok: true, ses: p.ses, name, token: BOT_TOKEN });
+  const ses = pushSes(p);
+  res.json({ ok: true, ses, name, token: BOT_TOKEN });
 });
 
 // 비밀번호 설정/변경 (봇 서명 링크 또는 기존 세션으로만 가능)
@@ -935,13 +949,14 @@ app.post("/api/pin/set", (req, res) => {
   const pin = String(b.pin || "");
   if (!name || pin.length < 4) return res.json({ ok: false, message: "비밀번호는 4자 이상이어야 해요." });
   const p = db.players[name] || (db.players[name] = {});
-  const authed = (p.ses && b.ses && b.ses === p.ses) || validSig(name, String(b.ph || ""), String(b.sig || ""));
+  const authed = validSes(p, String(b.ses || "")) || validSig(name, String(b.ph || ""), String(b.sig || ""));
   if (!authed) return res.status(403).json({ ok: false, message: "본인 링크로 접속해야 비밀번호를 만들 수 있어요." });
   const ph = String(b.ph || "");
   if (ph) { if (!p.ph) p.ph = ph; else if (p.ph !== ph) return res.status(403).json({ ok: false, message: "사칭 의심 — 관리자에게 문의하세요." }); }
   p.pinHash = pinHash(name, pin);
-  p.ses = makeSes(); markDirty();
-  res.json({ ok: true, ses: p.ses });
+  p.sess = []; // 비밀번호 변경 = 모든 기기 로그아웃
+  const ses = pushSes(p);
+  res.json({ ok: true, ses });
 });
 
 // 관리자: 기기 잠금 해제 (LINK_SECRET 필요 — 링크에 노출되지 않는 비밀)
@@ -954,7 +969,7 @@ app.get("/api/admin/unbind", (req, res) => {
     for (const p of Object.values(db.players || {})) {
       if (!p) continue;
       if (p.devKey) { delete p.devKey; n++; }
-      if (wipePin) { delete p.pinHash; delete p.ses; delete p.ph; }
+      if (wipePin) { delete p.pinHash; delete p.ses; delete p.sess; delete p.ph; }
     }
     markDirty();
     return res.json({ ok: true, cleared: n });
@@ -962,7 +977,7 @@ app.get("/api/admin/unbind", (req, res) => {
   const t = db.players[name];
   if (t) {
     delete t.devKey;
-    if (String(req.query.pin || "") === "1") { delete t.pinHash; delete t.ses; delete t.ph; }
+    if (String(req.query.pin || "") === "1") { delete t.pinHash; delete t.ses; delete t.sess; delete t.ph; }
     markDirty(); return res.json({ ok: true, cleared: 1 });
   }
   res.json({ ok: true, cleared: 0 });

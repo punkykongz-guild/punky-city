@@ -68,7 +68,7 @@ var nameFromUrl = (loginId&&loginId.name) || (savedId&&savedId.name) || qs.get("
       + "&sig=" + encodeURIComponent((savedId&&savedId.sig)||qs.get("sig")||"")
       + "&ph=" + encodeURIComponent((savedId&&savedId.ph)||qs.get("ph")||"");
     fetch("/api/bank?" + q).then(function(r){ return r.json(); }).then(function(b){
-      if (!b.ok) { box.textContent = "💰 저축: 확인 실패"; return; }
+      if (!b.ok) { box.textContent = "💰 저축: 로그인이 만료됐어요 — 펑키시티로 가서 다시 로그인!"; return; }
       box.innerHTML = "💰 <b>내 저축</b>: " + b.p.toLocaleString() + "P · ₭" + b.k.toLocaleString() + " <span style='color:#9aa4b8;font-size:11px'>(누르면 이력)</span>";
       var hist = document.getElementById("bankHist");
       if (!b.hist.length) hist.innerHTML = "아직 저축 이력이 없어요. 정상 퇴장(10%)이나 사망 잔해 회수로 쌓입니다!";
