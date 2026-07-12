@@ -773,6 +773,7 @@ if (!fs.existsSync(AVATAR_DIR)) fs.mkdirSync(AVATAR_DIR, { recursive: true });
 const AVATAR_DAILY_CAP = 30; // 하루 생성 상한 (무료 티어 보호)
 let avatarGen = { date: todayStr(), n: 0 };
 const avatarPending = new Set();
+let lastAvatarErr = ""; // 디버그용 마지막 실패 사유
 
 // 등급별 의상/분위기 (콩즈 정체성은 유지, 차림새만 변신)
 const STAGE_OUTFITS = [null,
@@ -854,13 +855,24 @@ async function generateAvatar(id, stage, srcImg) {
         return;
       }
     }
+    lastAvatarErr = "no-image: " + JSON.stringify(json).slice(0, 300);
     console.warn("아바타 생성 응답에 이미지 없음:", JSON.stringify(json).slice(0, 200));
   } catch (e) {
+    lastAvatarErr = "exception: " + e.message;
     console.warn("아바타 생성 실패:", e.message);
   } finally {
     avatarPending.delete(key);
   }
 }
+
+// 아바타 생성 상태 디버그 (관리자 전용)
+app.get("/api/avatar-debug", (req, res) => {
+  if (!LINK_SECRET || String(req.query.secret || "") !== LINK_SECRET) return res.status(403).json({ ok: false });
+  let genDir = [];
+  try { genDir = fs.readdirSync(path.join(__dirname, "public", "gen")); } catch (e) { genDir = ["(폴더 없음: " + e.message + ")"]; }
+  res.json({ ok: true, date: avatarGen.date, n: avatarGen.n, cap: AVATAR_DAILY_CAP,
+    pending: Array.from(avatarPending), lastErr: lastAvatarErr, hasKey: !!GEMINI_API_KEY, files: genDir.slice(0, 20) });
+});
 
 // 아바타 변신 이미지 조회 (없으면 백그라운드 생성 시작)
 app.get("/api/avatar-url", (req, res) => {
