@@ -800,7 +800,14 @@
   },100);
 
   // ===== 행인 NPC (지나가다 동전 던져줌, 가끔 부자 등장) =====
-  var WALKERS=["🚶","🚶‍♀️","🏃","🧓","👩‍💼","🕺","🐕","👷"];
+  // 등급별 어울리는 행인 (1~6 골목/동네, 7~13 도심, 14~21 부촌, 22~26 우주, 27~30 환상)
+  function walkersForStage(st){
+    if(st<=6)  return ["🚶","🧓","🐕","🚲","🧹"];
+    if(st<=13) return ["👩‍💼","👨‍💼","🏃","🛴","📦"];
+    if(st<=21) return ["🕺","💃","🦸","🚺","🏎"];
+    if(st<=26) return ["🧑‍🚀","👽","🤖","🛸"];
+    return ["🧙","👻","🦄","👑"];
+  }
   function spawnWalker(){
     if(!S||document.hidden) return;
     var tz=$("tapZone");
@@ -808,7 +815,7 @@
     var w=document.createElement("span");
     var dur=isRich?7:(9+Math.random()*5);
     w.className="walker"+(isRich?" rich":"");
-    w.textContent=isRich?"🤵":WALKERS[Math.floor(Math.random()*WALKERS.length)];
+    var WS=walkersForStage(S.stage); w.textContent=isRich?"🤵":WS[Math.floor(Math.random()*WS.length)];
     w.style.animation="walk"+(Math.random()<0.5?"L":"R")+" "+dur+"s linear forwards";
     tz.appendChild(w);
     if(isRich){
