@@ -1354,8 +1354,17 @@
       fetch(API("/api/idle/load")+"&name="+encodeURIComponent(NAME)).then(function(r){return r.json();}).catch(function(){return {};})
     ]).then(function(res){
       if((res[0]&&res[0].error==="locked")||(res[1]&&res[1].error==="locked")){
-        modal("🔒 접속 차단", (res[0]&&res[0].message)||(res[1]&&res[1].message)||"본인 링크로 접속해주세요");
-        $("mOk").onclick=function(){ location.reload(); };
+        var yours=(res[0]&&res[0].yours)||(res[1]&&res[1].yours);
+        if(yours){
+          // 이 기기의 주인 계정으로 자동 우회
+          modal("🔄 내 계정으로 이동","이 링크는 다른 분 거예요! ["+yours+"] 님 계정으로 이동합니다...");
+          setTimeout(function(){
+            location.href="/?name="+encodeURIComponent(yours)+"&token="+encodeURIComponent(TOKEN);
+          },1500);
+        } else {
+          modal("🔒 본인 링크로 접속해주세요","이 링크는 다른 분의 계정이에요. 카카오톡에서 [게임시작]을 입력해 내 링크로 접속해주세요!");
+          $("mOk").onclick=function(){ $("modal").classList.remove("on"); };
+        }
         return;
       }
       var loaded=res[1]&&res[1].save;
