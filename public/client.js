@@ -57,6 +57,31 @@ var nameFromUrl = (loginId&&loginId.name) || (savedId&&savedId.name) || qs.get("
       }).catch(function(){ document.getElementById("feeInfo").textContent = "입장료 확인 실패"; });
   })();
 
+  // 저축 잔액 + 이력
+  (function loadBank(){
+    var tk = qs.get("token") || (loginId&&loginId.token) || "";
+    var nm = nameBox.value.trim();
+    var box = document.getElementById("bankBox");
+    if (!nm) { box.textContent = "💰 저축: 로그인 후 확인 가능"; return; }
+    var q = "token=" + encodeURIComponent(tk) + "&name=" + encodeURIComponent(nm)
+      + "&ses=" + encodeURIComponent((loginId&&loginId.ses)||"")
+      + "&sig=" + encodeURIComponent((savedId&&savedId.sig)||qs.get("sig")||"")
+      + "&ph=" + encodeURIComponent((savedId&&savedId.ph)||qs.get("ph")||"");
+    fetch("/api/bank?" + q).then(function(r){ return r.json(); }).then(function(b){
+      if (!b.ok) { box.textContent = "💰 저축: 확인 실패"; return; }
+      box.innerHTML = "💰 <b>내 저축</b>: " + b.p.toLocaleString() + "P · ₭" + b.k.toLocaleString() + " <span style='color:#9aa4b8;font-size:11px'>(누르면 이력)</span>";
+      var hist = document.getElementById("bankHist");
+      if (!b.hist.length) hist.innerHTML = "아직 저축 이력이 없어요. 정상 퇴장(10%)이나 사망 잔해 회수로 쌓입니다!";
+      else hist.innerHTML = b.hist.map(function(e){
+        var d = new Date(e.t);
+        var mm = ("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2)+" "+("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2);
+        var amt = (e.p>0 ? "+"+e.p+"P " : "") + (e.k>0 ? "+₭"+e.k : "");
+        return "<div style='display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid #202a44'><span>"+mm+" "+e.txt+"</span><b style='color:#ffd54a;white-space:nowrap'>"+amt+"</b></div>";
+      }).join("");
+      box.onclick = function(){ hist.style.display = hist.style.display === "none" ? "block" : "none"; };
+    }).catch(function(){ box.textContent = "💰 저축: 확인 실패"; });
+  })();
+
   var selectedRoomId = null;
   var socket = null;
   var myId = null;

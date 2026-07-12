@@ -204,7 +204,7 @@ class Room {
     while (this.food.size < FOOD_TARGET) this.spawnFood();
   }
 
-  spawnFood(x, y, value, fromKill) {
+  spawnFood(x, y, value, fromKill, own) {
     const id = this.nextFoodId++;
     const gold = value ? false : Math.random() < GOLD_FOOD_CHANCE;
     this.food.set(id, {
@@ -214,6 +214,8 @@ class Room {
       value: value != null ? value : (gold ? 5 : 1),
       gold: !!gold && !value,
       fromKill: !!fromKill,
+      own: own || "",
+      exp: own ? Date.now() + 60000 : 0,
     });
   }
 
@@ -384,6 +386,21 @@ function handleFoodPickup(snake, room) {
   }
 }
 
+// ===== 저축(뱅크) =====
+function bankOf(name) {
+  const p = db.players[name] || (db.players[name] = {});
+  if (!p.bank) p.bank = { p: 0, k: 0, hist: [] };
+  return p.bank;
+}
+function bankAdd(name, dp, dk, txt) {
+  if (!name || (dp <= 0 && dk <= 0)) return;
+  const b = bankOf(name);
+  b.p += dp; b.k += dk;
+  b.hist.unshift({ t: Date.now(), txt, p: dp, k: dk });
+  if (b.hist.length > 50) b.hist.length = 50;
+  markDirty();
+}
+
 function killSnake(victim, room, io) {
   victim.alive = false;
   const dropTotal = victim.mass * KILL_DROP_RATIO;
@@ -392,7 +409,7 @@ function killSnake(victim, room, io) {
   for (let i = 0; i < dropCount; i++) {
     const ang = rand(0, Math.PI * 2);
     const r = rand(0, 60);
-    room.spawnFood(victim.x + Math.cos(ang) * r, victim.y + Math.sin(ang) * r, per, true);
+    room.spawnFood(victim.x + Math.cos(ang) * r, victim.y + Math.sin(ang) * r, per, true, victim.isBot ? "" : victim.name);
   }
 }
 
@@ -449,6 +466,19 @@ function tick(io) {
       room.nextItemSpawnAt = now + rand(4000, 9000);
     }
     for (const [iid, it] of room.items) if (now >= it.expiresAt) room.items.delete(iid);
+
+    // 사망 잔해: 1분 뒤 사라지며 주인 저축으로
+    const reclaim = {};
+    for (const [fid, f] of room.food) {
+      if (f.own && f.exp && now >= f.exp) {
+        reclaim[f.own] = (reclaim[f.own] || 0) + f.value;
+        room.food.delete(fid);
+      }
+    }
+    for (const owner of Object.keys(reclaim)) {
+      const m = reclaim[owner];
+      bankAdd(owner, Math.round(m / 10), Math.round(m / 2), "💀 사망 잔해 회수 (남은 점수 " + Math.round(m) + ")");
+    }
 
     for (const bot of room.bots) botAI(bot, room, now);
     for (const s of allSnakes(room)) {
@@ -1003,6 +1033,8 @@ io.on("connection", (socket) => {
         ? rooms.get(roomIdReq) : findJoinableRoom();
 
       const snake = new Snake(socket.id, name, false, entry.mode, entry.buffs || [], entry.nft || 0);
+      snake.kFeePaid = kFee;
+      snake.pFeePaid = entry.mode === "paid" ? 50 : 0;
       room.players.set(socket.id, snake);
       mySnake = snake;
       myRoom = room;
@@ -1036,6 +1068,9 @@ io.on("connection", (socket) => {
     if (!mySnake || !myRoom) return;
     const playedSec = (Date.now() - mySnake.joinedAt) / 1000;
     const finalScore = playedSec >= MIN_PLAY_SECONDS ? mySnake.score : 0;
+    if (mySnake.alive && playedSec >= MIN_PLAY_SECONDS) {
+      bankAdd(mySnake.name, Math.ceil((mySnake.pFeePaid || 0) * 0.1), Math.ceil((mySnake.kFeePaid || 0) * 0.1), "🏦 정상 퇴장 — 입장료 10% 저축");
+    }
     myRoom.players.delete(socket.id);
     if (finalScore > 0) {
       if (!db.worm) db.worm = {};
@@ -1048,6 +1083,17 @@ io.on("connection", (socket) => {
     }
     mySnake = null; myRoom = null;
   }
+});
+
+// 저축 조회 (잔액 + 이력)
+app.get("/api/bank", (req, res) => {
+  if (!checkToken(req, res)) return;
+  const name = String(req.query.name || "").trim();
+  if (!checkDev(name, String(req.query.key || ""), String(req.query.sig || ""), String(req.query.ph || ""), String(req.query.ses || ""))) {
+    return res.status(403).json({ ok: false, error: "locked" });
+  }
+  const b = bankOf(name);
+  res.json({ ok: true, p: Math.floor(b.p), k: Math.floor(b.k), hist: (b.hist || []).slice(0, 30) });
 });
 
 // ===== 랭킹 API (지렁이 누적 / 펑키시티) =====
