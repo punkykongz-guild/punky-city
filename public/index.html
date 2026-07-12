@@ -450,6 +450,7 @@
   }
   document.addEventListener("click",function once(){ ac(); startBgm(); greet(); },{once:true});
 
+  var PLAY_OK=false; // 지갑 승인 후에만 플레이(수익) 가능
   var qs = new URLSearchParams(location.search);
   var NAME = (qs.get("name")||"").trim();
   var TOKEN = (qs.get("token")||"").trim();
@@ -794,6 +795,7 @@
       var btn=row.querySelector("button");
       btn.onclick=function(){
         var c=bizCost(i);
+        if(!PLAY_OK){ needWallet(); return; }
         if(S.stage<b.stage) return;
         if(S.money>=c){ S.money-=c; S.levels[i]++; renderFast(); }
       };
@@ -842,8 +844,10 @@
     clearTimeout(bubbleTimer);
     bubbleTimer=setTimeout(function(){b.style.opacity=0;},900);
   }
+  function needWallet(){ toast("🔗 지갑 등록·승인 후 플레이할 수 있어요!"); $("avatarBtn").click(); }
   $("tapZone").addEventListener("click",function(e){
     if(e.target&&e.target.id==="stageUpBtn") return; // 승급 버튼은 별도 처리
+    if(!PLAY_OK){ needWallet(); return; }
     var v=perTap(); S.money+=v; S.lifetime+=v;
     beep(600+Math.random()*300,0.06); vib(12);
     if(Math.random()<0.5) showBubble(); // 절반 확률로 캐릭터 대사
@@ -893,6 +897,7 @@
   }
   $("stageUpBtn").addEventListener("click",function(ev){
     ev.stopPropagation();
+    if(!PLAY_OK){ needWallet(); return; }
     var cost=stageUpCost();
     if(cost===null||S.money<cost) return;
     S.money-=cost;
@@ -913,7 +918,7 @@
 
   // ===== 루프 =====
   setInterval(function(){
-    if(!S) return;
+    if(!S||!PLAY_OK) return;
     var v=perSec()/10; S.money+=v; S.lifetime+=v;
     renderFast();
   },100);
@@ -950,6 +955,7 @@
     if(isRich){
       w.onclick=function(ev){
         ev.stopPropagation();
+        if(!PLAY_OK) return;
         var bonus=Math.max(perTap()*25, perSec()*45, 100);
         S.money+=bonus; S.lifetime+=bonus;
         w.remove();
@@ -960,7 +966,7 @@
       };
     } else if(special){
       w.onclick=function(ev){
-        ev.stopPropagation(); w.remove();
+        ev.stopPropagation(); if(!PLAY_OK) return; w.remove();
         var b=$("bubble"); var msg;
         if(special==="🍀"){ tapX2Until=Date.now()+10000; msg="🍀 행운! 10초간 탭 수입 2배!"; }
         else if(special==="⚡"){ incomeX2Until=Date.now()+15000; msg="⚡ 번개! 15초간 모든 수입 2배!"; }
@@ -972,7 +978,7 @@
     } else {
       // 지나가다 중간쯤에 동전 던져줌
       setTimeout(function(){
-        if(!w.parentNode) return;
+        if(!w.parentNode||!PLAY_OK) return;
         var toss=Math.max(perTap()*2, perSec()*3);
         S.money+=toss; S.lifetime+=toss;
         var coin=document.createElement("span");
@@ -1059,6 +1065,7 @@
 
   // ===== 수금 =====
   $("collectBtn").onclick=function(){
+    if(!PLAY_OK){ needWallet(); return; }
     saveNow();
     setTimeout(function(){
       fetch(API("/api/idle/collect"),{method:"POST",headers:{"Content-Type":"application/json"},
@@ -1200,10 +1207,11 @@
     $("userName").textContent=NAME||"이름 없음";
     $("nameTag").textContent=(NAME||"무명 콩즈")+" 🦍";
     var cta=$("walletCta");
-    if(p.tokenIds&&p.tokenIds.length){ cta.style.display="none"; }
+    PLAY_OK=!!(p.tokenIds&&p.tokenIds.length);
+    if(PLAY_OK){ cta.style.display="none"; }
     else if(p.pending){
       cta.style.display="block";
-      cta.textContent="⏳ 지갑 승인 대기중 — 관리자 승인 후 내 콩즈가 연결됩니다";
+      cta.textContent="⏳ 관리자 승인 대기중입니다 — 승인되면 플레이가 열려요!";
       cta.onclick=null;
     } else {
       cta.style.display="block";
@@ -1269,6 +1277,7 @@
   $("adBtn").addEventListener("click",function(ev){
     ev.stopPropagation();
     if(!S||!NAME) return;
+    if(!PLAY_OK){ needWallet(); return; }
     window.open(TWEET_URL,"_blank");
     modal("🐦 트윗 참여 보너스","공식 X가 열렸어요! 최신 글에 댓글을 남기고 [확인]을 눌러주세요. (관리자가 댓글 확인 — 거짓 클릭 제재 👀)");
     $("mOk").onclick=function(){
@@ -1291,6 +1300,7 @@
   $("ytBtn").addEventListener("click",function(ev){
     ev.stopPropagation();
     if(!S||!NAME||!YT_URL) return;
+    if(!PLAY_OK){ needWallet(); return; }
     window.open(YT_URL,"_blank");
     modal("▶️ 유튜브 보너스","영상에 댓글(닉네임 포함)을 남기고 [확인]을 눌러주세요!");
     $("mOk").onclick=function(){
