@@ -571,14 +571,15 @@ async function getOwnedTokenIds(wallet) {
         const inColl = grouping.some((g) => g.group_key === "collection" && g.group_value === COLLECTION_ADDRESS);
         if (!inColl) continue;
         const nm = ((it.content || {}).metadata || {}).name || "";
+        const img = ((it.content || {}).links || {}).image || "";
         const m = nm.match(/#(\d+)/);
-        if (m) ids.push(parseInt(m[1], 10));
+        if (m) ids.push({ id: parseInt(m[1], 10), img });
       }
       if (items.length < 1000) break;
       page++;
     }
   } catch (e) { console.warn("Helius 조회 실패:", e.message); }
-  ids.sort((a, b) => a - b);
+  ids.sort((a, b) => a.id - b.id);
   nftCache.set(wallet, { ids, ts: Date.now() });
   return ids;
 }
@@ -641,7 +642,10 @@ app.get("/api/profile", async (req, res) => {
   if (profile.wallet) tokenIds = await getOwnedTokenIds(profile.wallet);
   // 시트 NFT 수량이 없으면(미연동/테스트) 지갑 실보유 수로 동료 보너스 계산
   if (!profile.nft && tokenIds.length) profile.nft = tokenIds.length;
-  res.json({ ...profile, tokenIds: tokenIds.slice(0, 200), imageBase: "https://punkykongz.com/nft/punkykongz/image/" });
+  const toks = tokenIds.slice(0, 200);
+  const imgMap = {};
+  toks.forEach((t) => { if (t.img) imgMap[t.id] = t.img; });
+  res.json({ ...profile, tokenIds: toks.map((t) => t.id), imgMap, imageBase: "https://punkykongz.com/nft/punkykongz/image/" });
 });
 
 // 세이브 로드/저장
@@ -750,7 +754,7 @@ const STAGE_OUTFITS = [null,
 
 function avatarFile(id, stage) { return path.join(AVATAR_DIR, `avatar_${id}_${stage}.png`); }
 
-async function generateAvatar(id, stage) {
+async function generateAvatar(id, stage, srcImg) {
   const key = `${id}_${stage}`;
   if (avatarPending.has(key)) return;
   if (avatarGen.date !== todayStr()) avatarGen = { date: todayStr(), n: 0 };
@@ -759,7 +763,8 @@ async function generateAvatar(id, stage) {
   avatarGen.n++;
   try {
     // 원본 콩즈 이미지 (Helius CDN 리사이즈 → 실패 시 원본)
-    const orig = `https://punkykongz.com/nft/punkykongz/image/${id}.jpg`;
+    const orig = (srcImg && srcImg.indexOf("https://punkykongz.com/") === 0)
+      ? srcImg : `https://punkykongz.com/nft/punkykongz/image/${id}.jpg`;
     let imgRes = await fetch(`https://cdn.helius-rpc.com/cdn-cgi/image/width=512/${orig}`);
     if (!imgRes.ok) imgRes = await fetch(orig);
     const b64 = Buffer.from(await imgRes.arrayBuffer()).toString("base64");
@@ -810,7 +815,7 @@ app.get("/api/avatar-url", (req, res) => {
   if (!id || !GEMINI_API_KEY) return res.json({ ok: false });
   const file = avatarFile(id, stage);
   if (fs.existsSync(file)) return res.json({ ok: true, ready: true, url: `/gen/avatar_${id}_${stage}.png` });
-  generateAvatar(id, stage); // 비동기 시작 (기다리지 않음)
+  generateAvatar(id, stage, String(req.query.img || "")); // 비동기 시작
   res.json({ ok: true, ready: false });
 });
 

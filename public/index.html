@@ -1144,8 +1144,11 @@
     return profile.tokenIds[0];
   }
   // Helius CDN 리사이즈 (원본 0.6~2MB → 수십 KB, 로딩 체감 해결)
+  function rawImg(id){
+    return (profile.imgMap&&profile.imgMap[id]) || (profile.imageBase+id+".jpg");
+  }
   function kimg(id,w){
-    return "https://cdn.helius-rpc.com/cdn-cgi/image/width="+w+"/"+profile.imageBase+id+".jpg";
+    return "https://cdn.helius-rpc.com/cdn-cgi/image/width="+w+"/"+rawImg(id);
   }
   function applyAvatarImage(){
     var id=currentAvatarId();
@@ -1180,7 +1183,7 @@
     if(!S) return;
     if(id===null){ tryGenericChar(); return; }
     var stage=S.stage;
-    fetch(API("/api/avatar-url")+"&id="+id+"&stage="+stage)
+    fetch(API("/api/avatar-url")+"&id="+id+"&stage="+stage+"&img="+encodeURIComponent(rawImg(id)))
       .then(function(r){return r.json();})
       .then(function(j){
         if(j.ok&&j.ready&&S.stage===stage&&currentAvatarId()===id){
