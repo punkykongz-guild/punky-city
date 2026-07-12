@@ -131,7 +131,8 @@
       setTimeout(function () { hud.style.color = ""; }, 2500);
     });
 
-    socket.emit("join", { name: name, buffs: wantedBuffs(), roomId: selectedRoomId });
+    var devKey=localStorage.getItem("pkc_key")||"";
+    socket.emit("join", { name: name, buffs: wantedBuffs(), roomId: selectedRoomId, key: devKey });
   }
 
   function doLeave() {
