@@ -132,7 +132,7 @@
     });
 
     var devKey=localStorage.getItem("pkc_key")||"";
-    socket.emit("join", { name: name, buffs: wantedBuffs(), roomId: selectedRoomId, key: devKey, sig: (qs.get("sig")||"") });
+    socket.emit("join", { name: name, buffs: wantedBuffs(), roomId: selectedRoomId, key: devKey, sig: (qs.get("sig")||""), ph: (qs.get("ph")||"") });
   }
 
   function doLeave() {

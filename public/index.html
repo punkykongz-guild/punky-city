@@ -456,7 +456,8 @@
   var TOKEN = (qs.get("token")||"").trim();
   var DEVKEY=localStorage.getItem("pkc_key")||(function(){var k=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem("pkc_key",k);return k;})();
   var SIG=(qs.get("sig")||"").trim();
-  var API = function(p){ return p + (p.indexOf("?")>=0?"&":"?") + "token="+encodeURIComponent(TOKEN)+"&key="+encodeURIComponent(DEVKEY)+"&sig="+encodeURIComponent(SIG); };
+  var PH=(qs.get("ph")||"").trim();
+  var API = function(p){ return p + (p.indexOf("?")>=0?"&":"?") + "token="+encodeURIComponent(TOKEN)+"&key="+encodeURIComponent(DEVKEY)+"&sig="+encodeURIComponent(SIG)+"&ph="+encodeURIComponent(PH); };
 
   var STAGES = [
     null,
@@ -913,7 +914,7 @@
     modal("🎉 신분 상승!", "Lv."+S.stage+" "+STAGES[S.stage].nm+" 달성!\n"+STAGES[S.stage].scene);
     saveNow();
     fetch(API("/api/idle/stage"),{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG})})
+      body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH})})
       .then(function(r){return r.json();})
       .then(function(j){ if(j.ok&&j.granted>0){ toast("승급 보상 +"+j.granted+"P 지급!"); profile.point+=j.granted; render(); } })
       .catch(function(){});
@@ -1059,7 +1060,7 @@
   function saveNow(){
     if(!S||!NAME) return;
     S.lastSeen=Date.now();
-    var body=JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,save:S});
+    var body=JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH,save:S});
     try{ navigator.sendBeacon("/api/idle/save?token="+encodeURIComponent(TOKEN), new Blob([body],{type:"application/json"})); }
     catch(e){ fetch(API("/api/idle/save"),{method:"POST",headers:{"Content-Type":"application/json"},body:body,keepalive:true}).catch(function(){}); }
   }
@@ -1072,7 +1073,7 @@
     saveNow();
     setTimeout(function(){
       fetch(API("/api/idle/collect"),{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG})})
+        body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH})})
         .then(function(r){return r.json();})
         .then(function(j){
           if(j.ok){ modal("💰 수금 완료!","길드 포인트 +"+j.points+"P 가 지급됐어요."); profile.point+=j.points; loadTower(); render(); }
@@ -1252,7 +1253,7 @@
           var w=$("wIn").value.trim();
           if(!w){ toast("지갑주소를 입력해주세요"); return; }
           fetch(API("/api/wallet/apply"),{method:"POST",headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,wallet:w})})
+            body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH,wallet:w})})
             .then(function(r){return r.json();})
             .then(function(j){ $("avatarModal").classList.remove("on"); modal("🔗 지갑 신청", j.message||"완료"); })
             .catch(function(){ toast("서버 연결 실패"); });
@@ -1311,7 +1312,7 @@
     $("mOk").onclick=function(){
       $("modal").classList.remove("on");
       fetch(API("/api/ad/watch"),{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG})})
+        body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH})})
         .then(function(r){return r.json();})
         .then(function(j){
           if(!j.ok){ toast(j.error||"잠시 후 다시"); return; }
@@ -1335,7 +1336,7 @@
     $("mOk").onclick=function(){
       $("modal").classList.remove("on");
       fetch(API("/api/ad/watch"),{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,type:"yt"})})
+        body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH,type:"yt"})})
         .then(function(r){return r.json();})
         .then(function(j){
           if(!j.ok){ toast(j.error||"잠시 후 다시"); return; }
