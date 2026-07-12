@@ -1276,16 +1276,25 @@
   });
   $("avatarClose").onclick=function(){ $("avatarModal").classList.remove("on"); };
 
-  // SNS 보너스: 댓글 달 시간 확보용 20초 잠금 (거짓 클릭 방지)
+  // SNS 보너스: 실제로 SNS에 다녀와야 카운트 시작 + 60초 잠금 (거짓 클릭 방지)
   function lockOk(sec){
     var b=$("mOk"); b.disabled=true;
-    var left=sec;
-    b.textContent="댓글 작성 후 확인 ("+left+"초)";
-    var t=setInterval(function(){
-      left--;
-      if(left<=0){ clearInterval(t); b.disabled=false; b.textContent="댓글 달았어요 — 확인"; }
-      else b.textContent="댓글 작성 후 확인 ("+left+"초)";
-    },1000);
+    b.textContent="SNS에서 댓글 작성 후 돌아오세요";
+    var left=sec, wentAway=false, timer=null;
+    function onVis(){
+      if(document.hidden){ wentAway=true; return; }
+      if(wentAway && !timer){
+        timer=setInterval(function(){
+          left--;
+          if(left<=0){
+            clearInterval(timer);
+            document.removeEventListener("visibilitychange",onVis);
+            b.disabled=false; b.textContent="댓글 달았어요 — 확인";
+          } else b.textContent="확인까지 "+left+"초 (댓글 확인 중...)";
+        },1000);
+      }
+    }
+    document.addEventListener("visibilitychange",onVis);
   }
 
   // ===== 트윗 참여 보너스 (하루 1회) — 광고는 임시 제외, 코드 보관 =====
@@ -1297,7 +1306,7 @@
     if(!PLAY_OK){ needWallet(); return; }
     window.open(TWEET_URL,"_blank");
     modal("🐦 트윗 참여 보너스","공식 X가 열렸어요! 최신 글에 댓글을 남기고 돌아와 확인을 눌러주세요. 관리자가 실제 댓글을 대조하며, 허위 수령은 회수+제재됩니다 👀");
-    lockOk(20);
+    lockOk(60);
     $("mOk").onclick=function(){
       $("modal").classList.remove("on");
       fetch(API("/api/ad/watch"),{method:"POST",headers:{"Content-Type":"application/json"},
@@ -1321,7 +1330,7 @@
     if(!PLAY_OK){ needWallet(); return; }
     window.open(YT_URL,"_blank");
     modal("▶️ 유튜브 보너스","영상에 닉네임 포함 댓글을 남기고 돌아와 확인을 눌러주세요. 관리자가 대조합니다!");
-    lockOk(20);
+    lockOk(60);
     $("mOk").onclick=function(){
       $("modal").classList.remove("on");
       fetch(API("/api/ad/watch"),{method:"POST",headers:{"Content-Type":"application/json"},

@@ -587,6 +587,8 @@ async function getOwnedTokenIds(wallet) {
 // 기기 잠금: 계정(이름)은 최초 접속 기기에 묶임 — 남의 링크로 플레이 방지
 function checkDev(name, key) {
   if (!name || !key) return false;
+  const owner = findNameByKey(key);
+  if (owner && owner !== name) return false; // 이 기기는 이미 다른 계정 소유 → 본인 계정으로 우회
   if (!db.players[name]) db.players[name] = {};
   const p = db.players[name];
   if (!p.devKey) { p.devKey = key; markDirty(); return true; } // 최초 접속 기기로 등록
