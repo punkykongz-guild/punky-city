@@ -595,6 +595,18 @@ app.use(express.json({ limit: "200kb" }));
 app.use(express.static(path.join(__dirname, "public")));
 app.get("/rooms", (req, res) => res.json(roomList()));
 
+// 지렁이 입장료 미리보기 (등급 비례 — join 로직과 동일 공식)
+app.get("/api/worm/fee", (req, res) => {
+  if (!checkToken(req, res)) return;
+  const name = String(req.query.name || "").trim();
+  const sv = db.players[name] || {};
+  const stage = Math.min(30, Math.max(1, sv.stage || 1));
+  const money = Math.max(0, Math.floor(sv.money || 0));
+  const feePaid = Math.max(300, Math.floor((STAGE_THRESHOLDS[stage] || 0) / 200));
+  const feeKongz = Math.max(800, feePaid * 2.5 | 0);
+  res.json({ ok: true, stage, money, feePaid, feeKongz });
+});
+
 // 프로필: 시트(등록·NFT수·포인트) + 보유 NFT 번호(이미지용)
 const TEST_WALLET = process.env.TEST_WALLET || "";
 app.get("/api/profile", async (req, res) => {

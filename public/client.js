@@ -38,6 +38,23 @@
 
   if (nameFromUrl) nameBox.value = nameFromUrl;
 
+  // 내 등급 기준 입장료 표시
+  (function loadFee(){
+    var tk = qs.get("token") || "";
+    var nm = nameBox.value.trim();
+    if (!nm) { document.getElementById("feeInfo").textContent = "이름이 있어야 입장료를 계산해요"; return; }
+    fetch("/api/worm/fee?token=" + encodeURIComponent(tk) + "&name=" + encodeURIComponent(nm))
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j.ok) return;
+        document.getElementById("feeInfo").innerHTML =
+          "🎫 <b>내 입장료</b> (시티 Lv." + j.stage + " 기준)<br>" +
+          "· 정상 입장: <b>50P + ₭" + j.feePaid.toLocaleString() + "</b> (모든 점수 100%)<br>" +
+          "· 콩달러 입장: <b>₭" + j.feeKongz.toLocaleString() + "</b> (킬 점수 10%만)<br>" +
+          "· 보유 콩달러: ₭" + j.money.toLocaleString();
+      }).catch(function(){ document.getElementById("feeInfo").textContent = "입장료 확인 실패"; });
+  })();
+
   var selectedRoomId = null;
   var socket = null;
   var myId = null;
