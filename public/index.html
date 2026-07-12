@@ -1397,8 +1397,10 @@
       bootMain();
     };
     no.onclick=function(){
-      no.remove(); ok.textContent="확인"; $("modal").classList.remove("on");
-      modal("🔗 내 링크로 접속하세요", "카카오톡 채팅방에서 [게임시작] 이라고 입력하면 내 전용 링크가 나옵니다. 그 링크로 접속해주세요! (남의 링크로는 등록되지 않아요)");
+      no.remove(); $("modal").classList.remove("on");
+      modal("🔗 내 링크로 접속하세요", "카카오톡 채팅방에 [게임시작] 이라고 치면 내 전용 링크가 나와요. 폰마다 딱 한 번만 하면, 그 뒤로는 어떤 링크를 눌러도 항상 내 계정으로 들어옵니다!");
+      ok.textContent="💬 카카오톡 열기";
+      ok.onclick=function(){ location.href="kakaotalk://launch"; };
     };
   }
   function bootMain(){
