@@ -790,6 +790,16 @@ app.post("/api/ad/watch", (req, res) => {
   res.json({ ok: true });
 });
 
+// 게임 내 지갑 신청 → 백엔드로 전달
+app.post("/api/wallet/apply", async (req, res) => {
+  if (!checkToken(req, res)) return;
+  const name = String((req.body.name || "")).trim();
+  const wallet = String((req.body.wallet || "")).trim();
+  if (!name || !wallet) return res.json({ ok: false, message: "입력값 부족" });
+  const raw = await callBackend("wallet_apply", name, wallet);
+  res.json({ ok: true, message: raw || "서버 연결 실패 — 잠시 후 다시" });
+});
+
 // 길드타워 현황
 app.get("/api/tower", (req, res) => {
   res.json({ ok: true, bricks: db.tower.bricks, floor: Math.floor(db.tower.bricks / 10) });

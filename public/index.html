@@ -1059,7 +1059,20 @@
     ev.stopPropagation();
     var grid=$("avatarGrid"); grid.innerHTML="";
     if(!profile.tokenIds||!profile.tokenIds.length){
-      $("avatarHint").textContent="지갑 연동 후 내 콩즈를 아바타로 쓸 수 있어요! (준비 중)";
+      $("avatarHint").textContent="지갑을 등록하면 내 콩즈가 여기 나타나요!";
+      grid.innerHTML='<input id="wIn" placeholder="솔라나 지갑주소 붙여넣기" style="grid-column:1/-1;padding:10px;border-radius:8px;border:1px solid #444;background:#160d2c;color:#fff;font-size:12px">'+
+        '<button id="wGo" style="grid-column:1/-1;padding:11px;border:none;border-radius:8px;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;font-weight:800;cursor:pointer">🔗 등록 신청 (승인 후 연결)</button>';
+      setTimeout(function(){
+        $("wGo").onclick=function(){
+          var w=$("wIn").value.trim();
+          if(!w){ toast("지갑주소를 입력해주세요"); return; }
+          fetch(API("/api/wallet/apply"),{method:"POST",headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({token:TOKEN,name:NAME,wallet:w})})
+            .then(function(r){return r.json();})
+            .then(function(j){ $("avatarModal").classList.remove("on"); modal("🔗 지갑 신청", j.message||"완료"); })
+            .catch(function(){ toast("서버 연결 실패"); });
+        };
+      },0);
     } else {
       $("avatarHint").textContent="보유한 펑키콩즈 "+profile.tokenIds.length+"마리 중 아바타를 고르세요";
       var cur=currentAvatarId();
