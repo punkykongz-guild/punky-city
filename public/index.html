@@ -779,7 +779,7 @@
   }
   function perTap(){
     var lvSum=0; for(var i=0;i<S.levels.length;i++) lvSum+=S.levels[i];
-    var base = 1 + (S.stage-1)*0.6 + lvSum*0.05 + perSec()*0.06; // 등급·사업 레벨이 오를수록 탭도 강해짐
+    var base = 1 + (S.stage-1)*0.4 + lvSum*0.015 + perSec()*0.05; // 등급·사업 레벨이 오를수록 탭도 강해짐 (완만하게)
     return base*(Date.now()<tapX2Until?2:1);
   }
   function bizCost(i){ return BIZ[i].cost*Math.pow(COST_MULT, S.levels[i]); }
@@ -808,8 +808,17 @@
     $("modal").classList.add("on"); $("mOk").onclick=function(){ $("modal").classList.remove("on"); if(cb)cb(); }; }
 
   // 매 틱(100ms) 도는 가벼운 렌더: 숫자만 갱신
+  function moneyFull(n){ return Math.floor(n).toLocaleString("en-US"); }
+  var lastMoneyLen=-1;
   function renderFast(){
-    $("money").textContent="₭ "+fmt(S.money);
+    var mtxt=moneyFull(S.money);
+    $("money").textContent="₭ "+mtxt;
+    if(mtxt.length!==lastMoneyLen){ // 자릿수 변할 때만 폰트 조정
+      lastMoneyLen=mtxt.length;
+      var fs=36;
+      if(mtxt.length>9) fs=Math.max(15, 36-(mtxt.length-9)*1.6);
+      $("money").style.fontSize=fs+"px";
+    }
     $("perSec").textContent=fmt(perSec());
     $("perTap").textContent=fmt(perTap());
     for(var i=0;i<BIZ.length;i++){
@@ -817,7 +826,13 @@
       bizBtns[i].textContent="₭ "+fmt(c);
       bizBtns[i].disabled=(S.stage<BIZ[i].stage)||S.money<c;
       $("lv"+i).textContent="Lv."+S.levels[i];
-      if(S.stage>=BIZ[i].stage) $("st"+i).textContent="초당 "+fmt(bizIncome(i)*totalMult());
+      if(S.stage>=BIZ[i].stage){
+        var curInc=bizIncome(i)*totalMult();
+        S.levels[i]++; var nextInc=bizIncome(i)*totalMult(); S.levels[i]--;
+        var dSec=nextInc-curInc;
+        $("st"+i).innerHTML="초당 "+fmt(curInc)+
+          ' <span style="font-size:10px;color:#8fd18f">▲구매 시 +'+fmt(dSec)+'/초 · +'+fmt(dSec*0.05+0.015)+'/탭</span>';
+      }
     }
     updateStageBtn();
   }

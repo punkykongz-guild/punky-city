@@ -574,7 +574,7 @@ async function restoreFromSheet() {
     }
   } catch (e) { console.warn("시트 복원 실패(무시):", e.message); }
 }
-restoreFromSheet();
+// (복원 완료 후 서버 오픈 — 파일 하단 server.listen 참고)
 
 // 등급 임계값(누적 수익) / 등급 달성 포인트 보상 — 클라이언트와 동일해야 함 (24단계)
 const STAGE_THRESHOLDS = [0,0,500,2500,12500,62500,312500,1562500,7812500,39062500,195312500,976562500,4882812500,24414062500,122070312500,610351562500,3051757812500,15258789062500,76293945312500,381469726562500,1907348632812500,9536743164062500,47683715820312496,238418579101562496,1192092895507812352,5960464477539061760,29802322387695308800,149011611938476556288,745058059692382748672,3725290298461913612288,18626451492309567537152];
@@ -646,6 +646,7 @@ function pushSes(p) {
   if (p.sess.length > 5) p.sess = p.sess.slice(-5); // 기기 5대까지 동시 로그인
   delete p.ses;
   markDirty();
+  setTimeout(() => backupToSheet().catch(() => {}), 10000); // 세션은 곧 백업 (재배포 대비)
   return ses;
 }
 
@@ -1112,6 +1113,25 @@ io.on("connection", (socket) => {
   }
 });
 
+// 관리자: 등급/콩달러 강제 설정 (LINK_SECRET 필요)
+app.get("/api/admin/set", (req, res) => {
+  if (!LINK_SECRET || String(req.query.secret || "") !== LINK_SECRET) return res.status(403).json({ ok: false });
+  const name = String(req.query.name || "").trim();
+  if (!name || !db.players[name]) return res.json({ ok: false, error: "no-player" });
+  const p = db.players[name];
+  const out = { ok: true, name };
+  const st = parseInt(req.query.stage, 10);
+  if (st >= 1 && st <= 30) {
+    p.stage = st;
+    if (p.save && Array.isArray(p.save.levels)) { /* 클라 세이브 구조 대비 */ }
+    out.stage = st;
+  }
+  const money = parseInt(req.query.money, 10);
+  if (!isNaN(money) && money >= 0) { p.money = money; out.money = money; }
+  markDirty();
+  res.json(out);
+});
+
 // 저축 조회 (잔액 + 이력)
 app.get("/api/bank", (req, res) => {
   if (!checkToken(req, res)) return;
@@ -1143,9 +1163,11 @@ app.get("/api/rank/idle", (req, res) => {
 
 setInterval(() => tick(io), TICK_MS);
 
-server.listen(PORT, () => {
-  console.log(`길드 지렁이 게임 서버 실행 중: http://localhost:${PORT}`);
-  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf("여기에") === 0) {
-    console.warn("⚠️  .env 의 APPS_SCRIPT_URL 이 설정되지 않아 테스트 모드(포인트 연동 없음)로 동작합니다.");
-  }
+restoreFromSheet().then(() => {
+  server.listen(PORT, () => {
+    console.log(`길드 지렁이 게임 서버 실행 중: http://localhost:${PORT}`);
+    if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf("여기에") === 0) {
+      console.warn("⚠️  .env 의 APPS_SCRIPT_URL 이 설정되지 않아 테스트 모드(포인트 연동 없음)로 동작합니다.");
+    }
+  });
 });
