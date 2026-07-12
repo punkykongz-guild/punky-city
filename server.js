@@ -251,9 +251,13 @@ function stepSnake(snake, room, dtSec) {
   snake.x += Math.cos(snake.angle) * spd;
   snake.y += Math.sin(snake.angle) * spd;
 
-  // 월드 경계
-  snake.x = Math.max(10, Math.min(WORLD_SIZE - 10, snake.x));
-  snake.y = Math.max(10, Math.min(WORLD_SIZE - 10, snake.y));
+  // 월드 경계 = 벽. 부딪히면 즉사
+  if (snake.x < 10 || snake.x > WORLD_SIZE - 10 || snake.y < 10 || snake.y > WORLD_SIZE - 10) {
+    snake.x = Math.max(10, Math.min(WORLD_SIZE - 10, snake.x));
+    snake.y = Math.max(10, Math.min(WORLD_SIZE - 10, snake.y));
+    snake.hitWall = true;
+    return;
+  }
 
   snake.path.unshift({ x: snake.x, y: snake.y });
   const maxLen = segCountFromMass(snake.mass) * 3 + 10;
@@ -447,7 +451,10 @@ function tick(io) {
     for (const [iid, it] of room.items) if (now >= it.expiresAt) room.items.delete(iid);
 
     for (const bot of room.bots) botAI(bot, room, now);
-    for (const s of allSnakes(room)) stepSnake(s, room, dt);
+    for (const s of allSnakes(room)) {
+      stepSnake(s, room, dt);
+      if (s.hitWall && s.alive) { s.hitWall = false; killSnake(s, room, io); }
+    }
     checkCollisions(room, io);
     for (const s of allSnakes(room)) if (s.alive) handleFoodPickup(s, room);
 
