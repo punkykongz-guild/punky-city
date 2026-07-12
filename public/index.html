@@ -303,7 +303,8 @@
       <label style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px">🎵 배경음악 <input type="checkbox" id="optBgm"></label>
       <label style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px">🔊 효과음 <input type="checkbox" id="optSfx"></label>
       <label style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px">📳 진동 <input type="checkbox" id="optVib"></label>
-      <button class="bigBtn" id="setClose" style="margin-top:12px">닫기</button>
+      <button class="bigBtn" id="acctReset" style="margin-top:12px;background:#5a5a72">🔄 계정 전환 (이 폰의 기억 지우기)</button>
+      <button class="bigBtn" id="setClose" style="margin-top:8px">닫기</button>
     </div>
   </div>
 
@@ -457,6 +458,10 @@
   var DEVKEY=localStorage.getItem("pkc_key")||(function(){var k=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem("pkc_key",k);return k;})();
   var SIG=(qs.get("sig")||"").trim();
   var PH=(qs.get("ph")||"").trim();
+  // 이 폰에 저장된 내 신분증 — 있으면 어떤 링크를 열어도 항상 내 계정으로
+  var SAVED=null; try{ SAVED=JSON.parse(localStorage.getItem("pkc_id")||"null"); }catch(e){}
+  var URL_NAME=NAME;
+  if(SAVED&&SAVED.name&&SAVED.sig){ NAME=SAVED.name; SIG=SAVED.sig; PH=SAVED.ph||""; if(!TOKEN&&SAVED.token) TOKEN=SAVED.token; }
   var API = function(p){ return p + (p.indexOf("?")>=0?"&":"?") + "token="+encodeURIComponent(TOKEN)+"&key="+encodeURIComponent(DEVKEY)+"&sig="+encodeURIComponent(SIG)+"&ph="+encodeURIComponent(PH); };
 
   var STAGES = [
@@ -1354,6 +1359,7 @@
   $("optBgm").checked=OPT.bgm; $("optSfx").checked=OPT.sfx; $("optVib").checked=OPT.vib;
   $("setBtn").onclick=function(){ $("setModal").style.display="flex"; };
   $("setClose").onclick=function(){ $("setModal").style.display="none"; };
+  $("acctReset").onclick=function(){ if(confirm("이 폰에 저장된 계정 기억을 지울까요? 다음 접속 때 다시 본인 확인을 합니다.")){ localStorage.removeItem("pkc_id"); location.href=location.pathname; } };
   $("optBgm").onchange=function(){ OPT.bgm=this.checked; saveOpt(); this.checked?startBgm():stopBgm(); };
   $("optSfx").onchange=function(){ OPT.sfx=this.checked; saveOpt(); beep(700,0.08); };
   $("optVib").onchange=function(){ OPT.vib=this.checked; saveOpt(); vib(30); };
@@ -1373,7 +1379,28 @@
     }
   });
 
-  function boot(){ bootMain(); }
+  function boot(){
+    if(SAVED&&SAVED.name){
+      if(URL_NAME&&URL_NAME!==SAVED.name) toast("🦍 "+SAVED.name+"님 계정으로 접속했어요");
+      bootMain(); return;
+    }
+    if(!NAME){ bootMain(); return; }
+    // 이 폰 최초 접속: 링크 주인이 본인인지 확인 후 폰에 기억
+    modal("👤 본인 확인", "당신이 ["+NAME+"] 님 본인인가요? [네]를 누르면 이 폰이 "+NAME+"님 계정을 기억하고, 앞으로 어떤 링크를 열어도 항상 내 계정으로 들어옵니다.");
+    var ok=$("mOk"); ok.textContent="네, 제 계정입니다";
+    var no=document.createElement("button"); no.className=ok.className; no.textContent="아니요, 저 아니에요";
+    no.style.cssText="margin-top:8px;background:#5a5a72";
+    ok.parentNode.insertBefore(no, ok.nextSibling);
+    ok.onclick=function(){
+      localStorage.setItem("pkc_id", JSON.stringify({name:NAME,sig:SIG,ph:PH,token:TOKEN}));
+      no.remove(); ok.textContent="확인"; $("modal").classList.remove("on");
+      bootMain();
+    };
+    no.onclick=function(){
+      no.remove(); ok.textContent="확인"; $("modal").classList.remove("on");
+      modal("🔗 내 링크로 접속하세요", "카카오톡 채팅방에서 [게임시작] 이라고 입력하면 내 전용 링크가 나옵니다. 그 링크로 접속해주세요! (남의 링크로는 등록되지 않아요)");
+    };
+  }
   function bootMain(){
     if(!NAME){
       modal("👋 어서오세요","카톡에서 [게임시작]을 눌러 들어오면 내 콩즈와 포인트가 연결됩니다.\n지금은 구경 모드로 시작!");
