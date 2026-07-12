@@ -773,7 +773,7 @@ app.get("/api/avatar-url", (req, res) => {
 });
 
 // 광고 보상: 하루 5회 제한 (서버가 횟수 관리)
-const AD_DAILY_CAP = 10; // 1~3회 10분치, 4~6회 5분치, 7~10회 2분치
+const AD_DAILY_CAP = 1; // 트윗 참여 보너스: 하루 1회
 app.post("/api/ad/watch", (req, res) => {
   if (!checkToken(req, res)) return;
   const name = String((req.body.name || "")).trim();
@@ -782,7 +782,7 @@ app.post("/api/ad/watch", (req, res) => {
   const p = db.players[name];
   const today = todayStr();
   if (p.adDate !== today) { p.adDate = today; p.adCount = 0; }
-  if (p.adCount >= AD_DAILY_CAP) return res.json({ ok: false, error: "오늘 광고 보상 " + AD_DAILY_CAP + "회를 다 쓰셨어요! 내일 또 만나요 📺" });
+  if (p.adCount >= AD_DAILY_CAP) return res.json({ ok: false, error: "오늘 트윗 보너스는 이미 받으셨어요! 내일 또 참여해주세요 🐦" });
   p.adCount++;
   markDirty();
   res.json({ ok: true, left: AD_DAILY_CAP - p.adCount, n: p.adCount });

@@ -258,7 +258,7 @@
     <div id="bubble"></div>
     <button id="avatarBtn">🖼 콩즈 선택</button>
     <button id="bragBtn">📣 자랑하기</button>
-    <button id="adBtn">📺 보너스</button>
+    <button id="adBtn">🐦 트윗 보너스</button>
     <div id="aiBadge">🎨 변신 준비중...</div>
     <button id="stageUpBtn"></button>
   </div>
@@ -1075,36 +1075,26 @@
   });
   $("avatarClose").onclick=function(){ $("avatarModal").classList.remove("on"); };
 
-  // ===== 광고 보상 (하루 5회) =====
-  // 광고 제공자 연결부: 실제 광고사(AdSense H5/Applixir) 승인 후 이 함수만 교체하면 됨
-  function showRewardAd(onDone){
-    var sec=5;
-    modal("📺 광고 시청 중...", "테스트 광고입니다 ("+sec+"초) — 실제 광고는 승인 후 연결");
-    var t=setInterval(function(){
-      sec--;
-      $("mBody").textContent="테스트 광고입니다 ("+sec+"초)";
-      if(sec<=0){ clearInterval(t); $("modal").classList.remove("on"); onDone(true); }
-    },1000);
-  }
+  // ===== 트윗 참여 보너스 (하루 1회) — 광고는 임시 제외, 코드 보관 =====
+  var TWEET_URL="https://twitter.com/punkvism";
   $("adBtn").addEventListener("click",function(ev){
     ev.stopPropagation();
     if(!S||!NAME) return;
-    fetch(API("/api/ad/watch"),{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({token:TOKEN,name:NAME})})
-      .then(function(r){return r.json();})
-      .then(function(j){
-        if(!j.ok){ toast(j.error||"잠시 후 다시 시도해주세요"); return; }
-        showRewardAd(function(){
-          // 단계별 감액: 1~3회 10분치 / 4~6회 5분치 / 7~10회 2분치
-          var n=j.n||1;
-          var secs = n<=3 ? 600 : (n<=6 ? 300 : 120);
-          var floorMin = n<=3 ? 500 : (n<=6 ? 250 : 100);
-          var reward=Math.max(floorMin, Math.floor(perSec()*secs));
+    window.open(TWEET_URL,"_blank");
+    modal("🐦 트윗 참여 보너스","공식 X가 열렸어요! 최신 글에 댓글을 남기고 [확인]을 눌러주세요. (관리자가 댓글 확인 — 거짓 클릭 제재 👀)");
+    $("mOk").onclick=function(){
+      $("modal").classList.remove("on");
+      fetch(API("/api/ad/watch"),{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({token:TOKEN,name:NAME})})
+        .then(function(r){return r.json();})
+        .then(function(j){
+          if(!j.ok){ toast(j.error||"잠시 후 다시"); return; }
+          var reward=Math.max(800, Math.floor(perSec()*900)); // 15분치 수입
           S.money+=reward; S.lifetime+=reward;
-          modal("📺 광고 보상!", "₭"+fmt(reward)+" 획득! (오늘 남은 횟수: "+j.left+"회)");
+          modal("🐦 참여 감사!","₭"+fmt(reward)+" 지급! 내일 또 만나요");
           renderFast(); saveNow();
-        });
-      }).catch(function(){ toast("서버 연결 실패"); });
+        }).catch(function(){toast("서버 연결 실패");});
+    };
   });
 
   // ===== 자랑하기: 카톡방 공유 (모바일 공유시트 → 카톡 선택 / PC는 복사) =====
