@@ -287,6 +287,9 @@
         <div style="font-size:11px;color:#b9a8e0;letter-spacing:1px">현재 누적 당첨금</div>
         <div id="lottoPot" style="font-size:30px;font-weight:900;color:var(--gold);letter-spacing:-.02em;line-height:1.2">₭ 0</div>
         <div id="lottoTick" style="font-size:11px;color:#6fe07a;min-height:14px"></div>
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.12);font-size:12px;color:#c9b8ef">
+          🙋 내 누적 기여금 <b id="lottoMine" style="color:#fff">₭ 0</b>
+        </div>
       </div>
       <button class="bigBtn" id="lottoBtn" style="background:#4a3b6e;opacity:.7" disabled>🎟 응모하기 (오픈 예정 · 응모비 미정)</button>
     </div>
@@ -1005,23 +1008,25 @@
   var lottoPending=0;      // 아직 서버에 안 보낸 내 기여분(지출 1%)
   var lottoShown=0;        // 화면에 보이는 팟 (부드럽게 목표치로 증가)
   var lottoTarget=0;       // 서버가 알려준 실제 팟
+  var lottoMine=0;         // 내 누적 기여금(서버 확정분)
   function lottoContribute(spend){ // ₭ 지출 시 1% 적립
     if(!PLAY_OK) return;
     lottoPending += Math.max(0, spend*0.01);
   }
+  function renderMine(){ var el=$("lottoMine"); if(el) el.textContent="₭ "+fmt(lottoMine+Math.floor(lottoPending)); }
   function lottoFlush(){ // 쌓인 기여분을 서버로 (글로벌 팟에 합산)
     if(lottoPending<1||!NAME||!PLAY_OK) return;
     var amt=Math.floor(lottoPending); lottoPending-=amt;
     var f=$("lottoTick"); if(f){ f.textContent="+₭"+fmt(amt)+" 적립!"; setTimeout(function(){ if(f)f.textContent=""; },1500); }
     fetch(API("/api/lotto/add"),{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH,ses:SES,amount:amt})})
-      .then(function(r){return r.json();}).then(function(j){ if(j.ok&&typeof j.pot==="number") lottoTarget=j.pot; })
+      .then(function(r){return r.json();}).then(function(j){ if(j.ok){ if(typeof j.pot==="number") lottoTarget=j.pot; if(typeof j.mine==="number") lottoMine=j.mine; renderMine(); } })
       .catch(function(){ lottoPending+=amt; }); // 실패 시 되돌림
   }
-  function lottoPoll(){ // 다른 길드원 기여까지 반영된 실제 팟 조회
+  function lottoPoll(){ // 다른 길드원 기여까지 반영된 실제 팟 + 내 누적 조회
     if(!NAME) return;
-    fetch(API("/api/lotto")).then(function(r){return r.json();})
-      .then(function(j){ if(j.ok&&typeof j.pot==="number") lottoTarget=j.pot; }).catch(function(){});
+    fetch(API("/api/lotto")+"&name="+encodeURIComponent(NAME)).then(function(r){return r.json();})
+      .then(function(j){ if(j.ok){ if(typeof j.pot==="number") lottoTarget=j.pot; if(typeof j.mine==="number") lottoMine=j.mine; renderMine(); } }).catch(function(){});
   }
   setInterval(lottoFlush, 8000);   // 8초마다 내 적립분 전송
   setInterval(lottoPoll, 6000);    // 6초마다 실제 팟 갱신
@@ -1032,6 +1037,7 @@
     if(lottoShown<goal){ lottoShown += Math.max(1, Math.ceil((goal-lottoShown)/12)); if(lottoShown>goal) lottoShown=goal; }
     else lottoShown=goal;
     el.textContent="₭ "+fmt(lottoShown);
+    renderMine(); // 내 기여금(확정+미전송분) 실시간 표시
   },120);
 
   // ===== 행인 NPC (지나가다 동전 던져줌, 가끔 부자 등장) =====

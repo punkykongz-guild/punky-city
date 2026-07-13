@@ -1084,6 +1084,7 @@ io.on("connection", (socket) => {
       if (!db.players[name]) db.players[name] = {};
       db.players[name].money = myMoney - kFee;
       db.lottoPot = (db.lottoPot || 0) + kFee; // 지렁이 입장료 전액 → 주간 로또 팟
+      db.players[name].lottoMine = (db.players[name].lottoMine || 0) + kFee; // 개인 누적 기여
       markDirty();
       entry.kFee = kFee;
 
@@ -1167,7 +1168,9 @@ app.get("/api/admin/set", (req, res) => {
 if (typeof db.lottoPot !== "number") db.lottoPot = 0;
 app.get("/api/lotto", (req, res) => {
   if (!checkToken(req, res)) return;
-  res.json({ ok: true, pot: Math.floor(db.lottoPot || 0), entryFee: null, open: false });
+  const name = String(req.query.name || "").trim();
+  const mine = (db.players[name] && db.players[name].lottoMine) || 0;
+  res.json({ ok: true, pot: Math.floor(db.lottoPot || 0), mine: Math.floor(mine), entryFee: null, open: false });
 });
 // 관리자: 로또 팟 설정/리셋 (주간 추첨 후 0으로) — LINK_SECRET 필요
 app.get("/api/admin/lotto", (req, res) => {
@@ -1184,8 +1187,10 @@ app.post("/api/lotto/add", (req, res) => {
   if (amt <= 0) return res.json({ ok: true, pot: Math.floor(db.lottoPot || 0) });
   if (amt > 1e15) amt = 1e15; // 비정상 방지 상한
   db.lottoPot = (db.lottoPot || 0) + amt;
+  const p = db.players[name] || (db.players[name] = {});
+  p.lottoMine = (p.lottoMine || 0) + amt; // 개인 누적 기여
   markDirty();
-  res.json({ ok: true, pot: Math.floor(db.lottoPot) });
+  res.json({ ok: true, pot: Math.floor(db.lottoPot), mine: Math.floor(p.lottoMine) });
 });
 
 // 저축 조회 (잔액 + 이력)
