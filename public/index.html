@@ -1359,7 +1359,7 @@
   }
   function nextPjRound(){
     pj.round++;
-    pj.zW=Math.max(7, 42*Math.pow(0.72,pj.round-1));
+    pj.zW=Math.max(6, 32*Math.pow(0.68,pj.round-1));
     pj.zL=Math.random()*(100-pj.zW-8)+4;
     pj.spd=0.9+pj.round*0.35;
     pj.pos=0; pj.dir=1;
@@ -1520,7 +1520,7 @@
     var mult=0, msg="";
     if(hasBomb){ mult=0; msg="💣 폭탄! 꽝이에요 ㅠㅠ"; }
     else if(a===b&&b===c){
-      var m={4:40,2:20,1:12,0:8,3:8}; mult=m[a]||8;
+      var m={4:25,2:12,1:8,0:5,3:5}; mult=m[a]||5;
       msg="🎉 "+SLOT_SYM[a]+" 3개! ×"+mult+" 당첨!";
     } else if(a===b||b===c||a===c){ mult=2; msg="✨ 2개 매치! ×2"; }
     else { mult=0; msg="아쉽! 다음 기회에 🍀"; }
@@ -1545,7 +1545,7 @@
     $("ldSub").textContent="🚶 사다리 타는 중...";
     // 가중 결과: 꽝 55% / ×1.5 30% / ×3 12% / ×10 3%
     var r=Math.random(), mult;
-    if(r<0.55) mult=0; else if(r<0.85) mult=1.5; else if(r<0.97) mult=3; else mult=10;
+    if(r<0.63) mult=0; else if(r<0.88) mult=1.5; else if(r<0.98) mult=3; else mult=8;
     setTimeout(function(){
       if(mult>0){ var w=Math.floor(bet*mult); win(w); vib(30); $("ldMsg").innerHTML='<span style="color:var(--gold)">×'+mult+' 당첨! ₭'+fmt(w)+' 🎉</span>'; }
       else { saveNow(); vib([30,30]); $("ldMsg").innerHTML='<span style="color:#ff8080">꽝! 아쉬워요 😭</span>'; }
@@ -1565,7 +1565,7 @@
       $("rpsFight").textContent=RPS[me]+" vs "+RPS[dealer];
       var outcome=(me-dealer+3)%3; // 0=비김 1=이김 2=짐
       var extra=' <span style="font-size:12px;color:#9b8cc0">— [대결] 눌러 한 판 더</span>';
-      if(outcome===1){ var w=rpsBet*2; win(w); vib(30); $("rpsMsg").innerHTML='<span style="color:var(--gold)">🎉 이겼다! ₭'+fmt(w)+' 획득 (×2)</span>'+extra; }
+      if(outcome===1){ var w=Math.floor(rpsBet*1.85); win(w); vib(30); $("rpsMsg").innerHTML='<span style="color:var(--gold)">🎉 이겼다! ₭'+fmt(w)+' 획득 (×1.85)</span>'+extra; }
       else if(outcome===0){ win(rpsBet); $("rpsMsg").innerHTML='<span style="color:#9fd">🤝 비김 — 배팅액 환불</span>'+extra; }
       else { saveNow(); vib([30,30]); $("rpsMsg").innerHTML='<span style="color:#ff8080">💥 졌어요… 다음 판!</span>'+extra; }
     };
@@ -1681,7 +1681,7 @@
   // ===== 🚀 콩즈 로켓 (크래시) =====
   var crash={active:false,mult:1,at:1,bet:0,cashed:false,raf:0};
   $("crashBtn").onclick=function(){ showIntro("🚀 콩즈 로켓", "🚀 배율이 계속 <b>치솟아요</b>! (1.00x→∞)<br>터지기 전에 <b style='color:#6fe07a'>💰탈출</b>을 누르면 그 배율만큼 획득!<br>욕심부리다 터지면 꽝… 언제 터질진 아무도 몰라요 💥", function(){ pickBet("🚀 콩즈 로켓", startCrash); }); };
-  function genCrash(){ var r=Math.random(); if(r<0.03) return 1.00; return Math.max(1.01, Math.round((0.97/(1-r))*100)/100); }
+  function genCrash(){ var r=Math.random(); if(r<0.07) return 1.00; return Math.max(1.01, Math.round((0.88/(1-r))*100)/100); }
   function startCrash(bet){
     crash.bet=bet; crash.mult=1.00; crash.at=genCrash(); crash.cashed=false; crash.active=true;
     $("crashModal").style.display="flex"; $("crashCash").style.display=""; $("crashCash").disabled=false;
@@ -1721,8 +1721,8 @@
   $("hlBtn").onclick=function(){ showIntro("🃏 하이로우", "숫자(1~100)를 보고 <b>다음이 높을지/낮을지</b> 예측! 🃏<br>맞추면 배율이 붙고, 연속 성공하면 폭발 📈<br>위험한 쪽일수록 배율이 커요. 아무때나 💰챙기기, 틀리면 꽝.", function(){ pickBet("🃏 하이로우", startHiLo); }); };
   function hlPayouts(n){
     var pHigh=(100-n)/99, pLow=(n-1)/99;
-    var ph=pHigh>0?Math.max(1.05,Math.round(0.95/pHigh*100)/100):0;
-    var pl=pLow>0?Math.max(1.05,Math.round(0.95/pLow*100)/100):0;
+    var ph=pHigh>0?Math.max(1.02,Math.round(0.86/pHigh*100)/100):0;
+    var pl=pLow>0?Math.max(1.02,Math.round(0.86/pLow*100)/100):0;
     return [ph,pl];
   }
   function startHiLo(bet){
@@ -1770,11 +1770,11 @@
       clearInterval(shake); ic.style.transform="";
       // 가중 결과 (EV~0.95): 꽝60% ×1(환불)25% ×2 10% ×5 4% 잭팟×30 1%
       var r=Math.random(), mult, icon;
-      if(r<0.60){ mult=0; icon="💨"; }
-      else if(r<0.85){ mult=1; icon="🪙"; }
-      else if(r<0.95){ mult=2; icon="💎"; }
-      else if(r<0.99){ mult=5; icon="👑"; }
-      else { mult=30; icon="🎰"; }
+      if(r<0.66){ mult=0; icon="💨"; }
+      else if(r<0.87){ mult=1; icon="🪙"; }
+      else if(r<0.955){ mult=2; icon="💎"; }
+      else if(r<0.99){ mult=4; icon="👑"; }
+      else { mult=25; icon="🎰"; }
       ic.textContent=icon;
       if(mult>0){ var w=bet*mult; win(w); vib(30); beep(mult>=5?1000:700,0.12);
         $("boxMsg").innerHTML='<span style="color:var(--gold)">'+(mult>=30?"🎉 잭팟!! ":(mult>=5?"🔥 대박! ":""))+"×"+mult+' — ₭'+fmt(w)+' 획득!</span>';
@@ -1786,12 +1786,13 @@
   // ===== 🥊 콩즈 파이터 (심리전 대전 + 필살기) =====
   var fg={bet:0,myHP:100,aiHP:100,myG:0,aiG:0,over:false,busy:false,aiId:1};
   $("fgBtn").onclick=function(){ showIntro("🥊 콩즈 파이터", "내 콩즈 vs 도전자 콩즈 대결! 🥊<br>👊공격 > 🤏잡기 > 🛡가드 > 👊공격 (상성)<br>🛡가드로 막으면 <b>기 게이지</b>가 차고, 3칸 모으면 <b style='color:#ff8080'>🔥필살기(-35)</b>!<br>상대 HP를 0으로 만들면 <b>×2</b> 승리 🏆", function(){ pickBet("🥊 콩즈 파이터", startFight); }); };
-  function fgKimg(id){ return "https://cdn.helius-rpc.com/cdn-cgi/image/width=200/https://punkykongz.com/nft/punkykongz/image/"+id+".png"; }
+  function fgKimg(id){ return "https://cdn.helius-rpc.com/cdn-cgi/image/width=200/https://punkykongz.com/nft/punkykongz/image/"+id+".jpg"; }
   function startFight(bet){
     fg.bet=bet; fg.myHP=100; fg.aiHP=100; fg.myG=0; fg.aiG=0; fg.over=false; fg.busy=false;
     fg.aiId=Math.floor(Math.random()*5000)+1;
     var myId=(typeof currentAvatarId==="function"&&currentAvatarId())|| (profile.tokenIds&&profile.tokenIds[0])||1;
-    $("fgMeImg").src=fgKimg(myId); $("fgAiImg").src=fgKimg(fg.aiId);
+    function fgSet(el,id){ el.onerror=function(){ el.onerror=null; el.src="https://cdn.helius-rpc.com/cdn-cgi/image/width=200/https://punkykongz.com/nft/punkykongz/image/"+id+".png"; }; el.src=fgKimg(id); }
+    fgSet($("fgMeImg"),myId); fgSet($("fgAiImg"),fg.aiId);
     $("fgMeName").textContent=(NAME||"나"); $("fgAiName").textContent="도전자 #"+fg.aiId;
     $("fgModal").style.display="flex";
     $("fgVs").textContent="라운드 시작! 기술을 골라라 👊🛡🤏";
@@ -1805,7 +1806,7 @@
     $("fgSuper").style.opacity=(fg.myG<3?.4:1);
   }
   function aiPick(){
-    if(fg.aiG>=3 && Math.random()<0.5) return 3;
+    if(fg.aiG>=3 && Math.random()<0.62) return 3;
     return Math.floor(Math.random()*3);
   }
   function resolveFg(me,ai){
@@ -2080,20 +2081,24 @@
     return profile.tokenIds[0];
   }
   // Helius CDN 리사이즈 (원본 0.6~2MB → 수십 KB, 로딩 체감 해결)
-  function rawImg(id){
-    return (profile.imgMap&&profile.imgMap[id]) || (profile.imageBase+id+".jpg");
-  }
-  function kimg(id,w){
-    return "https://cdn.helius-rpc.com/cdn-cgi/image/width="+w+"/"+rawImg(id);
-  }
+  var IMGBASE="https://punkykongz.com/nft/punkykongz/image/";
+  var CDN="https://cdn.helius-rpc.com/cdn-cgi/image/width=";
+  function rawImg(id){ return IMGBASE+id+".jpg"; }              // 최신 업로드 아트(.jpg) 우선
+  function rawImgOld(id){ return (profile.imgMap&&profile.imgMap[id]) || (IMGBASE+id+".png"); } // 폴백(온체인/구형)
+  function kimg(id,w){ return CDN+w+"/"+rawImg(id); }           // 최신
+  function kimgOld(id,w){ return CDN+w+"/"+rawImgOld(id); }     // 폴백
+  // <img>: 최신 로드 실패 시 구형으로 자동 교체
+  function setKimg(el,id,w){ el.onerror=function(){ el.onerror=null; el.src=kimgOld(id,w); }; el.src=kimg(id,w); }
+  // 배경이미지: 최신 존재 확인 후 적용, 없으면 구형
+  function setKbg(el,id,w){ var u=kimg(id,w); var p=new Image(); p.onload=function(){ el.style.backgroundImage="url("+u+")"; }; p.onerror=function(){ el.style.backgroundImage="url("+kimgOld(id,w)+")"; }; p.src=u; }
   function applyAvatarImage(){
     var id=currentAvatarId();
     if(id===null) return;
-    $("avatar").style.backgroundImage="url("+kimg(id,200)+")"; $("avatar").classList.remove("silhouette");
+    setKbg($("avatar"),id,200); $("avatar").classList.remove("silhouette");
     var hero=$("heroImg");
     hero.dataset.ai="0";
     hero.style.display=""; $("heroShadow").style.display=""; $("heroDeco").style.display="";
-    hero.style.backgroundImage="url("+kimg(id,600)+")"; hero.classList.remove("silhouette");
+    setKbg(hero,id,600); hero.classList.remove("silhouette");
     lastSceneStage=-1; applyScene(); // 등급별 변신(필터/액세서리) 다시 적용
     checkAiAvatar(); // AI 변신 이미지 확인/생성
   }
@@ -2163,7 +2168,7 @@
       $("matesInfo").textContent="(총 "+p.tokenIds.length+"마리 · 수입 +"+(p.nft*0.5).toFixed(1)+"% · 1마리당 +0.5%)";
       var m=$("mates"); m.innerHTML="";
       p.tokenIds.forEach(function(id){ // 전체 표시 (100마리+ 대비 작은 썸네일 + 지연 로딩)
-        var im=document.createElement("img"); im.src=kimg(id,120); im.loading="lazy"; im.title="#"+id; m.appendChild(im);
+        var im=document.createElement("img"); im.loading="lazy"; im.title="#"+id; setKimg(im,id,120); m.appendChild(im);
       });
     }
   }
@@ -2197,7 +2202,7 @@
       var cur=currentAvatarId();
       profile.tokenIds.forEach(function(id){
         var im=document.createElement("img"); im.loading="lazy";
-        im.src=kimg(id,160); im.title="Punky Kongz #"+id;
+        setKimg(im,id,160); im.title="Punky Kongz #"+id;
         if(id===cur) im.className="sel";
         im.onclick=function(){
           S.avatarId=id; applyAvatarImage(); saveNow();
