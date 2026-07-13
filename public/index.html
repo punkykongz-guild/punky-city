@@ -358,6 +358,66 @@
     </div>
   </div>
 
+  <!-- 공용 베팅 선택 -->
+  <div id="betModal" style="position:fixed;inset:0;background:rgba(8,4,20,.94);display:none;z-index:82;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center">
+    <h2 id="betTitle" style="margin:0 0 4px">베팅</h2>
+    <div id="betSub" class="muted" style="margin-bottom:14px;font-size:13px"></div>
+    <div id="betBtns" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:320px"></div>
+    <button class="bigBtn" id="betClose" style="margin-top:14px;background:#5a5a72;max-width:320px">닫기</button>
+  </div>
+
+  <!-- 바나나 슬롯 -->
+  <div id="slotModal" style="position:fixed;inset:0;background:rgba(8,4,20,.95);display:none;z-index:83;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center">
+    <h2>🎰 바나나 슬롯</h2>
+    <div id="slotReels" style="display:flex;gap:10px;font-size:56px;margin:16px 0;background:#1a1030;border-radius:14px;padding:14px 20px;border:2px solid var(--gold)">
+      <span id="sr0">🍌</span><span id="sr1">🦍</span><span id="sr2">💎</span>
+    </div>
+    <div id="slotMsg" class="muted" style="min-height:22px;font-size:14px"></div>
+    <button class="bigBtn" id="slotClose" style="margin-top:12px;background:#5a5a72;max-width:300px">닫기</button>
+  </div>
+
+  <!-- 콩즈 사다리 -->
+  <div id="ldModal" style="position:fixed;inset:0;background:rgba(8,4,20,.95);display:none;z-index:83;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center">
+    <h2>🪜 콩즈 사다리</h2>
+    <div id="ldSub" class="muted" style="font-size:13px;margin-bottom:10px">출발 사다리를 고르세요</div>
+    <div id="ldLanes" style="display:flex;gap:10px"></div>
+    <div id="ldMsg" style="min-height:26px;font-size:16px;font-weight:800;margin-top:12px"></div>
+    <button class="bigBtn" id="ldClose" style="margin-top:10px;background:#5a5a72;max-width:300px">닫기</button>
+  </div>
+
+  <!-- 가위바위보 -->
+  <div id="rpsModal" style="position:fixed;inset:0;background:rgba(8,4,20,.95);display:none;z-index:83;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center">
+    <h2>✊ 가위바위보</h2>
+    <div id="rpsFight" style="font-size:52px;margin:14px 0;min-height:60px">🤛 vs 🤜</div>
+    <div id="rpsMsg" class="muted" style="min-height:22px;font-size:15px;margin-bottom:10px"></div>
+    <div id="rpsPick" style="display:flex;gap:12px">
+      <button class="bigBtn" style="width:auto;padding:12px 18px;font-size:26px" data-rps="0">✌️</button>
+      <button class="bigBtn" style="width:auto;padding:12px 18px;font-size:26px" data-rps="1">✊</button>
+      <button class="bigBtn" style="width:auto;padding:12px 18px;font-size:26px" data-rps="2">✋</button>
+    </div>
+    <button class="bigBtn" id="rpsClose" style="margin-top:12px;background:#5a5a72;max-width:300px">닫기</button>
+  </div>
+
+  <!-- 두더지 잡기 -->
+  <div id="moleModal" style="position:fixed;inset:0;background:linear-gradient(180deg,#241a12,#120c08);display:none;z-index:83;flex-direction:column">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px">
+      <div style="font-weight:800">🔨 <span id="moleScore">0</span></div>
+      <div style="font-weight:800;color:var(--gold)">⏱ <span id="moleTime">30</span>s</div>
+      <button id="moleClose" style="background:#5a5a72;border:none;color:#fff;padding:6px 12px;border-radius:8px">나가기</button>
+    </div>
+    <div id="moleGrid" style="flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:16px;align-content:center"></div>
+    <div id="moleStart" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2;background:rgba(8,4,20,.6)"></div>
+  </div>
+
+  <!-- 콩즈 기억력 (사이먼) -->
+  <div id="simonModal" style="position:fixed;inset:0;background:linear-gradient(180deg,#12183a,#0a0c1e);display:none;z-index:83;flex-direction:column;align-items:center;justify-content:center;padding:20px">
+    <div style="position:absolute;top:12px;right:16px"><button id="simonClose" style="background:#5a5a72;border:none;color:#fff;padding:6px 12px;border-radius:8px">나가기</button></div>
+    <h2 id="simonTitle">🧠 콩즈 기억력</h2>
+    <div id="simonMsg" class="muted" style="min-height:22px;font-size:14px;margin-bottom:8px">순서를 기억하세요!</div>
+    <div id="simonPads" style="display:grid;grid-template-columns:repeat(2,110px);gap:12px"></div>
+    <button class="bigBtn" id="simonGo" style="margin-top:16px;max-width:220px">시작!</button>
+  </div>
+
   <div id="tabs">
     <button class="tabBtn on" data-page="biz">💼 사업</button>
     <button class="tabBtn" data-page="stage">📖 등급</button>
@@ -457,9 +517,30 @@
       </div>
       <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="bnBtn">플레이</button>
     </div>
-    <div class="card">
-      <h3>🃏 콩즈코인 투자 <span class="muted">곧 오픈 🚧</span></h3>
-      <p class="muted" style="font-size:12px">차트 보고 ₭ 사고팔기 — 준비중!</p>
+    <div class="card arcadeItem">
+      <div class="big">🎰</div>
+      <div style="flex:1"><h3 style="margin:0">바나나 슬롯 <span class="muted">₭ 베팅</span></h3><div class="muted" style="font-size:12px">777 잭팟! 3개 맞추면 대박 · 💣폭탄 조심</div></div>
+      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="slotBtn">돌리기</button>
+    </div>
+    <div class="card arcadeItem">
+      <div class="big">🪜</div>
+      <div style="flex:1"><h3 style="margin:0">콩즈 사다리 <span class="muted">₭ 베팅</span></h3><div class="muted" style="font-size:12px">사다리 타고 최대 ×10! 꽝도 있음 😜</div></div>
+      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="ldBtn">타기</button>
+    </div>
+    <div class="card arcadeItem">
+      <div class="big">✊</div>
+      <div style="flex:1"><h3 style="margin:0">가위바위보 <span class="muted">₭ 베팅</span></h3><div class="muted" style="font-size:12px">딜러와 한판! 이기면 ×2, 비기면 환불</div></div>
+      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="rpsBtn">대결</button>
+    </div>
+    <div class="card arcadeItem">
+      <div class="big">🔨</div>
+      <div style="flex:1"><h3 style="margin:0">두더지 잡기 <span class="muted" id="moleLeftT">하루 5판</span></h3><div class="muted" style="font-size:12px">튀어나온 🦍 탭! 🕵️사기꾼은 감점 → ₭ 획득</div></div>
+      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="moleBtn">플레이</button>
+    </div>
+    <div class="card arcadeItem">
+      <div class="big">🧠</div>
+      <div style="flex:1"><h3 style="margin:0">콩즈 기억력 <span class="muted" id="simonLeftT">하루 5판</span></h3><div class="muted" style="font-size:12px">깜빡이는 순서 따라 누르기! 길수록 ₭ 대박</div></div>
+      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="simonBtn">플레이</button>
     </div>
   </div>
 
@@ -1295,6 +1376,200 @@
   $("bnClose").onclick=function(){ bn.active=false; clearInterval(bn.timer); cancelAnimationFrame(bn.raf); bn.items.forEach(function(el){el.remove();}); bn.items=[]; $("bnModal").style.display="none"; };
   $("bnBtn").onclick=openBn;
 
+  // ===== 공용 베팅 선택 =====
+  var betCb=null;
+  function pickBet(title, cb){
+    if(!PLAY_OK){ needWallet(); return; }
+    if(S.money<100){ toast("콩달러가 부족해요! 먼저 벌어오세요 🦍"); return; }
+    betCb=cb; $("betTitle").textContent=title;
+    $("betSub").textContent="배팅액을 고르세요 (보유 ₭"+fmt(S.money)+")";
+    var box=$("betBtns"); box.innerHTML="";
+    [["소액",Math.max(100,Math.floor(S.money*0.05))],["중박",Math.max(500,Math.floor(S.money*0.2))],["한방",Math.max(2000,Math.floor(S.money*0.5))]].forEach(function(o){
+      var b=document.createElement("button"); b.className="bigBtn"; b.style.cssText="width:auto;padding:10px 16px;margin:0";
+      b.innerHTML=o[0]+"<br><span style='font-size:12px'>₭"+fmt(o[1])+"</span>";
+      if(S.money<o[1]) b.disabled=true;
+      b.onclick=function(){ $("betModal").style.display="none"; var bet=o[1]; S.money-=bet; lottoContribute(bet); renderFast(); if(betCb) betCb(bet); };
+      box.appendChild(b);
+    });
+    $("betModal").style.display="flex";
+  }
+  $("betClose").onclick=function(){ $("betModal").style.display="none"; };
+  function win(amt){ S.money+=amt; S.lifetime+=amt; renderFast(); saveNow(); }
+
+  // ===== 🎰 바나나 슬롯 =====
+  var SLOT_SYM=["🍌","🦍","💎","🔔","7️⃣","💣"];
+  $("slotBtn").onclick=function(){ pickBet("🎰 바나나 슬롯", spinSlot); };
+  function spinSlot(bet){
+    $("slotModal").style.display="flex"; $("slotMsg").textContent="두구두구...";
+    var res=[0,1,2].map(function(){ return Math.floor(Math.random()*SLOT_SYM.length); });
+    var spins=[0,1,2].map(function(i){ return setInterval(function(){ $("sr"+i).textContent=SLOT_SYM[Math.floor(Math.random()*SLOT_SYM.length)]; },70); });
+    [0,1,2].forEach(function(i){
+      setTimeout(function(){ clearInterval(spins[i]); $("sr"+i).textContent=SLOT_SYM[res[i]]; beep(500+i*120,0.06);
+        if(i===2) setTimeout(function(){ settleSlot(bet,res); },200);
+      }, 700+i*450);
+    });
+  }
+  function settleSlot(bet,res){
+    var a=res[0],b=res[1],c=res[2];
+    var hasBomb=(a===5||b===5||c===5);
+    var mult=0, msg="";
+    if(hasBomb){ mult=0; msg="💣 폭탄! 꽝이에요 ㅠㅠ"; }
+    else if(a===b&&b===c){
+      var m={4:40,2:20,1:12,0:8,3:8}; mult=m[a]||8;
+      msg="🎉 "+SLOT_SYM[a]+" 3개! ×"+mult+" 당첨!";
+    } else if(a===b||b===c||a===c){ mult=2; msg="✨ 2개 매치! ×2"; }
+    else { mult=0; msg="아쉽! 다음 기회에 🍀"; }
+    if(mult>0){ var w=bet*mult; win(w); vib(30); msg+=" (₭"+fmt(w)+")"; }
+    else { saveNow(); vib([30,30]); }
+    $("slotMsg").textContent=msg;
+  }
+  $("slotClose").onclick=function(){ $("slotModal").style.display="none"; };
+
+  // ===== 🪜 콩즈 사다리 =====
+  $("ldBtn").onclick=function(){ pickBet("🪜 콩즈 사다리", startLadder); };
+  function startLadder(bet){
+    $("ldModal").style.display="flex"; $("ldMsg").textContent=""; $("ldSub").textContent="출발 사다리를 고르세요";
+    var lanes=$("ldLanes"); lanes.innerHTML="";
+    for(var i=0;i<4;i++){ (function(i){
+      var b=document.createElement("button"); b.className="bigBtn"; b.style.cssText="width:auto;padding:14px 10px;font-size:22px;margin:0";
+      b.textContent="🪜"; b.onclick=function(){ runLadder(bet,lanes); }; lanes.appendChild(b);
+    })(i); }
+  }
+  function runLadder(bet,lanes){
+    Array.prototype.forEach.call(lanes.children,function(b){ b.disabled=true; });
+    $("ldSub").textContent="🚶 사다리 타는 중...";
+    // 가중 결과: 꽝 55% / ×1.5 30% / ×3 12% / ×10 3%
+    var r=Math.random(), mult;
+    if(r<0.55) mult=0; else if(r<0.85) mult=1.5; else if(r<0.97) mult=3; else mult=10;
+    setTimeout(function(){
+      if(mult>0){ var w=Math.floor(bet*mult); win(w); vib(30); $("ldMsg").innerHTML='<span style="color:var(--gold)">×'+mult+' 당첨! ₭'+fmt(w)+' 🎉</span>'; }
+      else { saveNow(); vib([30,30]); $("ldMsg").innerHTML='<span style="color:#ff8080">꽝! 아쉬워요 😭</span>'; }
+    },1200);
+  }
+  $("ldClose").onclick=function(){ $("ldModal").style.display="none"; };
+
+  // ===== ✊ 가위바위보 =====
+  var RPS=["✌️","✊","✋"], RPS_NM=["가위","바위","보"];
+  var rpsBet=0;
+  $("rpsBtn").onclick=function(){ pickBet("✊ 가위바위보", function(bet){ rpsBet=bet; $("rpsModal").style.display="flex"; $("rpsMsg").textContent="가위·바위·보 중 하나!"; $("rpsFight").textContent="🤛 vs 🤜"; }); };
+  Array.prototype.forEach.call(document.querySelectorAll('#rpsPick [data-rps]'),function(btn){
+    btn.onclick=function(){
+      var me=+btn.dataset.rps, dealer=Math.floor(Math.random()*3);
+      $("rpsFight").textContent=RPS[me]+" vs "+RPS[dealer];
+      var outcome=(me-dealer+3)%3; // 0=비김 1=이김 2=짐
+      if(outcome===1){ var w=rpsBet*2; win(w); vib(30); $("rpsMsg").innerHTML='<span style="color:var(--gold)">🎉 이겼다! ₭'+fmt(w)+' 획득 (×2)</span>'; }
+      else if(outcome===0){ win(rpsBet); $("rpsMsg").innerHTML='<span style="color:#9fd">🤝 비김 — 배팅액 환불</span>'; }
+      else { saveNow(); vib([30,30]); $("rpsMsg").innerHTML='<span style="color:#ff8080">💥 졌어요… 다음 판!</span>'; }
+    };
+  });
+  $("rpsClose").onclick=function(){ $("rpsModal").style.display="none"; };
+
+  // ===== 미니게임 일일제한 (두더지/기억력) =====
+  function mgRoll(){ if(S.mgDate!==todayKey()){ S.mgDate=todayKey(); S.moleN=0; S.simonN=0; } }
+  function moleLeft(){ mgRoll(); return Math.max(0,5-(S.moleN||0)); }
+  function simonLeft(){ mgRoll(); return Math.max(0,5-(S.simonN||0)); }
+  function refreshMgLeft(){ var a=$("moleLeftT"),b=$("simonLeftT"); if(a)a.textContent="오늘 "+moleLeft()+"판"; if(b)b.textContent="오늘 "+simonLeft()+"판"; }
+
+  // ===== 🔨 두더지 잡기 =====
+  var mole={active:false,score:0,time:0,timer:0,popT:0,raf:0};
+  $("moleBtn").onclick=function(){
+    if(!PLAY_OK){ needWallet(); return; }
+    if(moleLeft()<=0){ toast("오늘 두더지는 다 잡으셨어요! 내일 또 🔨"); return; }
+    $("moleModal").style.display="flex";
+    $("moleStart").style.display="flex";
+    $("moleStart").innerHTML='<h2>🔨 두더지 잡기</h2><p class="muted" style="max-width:280px;text-align:center;font-size:13px">30초간 튀어나온 🦍를 탭! 🕵️사기꾼·💣폭탄은 감점. 점수만큼 ₭!</p><button class="bigBtn" id="moleGo" style="max-width:220px">시작! ('+moleLeft()+'판 남음)</button>';
+    $("moleGo").onclick=startMole;
+    var g=$("moleGrid"); g.innerHTML="";
+    for(var i=0;i<9;i++){ var h=document.createElement("div"); h.className="moleHole"; h.style.cssText="background:#2a1c10;border-radius:14px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:38px;cursor:pointer;user-select:none"; h.dataset.i=i; g.appendChild(h); }
+  };
+  function startMole(){
+    mgRoll(); if(moleLeft()<=0){ $("moleModal").style.display="none"; return; }
+    S.moleN=(S.moleN||0)+1; refreshMgLeft();
+    $("moleStart").style.display="none";
+    mole.active=true; mole.score=0; mole.time=30; $("moleScore").textContent="0"; $("moleTime").textContent="30";
+    Array.prototype.forEach.call($("moleGrid").children,function(h){ h.textContent=""; h.dataset.on=""; h.onmousedown=function(){ hitMole(h); }; h.ontouchstart=function(e){ e.preventDefault(); hitMole(h); }; });
+    mole.timer=setInterval(function(){ mole.time--; $("moleTime").textContent=mole.time; if(mole.time<=0) endMole(); },1000);
+    mole.popT=setInterval(popMole, 620);
+  }
+  function popMole(){
+    if(!mole.active) return;
+    var holes=$("moleGrid").children;
+    // 켜진 것 일부 끄기
+    Array.prototype.forEach.call(holes,function(h){ if(h.dataset.on && Math.random()<0.5){ h.textContent=""; h.dataset.on=""; } });
+    var idx=Math.floor(Math.random()*9), h=holes[idx];
+    if(h.dataset.on) return;
+    var r=Math.random(); var t = r<0.7?"🦍":(r<0.88?"🕵️":"💣");
+    h.textContent=t; h.dataset.on=t;
+    setTimeout(function(){ if(h.dataset.on===t){ h.textContent=""; h.dataset.on=""; } }, 800);
+  }
+  function hitMole(h){
+    if(!mole.active||!h.dataset.on) return;
+    var t=h.dataset.on;
+    if(t==="🦍"){ mole.score++; beep(600+mole.score*3,0.05); h.textContent="✨"; }
+    else { mole.score=Math.max(0,mole.score-2); beep(150,0.12); vib(30); h.textContent="💥"; }
+    h.dataset.on=""; $("moleScore").textContent=mole.score;
+    setTimeout(function(){ if(!h.dataset.on) h.textContent=""; },180);
+  }
+  function endMole(){
+    mole.active=false; clearInterval(mole.timer); clearInterval(mole.popT);
+    var reward=Math.floor(mole.score*Math.max(1,perTap()*0.9));
+    win(reward);
+    $("moleStart").style.display="flex";
+    $("moleStart").innerHTML='<h2>🔨 '+mole.score+'마리 잡음!</h2><p class="muted" style="font-size:14px">₭'+fmt(reward)+' 획득!</p>'+
+      '<button class="bigBtn" id="moleAgain" style="max-width:220px">'+(moleLeft()>0?'또 잡기 ('+moleLeft()+'남음)':'오늘 끝!')+'</button>'+
+      '<button class="bigBtn" id="moleDone" style="max-width:220px;background:#5a5a72;margin-top:8px">나가기</button>';
+    $("moleAgain").onclick=function(){ if(moleLeft()>0) startMole(); else $("moleModal").style.display="none"; };
+    $("moleDone").onclick=function(){ $("moleModal").style.display="none"; };
+  }
+  $("moleClose").onclick=function(){ mole.active=false; clearInterval(mole.timer); clearInterval(mole.popT); $("moleModal").style.display="none"; };
+
+  // ===== 🧠 콩즈 기억력 (사이먼) =====
+  var SIMON_C=[["🟥","#e5484d"],["🟩","#4ade80"],["🟦","#3a7bd5"],["🟨","#fbbf24"]];
+  var simon={seq:[],idx:0,round:0,playing:false,busy:false,pads:[]};
+  $("simonBtn").onclick=function(){
+    if(!PLAY_OK){ needWallet(); return; }
+    if(simonLeft()<=0){ toast("오늘 기억력 게임은 끝! 내일 또 🧠"); return; }
+    $("simonModal").style.display="flex";
+    var p=$("simonPads"); p.innerHTML=""; simon.pads=[];
+    SIMON_C.forEach(function(c,i){ var d=document.createElement("div"); d.style.cssText="width:110px;height:110px;border-radius:16px;background:"+c[1]+";opacity:.4;font-size:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .1s"; d.textContent=c[0]; d.dataset.i=i; d.onmousedown=function(){ padPress(i); }; d.ontouchstart=function(e){ e.preventDefault(); padPress(i); }; p.appendChild(d); simon.pads.push(d); });
+    $("simonMsg").textContent="시작을 누르면 순서가 나옵니다!"; $("simonTitle").textContent="🧠 콩즈 기억력";
+    $("simonGo").style.display=""; $("simonGo").textContent="시작! ("+simonLeft()+"판 남음)";
+    $("simonGo").onclick=startSimon;
+  };
+  function flashPad(i,cb){ var d=simon.pads[i]; d.style.opacity="1"; beep(300+i*140,0.16); setTimeout(function(){ d.style.opacity=".4"; if(cb)cb(); },320); }
+  function startSimon(){
+    mgRoll(); if(simonLeft()<=0){ $("simonModal").style.display="none"; return; }
+    S.simonN=(S.simonN||0)+1; refreshMgLeft();
+    $("simonGo").style.display="none";
+    simon.seq=[]; simon.round=0; simon.playing=true; nextSimonRound();
+  }
+  function nextSimonRound(){
+    simon.round++; simon.idx=0; simon.busy=true;
+    simon.seq.push(Math.floor(Math.random()*4));
+    $("simonMsg").textContent="라운드 "+simon.round+" — 잘 보세요 👀";
+    var k=0;
+    function play(){ if(k>=simon.seq.length){ simon.busy=false; $("simonMsg").textContent="순서대로 눌러보세요! ("+simon.seq.length+"개)"; return; } flashPad(simon.seq[k],function(){ k++; setTimeout(play,180); }); }
+    setTimeout(play,600);
+  }
+  function padPress(i){
+    if(!simon.playing||simon.busy) return;
+    flashPad(i);
+    if(simon.seq[simon.idx]===i){
+      simon.idx++;
+      if(simon.idx>=simon.seq.length){ simon.busy=true; $("simonMsg").textContent="정답! ✨"; setTimeout(nextSimonRound,700); }
+    } else { endSimon(); }
+  }
+  function endSimon(){
+    simon.playing=false;
+    var rounds=Math.max(0,simon.round-1);
+    var reward=Math.floor(rounds*Math.max(1,perTap()*3));
+    win(reward);
+    $("simonMsg").innerHTML='<b>💥 '+rounds+'단계 성공!</b> ₭'+fmt(reward)+' 획득';
+    $("simonGo").style.display=""; $("simonGo").textContent=simonLeft()>0?("다시 ("+simonLeft()+"판)"):"오늘 끝!";
+    $("simonGo").onclick=function(){ if(simonLeft()>0) startSimon(); else $("simonModal").style.display="none"; };
+  }
+  $("simonClose").onclick=function(){ simon.playing=false; $("simonModal").style.display="none"; };
+
   // ===== 행인 NPC (지나가다 동전 던져줌, 가끔 부자 등장) =====
   // 등급별 어울리는 행인 (1~6 골목/동네, 7~13 도심, 14~21 부촌, 22~26 우주, 27~30 환상)
   function walkersForStage(st){
@@ -1865,7 +2140,7 @@
             modal("😴 오프라인 보상","자리를 비운 "+Math.floor(gap/60)+"분 동안\n동료들이 ₭"+fmt(earned)+" 벌어놨어요!"); }
         }
       }
-      renderBizInit(); render(); lottoPoll(); refreshBnLeft();
+      renderBizInit(); render(); lottoPoll(); refreshBnLeft(); refreshMgLeft();
     }).catch(function(e){
       // 부팅 중 예외가 나도 화면이 죽지 않게
       S=S||newSave(); applyProfile(profile); renderBizInit(); render();
