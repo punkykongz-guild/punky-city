@@ -281,17 +281,28 @@
 
   <div class="page" id="page-bonus">
     <div class="card" style="background:linear-gradient(135deg,#2a1550,#3a1a2e);border:1px solid var(--gold)">
-      <h3>🎰 주간 로또 <span class="muted">오픈 예정</span></h3>
-      <p class="muted" style="margin-bottom:6px">모든 콩달러 지출의 <b>1%</b> + 지렁이 입장료가 실시간으로 쌓이는 <b>길드 공동 당첨금</b>!</p>
-      <div style="text-align:center;padding:8px 0">
-        <div style="font-size:11px;color:#b9a8e0;letter-spacing:1px">현재 누적 당첨금</div>
-        <div id="lottoPot" style="font-size:30px;font-weight:900;color:var(--gold);letter-spacing:-.02em;line-height:1.2">₭ 0</div>
-        <div id="lottoTick" style="font-size:11px;color:#6fe07a;min-height:14px"></div>
-        <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.12);font-size:12px;color:#c9b8ef">
-          🙋 내 누적 기여금 <b id="lottoMine" style="color:#fff">₭ 0</b>
-        </div>
+      <h3>🎰 주간 로또 <span class="muted" id="lottoState">응모중</span></h3>
+      <!-- 당첨자 발표 (월13~화13) -->
+      <div id="lottoResult" style="display:none">
+        <div style="text-align:center;font-weight:800;font-size:15px;margin-bottom:8px">🎉 이번 주 당첨자</div>
+        <div id="lottoWinners"></div>
+        <div id="lottoResume" style="text-align:center;font-size:12px;color:#b9a8e0;margin-top:10px"></div>
+        <div style="text-align:center;font-size:11px;color:#8a7db0;margin-top:6px">다음 회차 당첨금이 이미 쌓이는 중! <b id="lottoPotMini" style="color:var(--gold)">₭ 0</b></div>
       </div>
-      <button class="bigBtn" id="lottoBtn" style="background:#4a3b6e;opacity:.7" disabled>🎟 응모하기 (오픈 예정 · 응모비 미정)</button>
+      <!-- 응모 기간 (화13~월13) -->
+      <div id="lottoEntry">
+        <p class="muted" style="margin-bottom:6px">모든 콩달러 지출의 <b>1%</b> + 지렁이 입장료가 실시간으로 쌓이는 <b>길드 공동 당첨금</b>! <b>매주 월요일 13시 자동 추첨</b>으로 3명 당첨 🎊</p>
+        <div style="text-align:center;padding:8px 0">
+          <div style="font-size:11px;color:#b9a8e0;letter-spacing:1px">현재 누적 당첨금</div>
+          <div id="lottoPot" style="font-size:30px;font-weight:900;color:var(--gold);letter-spacing:-.02em;line-height:1.2">₭ 0</div>
+          <div id="lottoTick" style="font-size:11px;color:#6fe07a;min-height:14px"></div>
+          <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.12);font-size:12px;color:#c9b8ef">
+            🙋 내 이번주 기여 <b id="lottoMine" style="color:#fff">₭ 0</b> <span id="lottoOdds" style="color:#6fe07a"></span>
+          </div>
+          <div id="lottoCountdown" style="font-size:11px;color:#8a7db0;margin-top:4px"></div>
+        </div>
+        <button class="bigBtn" id="lottoBtn" style="background:#7c3aed">🎟 자동 응모중 — 기여할수록 당첨확률 UP!</button>
+      </div>
     </div>
     <div class="card">
       <h3>🐦 X(트위터) 참여 보너스 <span class="muted">하루 1회</span></h3>
@@ -1004,16 +1015,26 @@
     renderFast();
   },100);
 
-  // ===== 주간 로또 팟 (길드 공동 적립) =====
+  // ===== 주간 로또 (매주 월 13시 자동추첨) =====
   var lottoPending=0;      // 아직 서버에 안 보낸 내 기여분(지출 1%)
   var lottoShown=0;        // 화면에 보이는 팟 (부드럽게 목표치로 증가)
   var lottoTarget=0;       // 서버가 알려준 실제 팟
-  var lottoMine=0;         // 내 누적 기여금(서버 확정분)
+  var lottoMine=0;         // 내 이번주 기여금(서버 확정분)
+  var lottoOdds=0;         // 당첨 확률(%)
+  var lottoOpen=true;      // 응모 가능?(발표중이면 false)
+  var lottoWinners=null;   // 당첨자 목록
+  var lottoResumeAt=0;     // 응모 재개 시각
+  var lottoNextDraw=0;     // 다음 추첨 시각
   function lottoContribute(spend){ // ₭ 지출 시 1% 적립
     if(!PLAY_OK) return;
     lottoPending += Math.max(0, spend*0.01);
   }
-  function renderMine(){ var el=$("lottoMine"); if(el) el.textContent="₭ "+fmt(lottoMine+Math.floor(lottoPending)); }
+  function renderMine(){
+    var el=$("lottoMine"); if(el) el.textContent="₭ "+fmt(lottoMine+Math.floor(lottoPending));
+    var od=$("lottoOdds");
+    if(od){ var goal=lottoTarget+Math.floor(lottoPending); var m=lottoMine+Math.floor(lottoPending);
+      od.textContent = (goal>0&&m>0) ? "· 당첨확률 ~"+(Math.min(100,Math.round(m/goal*1000)/10))+"%" : ""; }
+  }
   function lottoFlush(){ // 쌓인 기여분을 서버로 (글로벌 팟에 합산)
     if(lottoPending<1||!NAME||!PLAY_OK) return;
     var amt=Math.floor(lottoPending); lottoPending-=amt;
@@ -1023,13 +1044,54 @@
       .then(function(r){return r.json();}).then(function(j){ if(j.ok){ if(typeof j.pot==="number") lottoTarget=j.pot; if(typeof j.mine==="number") lottoMine=j.mine; renderMine(); } })
       .catch(function(){ lottoPending+=amt; }); // 실패 시 되돌림
   }
-  function lottoPoll(){ // 다른 길드원 기여까지 반영된 실제 팟 + 내 누적 조회
+  function lottoPoll(){ // 팟 + 내 기여 + 추첨상태 조회
     if(!NAME) return;
     fetch(API("/api/lotto")+"&name="+encodeURIComponent(NAME)).then(function(r){return r.json();})
-      .then(function(j){ if(j.ok){ if(typeof j.pot==="number") lottoTarget=j.pot; if(typeof j.mine==="number") lottoMine=j.mine; renderMine(); } }).catch(function(){});
+      .then(function(j){ if(!j.ok) return;
+        if(typeof j.pot==="number") lottoTarget=j.pot;
+        if(typeof j.mine==="number") lottoMine=j.mine;
+        lottoOpen=j.open!==false; lottoWinners=j.winners||null;
+        lottoResumeAt=j.resumeAt||0; lottoNextDraw=j.nextDrawAt||0;
+        renderLottoState(); renderMine();
+      }).catch(function(){});
   }
+  var MEDAL=["🥇","🥈","🥉"];
+  function renderLottoState(){
+    var res=$("lottoResult"), ent=$("lottoEntry"), st=$("lottoState");
+    if(!res||!ent) return;
+    if(lottoWinners&&lottoWinners.length&&!lottoOpen){
+      // 발표 모드
+      res.style.display="block"; ent.style.display="none"; if(st) st.textContent="당첨 발표중";
+      var html="";
+      for(var i=0;i<lottoWinners.length;i++){ var w=lottoWinners[i];
+        html+='<div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.06);border-radius:8px;padding:7px 12px;margin-bottom:5px">'+
+          '<span style="font-weight:700">'+(MEDAL[i]||"🎗")+' '+(w.name||"?")+'</span>'+
+          '<b style="color:var(--gold)">₭ '+fmt(w.prize||0)+'</b></div>';
+      }
+      $("lottoWinners").innerHTML=html;
+      var pm=$("lottoPotMini"); if(pm) pm.textContent="₭ "+fmt(lottoTarget+Math.floor(lottoPending));
+      var rz=$("lottoResume");
+      if(rz&&lottoResumeAt){ var left=lottoResumeAt-Date.now();
+        rz.textContent = left>0 ? "응모 재개까지 "+hms(left) : "곧 응모가 재개됩니다!"; }
+    } else {
+      // 응모 모드
+      res.style.display="none"; ent.style.display="block"; if(st) st.textContent="응모중";
+      var cd=$("lottoCountdown");
+      if(cd&&lottoNextDraw){ var l2=lottoNextDraw-Date.now();
+        cd.textContent = l2>0 ? "⏰ 다음 추첨까지 "+hms(l2)+" (월 13시)" : "추첨 진행중..."; }
+    }
+  }
+  function hms(ms){ var s=Math.floor(ms/1000); var d=Math.floor(s/86400); s%=86400;
+    var h=Math.floor(s/3600); s%=3600; var m=Math.floor(s/60);
+    return (d>0?d+"일 ":"")+h+"시간 "+m+"분"; }
+  $("lottoBtn").onclick=function(){
+    var m=lottoMine+Math.floor(lottoPending), g=lottoTarget+Math.floor(lottoPending);
+    var odd=(g>0&&m>0)?Math.min(100,Math.round(m/g*1000)/10):0;
+    toast("🎟 이미 자동 응모중! 이번주 기여 ₭"+fmt(m)+" · 당첨확률 ~"+odd+"% (기여할수록 UP)");
+  };
   setInterval(lottoFlush, 8000);   // 8초마다 내 적립분 전송
-  setInterval(lottoPoll, 6000);    // 6초마다 실제 팟 갱신
+  setInterval(lottoPoll, 6000);    // 6초마다 팟/상태 갱신
+  setInterval(renderLottoState, 1000); // 카운트다운 갱신
   // 팟 숫자를 부드럽게 목표치로 굴려올림 (실시간 쌓이는 느낌)
   setInterval(function(){
     var el=$("lottoPot"); if(!el) return;

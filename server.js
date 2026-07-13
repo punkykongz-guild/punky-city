@@ -1084,7 +1084,8 @@ io.on("connection", (socket) => {
       if (!db.players[name]) db.players[name] = {};
       db.players[name].money = myMoney - kFee;
       db.lottoPot = (db.lottoPot || 0) + kFee; // 지렁이 입장료 전액 → 주간 로또 팟
-      db.players[name].lottoMine = (db.players[name].lottoMine || 0) + kFee; // 개인 누적 기여
+      db.players[name].lottoMine = (db.players[name].lottoMine || 0) + kFee;
+      db.players[name].lottoWeek = (db.players[name].lottoWeek || 0) + kFee; // 이번주 응모권
       markDirty();
       entry.kFee = kFee;
 
@@ -1163,21 +1164,91 @@ app.get("/api/admin/set", (req, res) => {
   res.json(out);
 });
 
-// ===== 주간 로또 팟 (길드 공동 적립) =====
-// 적립: ① 모든 ₭ 지출의 1% (클라가 보고) ② 지렁이 입장료 전액 (join에서 서버가 직접)
+// ===== 주간 로또 (매주 월 13:00 KST 자동 추첨) =====
+// 적립: ① 모든 ₭ 지출의 1% ② 지렁이 입장료 전액 → 기여 비례 가중추첨 3명
 if (typeof db.lottoPot !== "number") db.lottoPot = 0;
+
+// 가장 최근에 지난 '월요일 13:00 KST' 의 실제 UTC 타임스탬프
+function lastMonday13KST(nowMs) {
+  const KST = 9 * 3600 * 1000, now = nowMs || Date.now();
+  const d = new Date(now + KST); // d의 UTC필드 = KST 벽시계
+  const daysSinceMon = (d.getUTCDay() + 6) % 7; // 월=0..일=6
+  const monWall = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - daysSinceMon, 13, 0, 0);
+  let monMs = monWall - KST; // KST 벽시계 → 실제 UTC
+  if (monMs > now) monMs -= 7 * 24 * 3600 * 1000; // 월요일 13시 이전이면 지난주로
+  return monMs;
+}
+function weightedPick(pool) { // pool: [[name, weight], ...]
+  const total = pool.reduce((a, e) => a + e[1], 0);
+  if (total <= 0) return null;
+  let r = Math.random() * total;
+  for (const [n, w] of pool) { r -= w; if (r <= 0) return n; }
+  return pool[pool.length - 1][0];
+}
+function performLottoDraw(due, force) {
+  const pot = Math.floor(db.lottoPot || 0);
+  let pool = [];
+  for (const [nm, pl] of Object.entries(db.players || {})) {
+    const w = Math.floor((pl && pl.lottoWeek) || 0);
+    if (w > 0) pool.push([nm, w]);
+  }
+  const splits = [0.5, 0.3, 0.2];
+  const winners = [];
+  for (let i = 0; i < 3 && pool.length > 0; i++) {
+    const nm = weightedPick(pool);
+    if (!nm) break;
+    const contrib = (pool.find((e) => e[0] === nm) || [null, 0])[1];
+    const prize = Math.floor(pot * splits[i]);
+    if (db.players[nm]) db.players[nm].money = (db.players[nm].money || 0) + prize; // 상금 ₭ 지급
+    winners.push({ name: nm, prize, contrib: Math.floor(contrib) });
+    pool = pool.filter((e) => e[0] !== nm); // 중복 당첨 방지
+  }
+  db.lottoDraw = { drawnFor: due, at: Date.now(), pot, winners };
+  db.lottoPot = 0; // 추첨과 동시에 새 주 누적 시작
+  for (const pl of Object.values(db.players || {})) { if (pl) pl.lottoWeek = 0; }
+  markDirty();
+  backupToSheet().catch(() => {});
+  console.log(`🎰 주간 로또 추첨: 팟 ${pot} → 당첨 ${winners.map((w) => w.name + "(" + w.prize + ")").join(", ") || "없음"}`);
+}
+function checkLottoDraw() {
+  const due = lastMonday13KST();
+  if (!db.lottoDraw) { db.lottoDraw = { drawnFor: due, at: 0, pot: 0, winners: [] }; markDirty(); return; } // 첫 가동: 다음주부터
+  if (db.lottoDraw.drawnFor !== due) performLottoDraw(due);
+}
+setInterval(checkLottoDraw, 60 * 1000);
+setTimeout(checkLottoDraw, 5000); // 부팅 후 1회
+const LOTTO_DISPLAY_MS = 24 * 3600 * 1000; // 당첨자 발표 노출 시간 (월13~화13)
 app.get("/api/lotto", (req, res) => {
   if (!checkToken(req, res)) return;
   const name = String(req.query.name || "").trim();
-  const mine = (db.players[name] && db.players[name].lottoMine) || 0;
-  res.json({ ok: true, pot: Math.floor(db.lottoPot || 0), mine: Math.floor(mine), entryFee: null, open: false });
+  const p = db.players[name] || {};
+  const draw = db.lottoDraw || { at: 0, winners: [] };
+  const showing = draw.at > 0 && Date.now() < draw.at + LOTTO_DISPLAY_MS && (draw.winners || []).length > 0;
+  const pot = Math.floor(db.lottoPot || 0);
+  const mine = Math.floor(p.lottoWeek || 0);
+  const odds = pot > 0 ? Math.min(100, Math.round((mine / pot) * 1000) / 10) : 0;
+  res.json({
+    ok: true, pot, mine, odds,
+    open: !showing,                                   // 발표중이면 응모 불가
+    winners: showing ? draw.winners : null,
+    resumeAt: showing ? draw.at + LOTTO_DISPLAY_MS : null, // 응모 재개 시각(=화 13시)
+    nextDrawAt: lastMonday13KST() + 7 * 24 * 3600 * 1000,  // 다음 추첨(월 13시)
+  });
 });
 // 관리자: 로또 팟 설정/리셋 (주간 추첨 후 0으로) — LINK_SECRET 필요
 app.get("/api/admin/lotto", (req, res) => {
   if (!LINK_SECRET || String(req.query.secret || "") !== LINK_SECRET) return res.status(403).json({ ok: false });
+  if (req.query.draw === "1") { performLottoDraw(lastMonday13KST(), true); return res.json({ ok: true, drew: true, winners: db.lottoDraw.winners }); }
   const set = req.query.set;
-  if (set !== undefined) { db.lottoPot = Math.max(0, Math.floor(Number(set) || 0)); markDirty(); }
-  res.json({ ok: true, pot: Math.floor(db.lottoPot || 0) });
+  if (set !== undefined) {
+    db.lottoPot = Math.max(0, Math.floor(Number(set) || 0));
+    if (req.query.reset === "1") { // 완전 초기화 (주간기여+발표 지움)
+      for (const pp of Object.values(db.players || {})) { if (pp) { pp.lottoWeek = 0; } }
+      db.lottoDraw = { drawnFor: lastMonday13KST(), at: 0, pot: 0, winners: [] };
+    }
+    markDirty();
+  }
+  res.json({ ok: true, pot: Math.floor(db.lottoPot || 0), draw: db.lottoDraw || null });
 });
 app.post("/api/lotto/add", (req, res) => {
   if (!checkToken(req, res)) return;
@@ -1188,9 +1259,10 @@ app.post("/api/lotto/add", (req, res) => {
   if (amt > 1e15) amt = 1e15; // 비정상 방지 상한
   db.lottoPot = (db.lottoPot || 0) + amt;
   const p = db.players[name] || (db.players[name] = {});
-  p.lottoMine = (p.lottoMine || 0) + amt; // 개인 누적 기여
+  p.lottoMine = (p.lottoMine || 0) + amt;   // 전체 누적(참고용)
+  p.lottoWeek = (p.lottoWeek || 0) + amt;   // 이번주 기여(= 응모권, 추첨 시 리셋)
   markDirty();
-  res.json({ ok: true, pot: Math.floor(db.lottoPot), mine: Math.floor(p.lottoMine) });
+  res.json({ ok: true, pot: Math.floor(db.lottoPot), mine: Math.floor(p.lottoWeek) });
 });
 
 // 저축 조회 (잔액 + 이력)
