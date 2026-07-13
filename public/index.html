@@ -2130,15 +2130,26 @@
     var st=Math.min(Math.max(1,stage),30);
     var scene=STAGES[Math.min(st,STAGES.length-1)];
     var d=$("spyDetail"); d.style.display="block";
-    d.innerHTML='<div style="font-weight:800;margin-bottom:6px">'+name+'님의 시티</div><div id="spyScene" style="position:relative;border-radius:12px;overflow:hidden;height:170px;background:#1a1030;background-size:cover;background-position:center bottom"></div><div class="muted" style="font-size:12px;margin-top:6px">'+(scene?scene.nm+" — "+scene.scene:"")+'</div>';
-    var sc=$("spyScene");
+    d.innerHTML='<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'+
+        '<div id="spyAv" style="width:52px;height:52px;border-radius:12px;background:#2a1a4a center/cover no-repeat;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:28px"></div>'+
+        '<div style="flex:1;min-width:0"><div style="font-weight:800;font-size:15px">'+name+'</div><div class="muted" style="font-size:12px">'+(scene?scene.nm:"Lv."+st)+'</div></div></div>'+
+      '<div id="spyScene" style="position:relative;border-radius:12px;overflow:hidden;height:180px;background:#1a1030;background-size:cover;background-position:center bottom"></div>'+
+      '<div class="muted" style="font-size:12px;margin-top:6px;line-height:1.5">'+(scene?scene.scene:"")+'</div>';
+    var sc=$("spyScene"), av=$("spyAv");
+    sc.style.backgroundImage="url(assets/bg/stage"+st+".webp)"; // 항상 그 사람 등급의 씬 배경
     if(avatarId){
+      setKbg(av,avatarId,120); // 프로필 썸네일
       var comp="/gen/avatar_"+avatarId+"_"+st+".png";
       var probe=new Image();
-      probe.onload=function(){ sc.style.backgroundImage="url("+comp+")"; };
-      probe.onerror=function(){ sc.style.backgroundImage="url(assets/bg/stage"+st+".webp)"; var im=document.createElement("img"); setKimg(im,avatarId,200); im.style.cssText="position:absolute;bottom:0;left:50%;transform:translateX(-50%);height:72%"; sc.appendChild(im); };
+      probe.onload=function(){ sc.style.backgroundImage="url("+comp+")"; }; // 합성 있으면 통째로
+      probe.onerror=function(){ var im=document.createElement("img"); setKimg(im,avatarId,300); im.style.cssText="position:absolute;bottom:-4%;left:50%;transform:translateX(-50%);height:82%;filter:drop-shadow(0 6px 12px rgba(0,0,0,.55))"; sc.appendChild(im); };
       probe.src=comp;
-    } else { sc.style.backgroundImage="url(assets/bg/stage"+st+".webp)"; }
+    } else {
+      av.textContent="🦍";
+      var badge=document.createElement("div"); badge.textContent="아직 콩즈 미선택"; badge.style.cssText="position:absolute;top:8px;left:8px;font-size:10px;background:rgba(0,0,0,.55);padding:2px 8px;border-radius:8px;color:#ddd";
+      var mask=document.createElement("div"); mask.textContent="🦍"; mask.style.cssText="position:absolute;bottom:6px;left:50%;transform:translateX(-50%);font-size:64px;opacity:.85";
+      sc.appendChild(mask); sc.appendChild(badge);
+    }
   }
   $("spyClose").onclick=function(){ $("spyModal").style.display="none"; };
 
