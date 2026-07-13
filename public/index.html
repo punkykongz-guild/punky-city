@@ -221,6 +221,7 @@
   #toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:#2a1a4a;border:1px solid var(--purple);
     color:#fff;font-size:13px;padding:9px 16px;border-radius:999px;opacity:0;transition:opacity .25s;z-index:60;pointer-events:none;max-width:90%;text-align:center;}
   #toast.on{opacity:1;}
+  @keyframes k2pop{0%{transform:scale(.7)}100%{transform:scale(1)}}
 </style>
 </head>
 <body>
@@ -527,6 +528,20 @@
     <div id="spyList" style="flex:1;overflow-y:auto;background:#160b2e;border-radius:12px;padding:6px 10px">불러오는 중...</div>
   </div>
 
+  <!-- 콩즈 진화 (2048) -->
+  <div id="k2Modal" style="position:fixed;inset:0;background:#160b2e;display:none;z-index:84;flex-direction:column;align-items:center;justify-content:center;padding:16px">
+    <div style="width:100%;max-width:360px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div><div style="font-weight:800;font-size:16px">🧬 콩즈 진화</div><div class="muted" style="font-size:11px">스와이프로 합쳐 진화!</div></div>
+        <div style="text-align:right"><div style="font-size:11px;color:#b9a8e0">최고 등급</div><div id="k2Best" style="font-weight:800;color:var(--gold)">Lv.1</div></div>
+        <button id="k2Close" style="background:#5a5a72;border:none;color:#fff;padding:6px 12px;border-radius:8px;align-self:flex-start">나가기</button>
+      </div>
+      <div id="k2Grid" style="position:relative;width:100%;aspect-ratio:1;background:#241340;border-radius:12px;padding:8px;box-sizing:border-box;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,1fr);gap:8px;touch-action:none"></div>
+      <div id="k2Msg" style="text-align:center;min-height:22px;font-size:13px;margin-top:8px"></div>
+      <button class="bigBtn" id="k2New" style="margin-top:4px">새 게임</button>
+    </div>
+  </div>
+
   <div id="tabs">
     <button class="tabBtn on" data-page="biz">💼 사업</button>
     <button class="tabBtn" data-page="stage">📖 등급</button>
@@ -675,6 +690,11 @@
       <div class="big">✈️</div>
       <div style="flex:1"><h3 style="margin:0">콩즈 스카이 <span class="muted" id="skyLeftT">하루 5판</span></h3><div class="muted" style="font-size:12px">콩즈 전투기로 하늘 슈팅! 👾 격추하고 ₭ 획득</div></div>
       <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="skyBtn">출격</button>
+    </div>
+    <div class="card arcadeItem" style="border:1px solid var(--gold)">
+      <div class="big">🧬</div>
+      <div style="flex:1"><h3 style="margin:0">콩즈 진화 <span class="muted">2048 퍼즐</span></h3><div class="muted" style="font-size:12px">같은 콩즈 합쳐 진화! 노숙→…→펑키킹 등급을 만들어라</div></div>
+      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="k2Btn">플레이</button>
     </div>
   </div>
 
@@ -1640,7 +1660,7 @@
   $("rpsClose").onclick=function(){ $("rpsModal").style.display="none"; };
 
   // ===== 미니게임 일일제한 (두더지/기억력) =====
-  function mgRoll(){ if(S.mgDate!==todayKey()){ S.mgDate=todayKey(); S.moleN=0; S.simonN=0; S.skyN=0; } }
+  function mgRoll(){ if(S.mgDate!==todayKey()){ S.mgDate=todayKey(); S.moleN=0; S.simonN=0; S.skyN=0; S.k2N=0; } }
   function moleLeft(){ mgRoll(); return Math.max(0,5-(S.moleN||0)); }
   function simonLeft(){ mgRoll(); return Math.max(0,5-(S.simonN||0)); }
   function refreshMgLeft(){ var a=$("moleLeftT"),b=$("simonLeftT"); if(a)a.textContent="오늘 "+moleLeft()+"판"; if(b)b.textContent="오늘 "+simonLeft()+"판"; }
@@ -2167,6 +2187,82 @@
     }
   }
   $("spyClose").onclick=function(){ $("spyModal").style.display="none"; };
+
+  // ===== 🧬 콩즈 진화 (2048) =====
+  var K2_EMO=["","🥲","📦","🐟","🏪","🛵","🧸","👔","🍗","🖥️","📦","💼","⛏️","🎬","🏢","💎","🚗","🏦","🛥️","✈️","🏝️","🏰","🚀","🛰️","👽","🌌","🪐","🌠","🔮","👑","🦍"];
+  function k2Hue(l){ return "hsl("+((l*32)%360)+",60%,"+(30+Math.min(l,20)*1.5)+"%)"; }
+  var k2={grid:[],score:0,over:false,best:1};
+  function k2Left(){ mgRoll(); return Math.max(0,5-(S.k2N||0)); }
+  $("k2Btn").onclick=function(){ showIntro("🧬 콩즈 진화 (2048)","같은 등급 콩즈 2개가 만나면 <b>진화</b>! 🧬<br>화면을 <b>상하좌우로 스와이프</b>하면 모든 콩즈가 밀려요.<br>노숙콩즈 → 폐지왕 → … → <b>펑키킹(Lv.30)</b>!<br>더 못 움직이면 끝. 최고 등급만큼 ₭ 획득 · 하루 5판", openK2); };
+  function openK2(){ if(!PLAY_OK){ needWallet(); return; } if(k2Left()<=0){ toast("오늘 콩즈 진화는 끝! 내일 또 🧬"); return; } $("k2Modal").style.display="flex"; startK2(); }
+  function startK2(){
+    mgRoll(); if(k2Left()<=0){ $("k2Modal").style.display="none"; return; }
+    S.k2N=(S.k2N||0)+1;
+    k2.grid=[]; for(var i=0;i<16;i++) k2.grid.push(0);
+    k2.score=0; k2.over=false; k2.best=1;
+    k2Spawn(); k2Spawn(); k2Render();
+    $("k2Msg").textContent="스와이프로 콩즈를 합쳐 진화시켜요!";
+  }
+  function k2Spawn(){ var e=[]; for(var i=0;i<16;i++) if(k2.grid[i]===0) e.push(i); if(!e.length) return; k2.grid[e[Math.floor(Math.random()*e.length)]]=Math.random()<0.9?1:2; }
+  function k2Slide(line){ var a=[]; for(var i=0;i<4;i++) if(line[i]>0) a.push(line[i]); for(var i=0;i<a.length-1;i++){ if(a[i]===a[i+1]){ a[i]++; k2.score+=a[i]; if(a[i]>k2.best) k2.best=a[i]; a.splice(i+1,1); } } while(a.length<4) a.push(0); return a; }
+  function k2Move(dir){
+    var g=k2.grid, moved=false;
+    function G(r,c){ return g[r*4+c]; } function Sset(r,c,v){ g[r*4+c]=v; }
+    for(var i=0;i<4;i++){
+      var line=[];
+      for(var j=0;j<4;j++){ line.push(dir===0?G(i,j):dir===1?G(i,3-j):dir===2?G(j,i):G(3-j,i)); }
+      var res=k2Slide(line);
+      for(var j=0;j<4;j++){ var v=res[j], cur;
+        if(dir===0){ cur=G(i,j); if(cur!==v)moved=true; Sset(i,j,v); }
+        else if(dir===1){ cur=G(i,3-j); if(cur!==v)moved=true; Sset(i,3-j,v); }
+        else if(dir===2){ cur=G(j,i); if(cur!==v)moved=true; Sset(j,i,v); }
+        else { cur=G(3-j,i); if(cur!==v)moved=true; Sset(3-j,i,v); }
+      }
+    }
+    if(moved){ k2Spawn(); k2Render(); beep(300+k2.best*10,0.03); if(k2GameOver()) endK2(); }
+  }
+  function k2GameOver(){
+    for(var i=0;i<16;i++) if(k2.grid[i]===0) return false;
+    for(var r=0;r<4;r++) for(var c=0;c<4;c++){ var v=k2.grid[r*4+c]; if(c<3&&v===k2.grid[r*4+c+1]) return false; if(r<3&&v===k2.grid[(r+1)*4+c]) return false; }
+    return true;
+  }
+  function k2Render(){
+    var el=$("k2Grid"); el.innerHTML="";
+    for(var i=0;i<16;i++){
+      var l=k2.grid[i], d=document.createElement("div");
+      d.style.cssText="border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;"+(l>0?("background:"+k2Hue(l)+";color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.1)"):"background:rgba(255,255,255,.04)");
+      if(l>0){ d.innerHTML='<div style="font-size:min(7vw,26px);line-height:1">'+(K2_EMO[Math.min(l,30)]||"🦍")+'</div><div style="font-size:min(3vw,11px);opacity:.9">Lv.'+l+'</div>'; d.style.animation="k2pop .12s"; }
+      el.appendChild(d);
+    }
+    $("k2Best").textContent="Lv."+k2.best+(K2_EMO[Math.min(k2.best,30)]||"");
+  }
+  function endK2(){
+    k2.over=true;
+    var reward=Math.floor(k2.best*k2.best*Math.max(1,perTap())*2 + k2.score*Math.max(1,perTap()*0.3));
+    win(reward);
+    var top=STAGES[Math.min(k2.best,STAGES.length-1)];
+    $("k2Msg").innerHTML='<span style="color:var(--gold)">🏆 최고 '+(top?top.nm:"Lv."+k2.best)+' 도달! ₭'+fmt(reward)+' 획득</span>'+(k2Left()>0?" · 남은 "+k2Left()+"판":" · 오늘 끝");
+    $("k2New").textContent=k2Left()>0?"다시 하기 ("+k2Left()+"판)":"오늘 끝!";
+  }
+  $("k2New").onclick=function(){ if(k2Left()>0) startK2(); else $("k2Modal").style.display="none"; };
+  $("k2Close").onclick=function(){ $("k2Modal").style.display="none"; };
+  // 스와이프 + 키보드 입력
+  (function(){
+    var g=$("k2Grid"), sx=0, sy=0, moved0=false;
+    g.addEventListener("touchstart",function(e){ if(e.touches[0]){ sx=e.touches[0].clientX; sy=e.touches[0].clientY; moved0=false; } },{passive:true});
+    g.addEventListener("touchmove",function(e){ e.preventDefault(); },{passive:false});
+    g.addEventListener("touchend",function(e){
+      if(k2.over) return; var t=e.changedTouches[0]; if(!t) return;
+      var dx=t.clientX-sx, dy=t.clientY-sy;
+      if(Math.abs(dx)<20 && Math.abs(dy)<20) return;
+      if(Math.abs(dx)>Math.abs(dy)) k2Move(dx>0?1:0); else k2Move(dy>0?3:2);
+    },{passive:true});
+    window.addEventListener("keydown",function(e){
+      if($("k2Modal").style.display==="none"||k2.over) return;
+      if(e.key==="ArrowLeft"){ k2Move(0); e.preventDefault(); } else if(e.key==="ArrowRight"){ k2Move(1); e.preventDefault(); }
+      else if(e.key==="ArrowUp"){ k2Move(2); e.preventDefault(); } else if(e.key==="ArrowDown"){ k2Move(3); e.preventDefault(); }
+    });
+  })();
 
   // ===== 행인 NPC (지나가다 동전 던져줌, 가끔 부자 등장) =====
   // 등급별 어울리는 행인 (1~6 골목/동네, 7~13 도심, 14~21 부촌, 22~26 우주, 27~30 환상)
