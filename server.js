@@ -1421,10 +1421,18 @@ app.get("/api/bank", (req, res) => {
 // ===== 랭킹 API (지렁이 누적 / 펑키시티) =====
 if (!db.worm) db.worm = {};
 const SPY_TEST_RE = /\d{5,}|테스터|검증|테스트|뷰어|롯또|겜검|몰수|도전[A-Z가-힣]?$|행인|최종검|완주|정규화|사칭|선점|세이브|기여자|대박이|중간이|소액이|공격러|잡기러|디버그|파이터[AB]|라이브검/;
+app.get("/api/admin/delplayer", (req, res) => {
+  if (!LINK_SECRET || String(req.query.secret || "") !== LINK_SECRET) return res.status(403).json({ ok: false });
+  const names = String(req.query.names || "").split(",").map((x) => x.trim().normalize("NFC")).filter(Boolean);
+  let del = 0;
+  names.forEach((n) => { if (db.players[n]) { delete db.players[n]; del++; } if (db.fgWins && db.fgWins[n]) delete db.fgWins[n]; if (db.worm && db.worm[n]) delete db.worm[n]; });
+  markDirty();
+  res.json({ ok: true, deleted: del });
+});
 app.get("/api/spectate", (req, res) => {
   if (!checkToken(req, res)) return;
   const list = Object.entries(db.players || {})
-    .filter(([n, p]) => p && !SPY_TEST_RE.test(n) && ((p.money || 0) > 0 || (p.stage || 0) > 1 || p.avatarId))
+    .filter(([n, p]) => p && !SPY_TEST_RE.test(n) && ((p.stage || 0) >= 2 || p.avatarId || ((db.fgWins && db.fgWins[n]) || 0) > 0))
     .map(([name, p]) => ({ name, stage: p.stage || 1, money: Math.floor(p.money || 0), avatarId: p.avatarId || 0, wins: (db.fgWins && db.fgWins[name]) || 0 }))
     .sort((a, b) => (b.stage - a.stage) || (b.money - a.money))
     .slice(0, 60);
