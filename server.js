@@ -1047,6 +1047,111 @@ const GAME_SCORE_TO_POINT_INV = 10;
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
+// ===== 콩즈 파이터 PvP (실시간 매칭 + 도전장 + 승수랭킹) =====
+const FG_TURN_MS = 20000;         // 각 라운드 선택 제한시간
+const fgQueue = [];               // 대기열 [{socket,name,avatarId,want}]
+const fgSockRoom = new Map();     // socket.id -> match
+if (!db.fgWins) db.fgWins = {};   // name -> 누적 승수
+
+function fgDequeue(id) { const i = fgQueue.findIndex((q) => q.socket.id === id); if (i >= 0) fgQueue.splice(i, 1); }
+
+function fgEnd(match, winnerIdx, reason) {
+  if (match.over) return;
+  match.over = true;
+  if (match.timer) { clearTimeout(match.timer); match.timer = null; }
+  match.players.forEach((p, i) => {
+    fgSockRoom.delete(p.socket.id);
+    const win = winnerIdx === i;
+    let reward = 0, wins = db.fgWins[p.name] || 0;
+    if (win && winnerIdx >= 0) {
+      wins = db.fgWins[p.name] = wins + 1;
+      const pl = db.players[p.name] || (db.players[p.name] = {});
+      const today = todayStr();
+      if (pl.fgDay !== today) { pl.fgDay = today; pl.fgRewarded = 0; }
+      if ((pl.fgRewarded || 0) < 5) { pl.fgRewarded = (pl.fgRewarded || 0) + 1; reward = 3; submitScore(p.name, reward, "파이터승리").catch(() => {}); }
+      markDirty();
+    }
+    try { p.socket.emit("fight:end", { win, tie: winnerIdx < 0, reward, wins, reason: reason || "" }); } catch (e) {}
+  });
+}
+
+function fgResolve(match) {
+  if (match.over) return;
+  if (match.timer) { clearTimeout(match.timer); match.timer = null; }
+  const A = match.players[0], B = match.players[1];
+  let ma = A.pick, mb = B.pick;
+  if (ma == null) ma = 1; if (mb == null) mb = 1;         // 미선택 = 가드
+  if (ma === 3 && A.g < 3) ma = 1;                        // 게이지 없이 필살기 불가(서버 검증)
+  if (mb === 3 && B.g < 3) mb = 1;
+  let dmgA = 0, dmgB = 0;
+  const superA = ma === 3, superB = mb === 3;
+  if (superA) A.g -= 3; if (superB) B.g -= 3;
+  if (superA || superB) {
+    if (superA && superB) { /* 충돌 */ }
+    else if (superA) { if (mb === 1) B.g = Math.min(3, B.g + 2); else dmgB = 35; }
+    else { if (ma === 1) A.g = Math.min(3, A.g + 2); else dmgA = 35; }
+  } else {
+    const w = (ma - mb + 3) % 3;
+    if (w === 0) { A.g = Math.min(3, A.g + 1); B.g = Math.min(3, B.g + 1); }
+    else if (w === 1) {
+      if (ma === 0) { dmgB = 15; A.g = Math.min(3, A.g + 1); }
+      else if (ma === 1) A.g = Math.min(3, A.g + 2);
+      else { dmgB = 12; A.g = Math.min(3, A.g + 1); }
+    } else {
+      if (mb === 0) { dmgA = 15; B.g = Math.min(3, B.g + 1); }
+      else if (mb === 1) B.g = Math.min(3, B.g + 2);
+      else { dmgA = 12; B.g = Math.min(3, B.g + 1); }
+    }
+  }
+  A.hp = Math.max(0, A.hp - dmgA); B.hp = Math.max(0, B.hp - dmgB);
+  A.pick = null; B.pick = null; match.round++;
+  try { A.socket.emit("fight:round", { round: match.round, me: { hp: A.hp, g: A.g, act: ma }, opp: { hp: B.hp, g: B.g, act: mb } }); } catch (e) {}
+  try { B.socket.emit("fight:round", { round: match.round, me: { hp: B.hp, g: B.g, act: mb }, opp: { hp: A.hp, g: A.g, act: ma } }); } catch (e) {}
+  if (A.hp <= 0 || B.hp <= 0) {
+    const winner = (A.hp <= 0 && B.hp <= 0) ? -1 : (B.hp <= 0 ? 0 : 1);
+    setTimeout(() => fgEnd(match, winner), 900);
+  } else {
+    fgBeginRound(match);
+  }
+}
+
+function fgBeginRound(match) {
+  if (match.over) return;
+  if (match.timer) clearTimeout(match.timer);
+  match.players.forEach((p) => { try { p.socket.emit("fight:go", { round: match.round + 1 }); } catch (e) {} });
+  match.timer = setTimeout(() => { if (!match.over) fgResolve(match); }, FG_TURN_MS);
+}
+
+function fgStartMatch(a, b) {
+  const match = { players: [a, b], round: 0, over: false, timer: null };
+  [a, b].forEach((p) => { p.hp = 100; p.g = 0; p.pick = null; fgSockRoom.set(p.socket.id, match); });
+  try { a.socket.emit("fight:matched", { opp: b.name, oppId: b.avatarId, wins: db.fgWins[a.name] || 0 }); } catch (e) {}
+  try { b.socket.emit("fight:matched", { opp: a.name, oppId: a.avatarId, wins: db.fgWins[b.name] || 0 }); } catch (e) {}
+  fgBeginRound(match);
+}
+
+function fgTryQueue(entry) {
+  for (let i = 0; i < fgQueue.length; i++) {
+    const q = fgQueue[i];
+    if (!q.socket.connected || q.socket.id === entry.socket.id) continue;
+    const iWantThem = !entry.want || entry.want.toLowerCase() === q.name.toLowerCase();
+    const theyWantMe = !q.want || q.want.toLowerCase() === entry.name.toLowerCase();
+    if (iWantThem && theyWantMe) { fgQueue.splice(i, 1); fgStartMatch(q, entry); return; }
+  }
+  fgQueue.push(entry);
+  try { entry.socket.emit("fight:waiting", { want: entry.want || "" }); } catch (e) {}
+}
+
+function fgOnLeave(socket) {
+  fgDequeue(socket.id);
+  const match = fgSockRoom.get(socket.id);
+  if (match && !match.over) {
+    const winnerIdx = match.players[0].socket.id === socket.id ? 1 : 0;
+    fgEnd(match, winnerIdx, "상대가 나갔어요");
+  }
+}
+
+
 io.on("connection", (socket) => {
   let mySnake = null;
   let myRoom = null;
@@ -1126,7 +1231,28 @@ io.on("connection", (socket) => {
     await finishAndLeave();
   });
 
+  // ----- 콩즈 파이터 PvP -----
+  socket.on("fight:queue", (d) => {
+    const name = String((d && d.name) || "").trim().normalize("NFC");
+    if (!name) return;
+    if (!checkDev(name, String((d && d.key) || ""), String((d && d.sig) || ""), String((d && d.ph) || ""), String((d && d.ses) || ""))) { try { socket.emit("fight:error", { message: "본인 인증 실패 — 다시 로그인해주세요." }); } catch (e) {} return; }
+    fgDequeue(socket.id);
+    fgTryQueue({ socket, name, avatarId: (d && d.avatarId) || 1, want: (d && d.want) ? String(d.want).trim().normalize("NFC") : "" });
+  });
+  socket.on("fight:pick", (d) => {
+    const match = fgSockRoom.get(socket.id);
+    if (!match || match.over) return;
+    const p = match.players.find((x) => x.socket.id === socket.id);
+    if (!p || p.pick != null) return;
+    let a = parseInt(d && d.action, 10); if (!(a >= 0 && a <= 3)) a = 1;
+    p.pick = a;
+    const other = match.players.find((x) => x.socket.id !== socket.id);
+    if (other && other.pick != null) fgResolve(match);
+  });
+  socket.on("fight:leave", () => fgOnLeave(socket));
+
   socket.on("disconnect", async () => {
+    fgOnLeave(socket);
     await finishAndLeave();
   });
 
@@ -1289,6 +1415,12 @@ app.get("/api/bank", (req, res) => {
 
 // ===== 랭킹 API (지렁이 누적 / 펑키시티) =====
 if (!db.worm) db.worm = {};
+app.get("/api/rank/fighter", (req, res) => {
+  if (!checkToken(req, res)) return;
+  const list = Object.entries(db.fgWins || {}).map(([name, w]) => ({ name, wins: w }))
+    .sort((a, b) => b.wins - a.wins).slice(0, 10);
+  res.json({ ok: true, list });
+});
 app.get("/api/rank/worm", (req, res) => {
   if (!checkToken(req, res)) return;
   const list = Object.entries(db.worm || {})
