@@ -2245,7 +2245,7 @@
   function k2Hue(l){ return "hsl("+((l*32)%360)+",60%,"+(30+Math.min(l,20)*1.5)+"%)"; }
   var k2={grid:[],score:0,over:false,best:1};
   function k2Left(){ mgRoll(); return Math.max(0,5-(S.k2N||0)); }
-  $("k2Btn").onclick=function(){ showIntro("🧬 콩즈 진화 (2048)","같은 등급 콩즈 2개가 만나면 <b>진화</b>! 🧬<br>화면을 <b>상하좌우로 스와이프</b>하면 모든 콩즈가 밀려요.<br>노숙콩즈 → 폐지왕 → … → <b>펑키킹(Lv.30)</b>!<br>더 못 움직이면 끝. 최고 등급만큼 ₭ 획득 · 하루 5판", openK2); };
+  var _k2b=$("k2Btn"); if(_k2b) _k2b.onclick=function(){ showIntro("🧬 콩즈 진화 (2048)","같은 등급 콩즈 2개가 만나면 <b>진화</b>! 🧬<br>화면을 <b>상하좌우로 스와이프</b>하면 모든 콩즈가 밀려요.<br>노숙콩즈 → 폐지왕 → … → <b>펑키킹(Lv.30)</b>!<br>더 못 움직이면 끝. 최고 등급만큼 ₭ 획득 · 하루 5판", openK2); };
   function openK2(){ if(!PLAY_OK){ needWallet(); return; } if(k2Left()<=0){ toast("오늘 콩즈 진화는 끝! 내일 또 🧬"); return; } $("k2Modal").style.display="flex"; startK2(); }
   function startK2(){
     mgRoll(); if(k2Left()<=0){ $("k2Modal").style.display="none"; return; }
