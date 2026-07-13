@@ -450,6 +450,35 @@
     <button class="bigBtn" id="boxClose" style="margin-top:14px;background:#5a5a72;max-width:280px">닫기</button>
   </div>
 
+  <!-- 콩즈 파이터 -->
+  <div id="fgModal" style="position:fixed;inset:0;background:linear-gradient(180deg,#2a1230,#0e0616);display:none;z-index:84;flex-direction:column;padding:14px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+      <div style="flex:1">
+        <div id="fgMeName" style="font-size:12px;font-weight:800;margin-bottom:3px">나</div>
+        <div style="height:14px;background:#3a1a2a;border-radius:7px;overflow:hidden"><div id="fgMeHP" style="height:100%;width:100%;background:linear-gradient(90deg,#4ade80,#22c55e);transition:width .3s"></div></div>
+        <div id="fgMeG" style="margin-top:4px;font-size:14px;letter-spacing:2px">🤍🤍🤍</div>
+      </div>
+      <div style="align-self:center;font-weight:900;color:var(--gold)">VS</div>
+      <div style="flex:1;text-align:right">
+        <div id="fgAiName" style="font-size:12px;font-weight:800;margin-bottom:3px">도전자</div>
+        <div style="height:14px;background:#3a1a2a;border-radius:7px;overflow:hidden"><div id="fgAiHP" style="height:100%;width:100%;background:linear-gradient(90deg,#f87171,#ef4444);transition:width .3s;margin-left:auto"></div></div>
+        <div id="fgAiG" style="margin-top:4px;font-size:14px;letter-spacing:2px">🤍🤍🤍</div>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 4px;position:relative">
+      <img id="fgMeImg" style="width:38%;max-width:150px;border-radius:14px;border:2px solid #4ade80" />
+      <div id="fgVs" style="position:absolute;left:50%;top:44%;transform:translateX(-50%);font-size:22px;font-weight:900;text-align:center;min-width:60%;color:#fff;text-shadow:0 2px 8px #000"></div>
+      <img id="fgAiImg" style="width:38%;max-width:150px;border-radius:14px;border:2px solid #f87171;transform:scaleX(-1)" />
+    </div>
+    <div id="fgBtns" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+      <button class="bigBtn" style="margin:0;padding:12px 4px;font-size:13px;background:#c2410c" data-fg="0">👊<br>공격</button>
+      <button class="bigBtn" style="margin:0;padding:12px 4px;font-size:13px;background:#1d4ed8" data-fg="1">🛡<br>가드</button>
+      <button class="bigBtn" style="margin:0;padding:12px 4px;font-size:13px;background:#7c3aed" data-fg="2">🤏<br>잡기</button>
+      <button class="bigBtn" id="fgSuper" style="margin:0;padding:12px 4px;font-size:13px;background:#b91c1c" data-fg="3">🔥<br>필살기</button>
+    </div>
+    <button class="bigBtn" id="fgClose" style="margin-top:8px;background:#5a5a72">그만두기</button>
+  </div>
+
   <div id="tabs">
     <button class="tabBtn on" data-page="biz">💼 사업</button>
     <button class="tabBtn" data-page="stage">📖 등급</button>
@@ -588,6 +617,11 @@
       <div class="big">🎁</div>
       <div style="flex:1"><h3 style="margin:0">미스터리 박스 <span class="muted">🔥 랜덤</span></h3><div class="muted" style="font-size:12px">열어봐야 안다! 꽝부터 ×30 잭팟까지 🎰</div></div>
       <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="boxBtn">열기</button>
+    </div>
+    <div class="card arcadeItem" style="border:1px solid var(--pink)">
+      <div class="big">🥊</div>
+      <div style="flex:1"><h3 style="margin:0">콩즈 파이터 <span class="muted">🔥 대전</span></h3><div class="muted" style="font-size:12px">공격·가드·잡기 심리전 + 필살기 바나나빔! 콩즈로 한판</div></div>
+      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="fgBtn">대전</button>
     </div>
   </div>
 
@@ -1729,6 +1763,83 @@
     },1500);
   }
   $("boxClose").onclick=function(){ $("boxModal").style.display="none"; };
+
+  // ===== 🥊 콩즈 파이터 (심리전 대전 + 필살기) =====
+  var fg={bet:0,myHP:100,aiHP:100,myG:0,aiG:0,over:false,busy:false,aiId:1};
+  $("fgBtn").onclick=function(){ pickBet("🥊 콩즈 파이터", startFight); };
+  function fgKimg(id){ return "https://cdn.helius-rpc.com/cdn-cgi/image/width=200/https://punkykongz.com/nft/punkykongz/image/"+id+".png"; }
+  function startFight(bet){
+    fg.bet=bet; fg.myHP=100; fg.aiHP=100; fg.myG=0; fg.aiG=0; fg.over=false; fg.busy=false;
+    fg.aiId=Math.floor(Math.random()*5000)+1;
+    var myId=(typeof currentAvatarId==="function"&&currentAvatarId())|| (profile.tokenIds&&profile.tokenIds[0])||1;
+    $("fgMeImg").src=fgKimg(myId); $("fgAiImg").src=fgKimg(fg.aiId);
+    $("fgMeName").textContent=(NAME||"나"); $("fgAiName").textContent="도전자 #"+fg.aiId;
+    $("fgModal").style.display="flex";
+    $("fgVs").textContent="라운드 시작! 기술을 골라라 👊🛡🤏";
+    renderFg();
+  }
+  function gDots(n){ return "🤍".repeat(n)+"⬜".repeat(3-n); }
+  function renderFg(){
+    $("fgMeHP").style.width=fg.myHP+"%"; $("fgAiHP").style.width=fg.aiHP+"%";
+    $("fgMeG").textContent=gDots(fg.myG); $("fgAiG").textContent=gDots(fg.aiG);
+    $("fgSuper").disabled=(fg.myG<3||fg.busy||fg.over);
+    $("fgSuper").style.opacity=(fg.myG<3?.4:1);
+  }
+  function aiPick(){
+    if(fg.aiG>=3 && Math.random()<0.5) return 3;
+    return Math.floor(Math.random()*3);
+  }
+  function resolveFg(me,ai){
+    var txt="", md=0, ad=0;
+    if(me===3||ai===3){
+      if(me===3) fg.myG-=3; if(ai===3) fg.aiG-=3;
+      if(me===3&&ai===3){ txt="⚡ 필살기 충돌!!"; }
+      else if(me===3){ if(ai===1){ txt="🛡 내 바나나빔이 막혔다!"; fg.aiG=Math.min(3,fg.aiG+2); } else { ad=35; txt="🔥 바나나빔 작렬! 상대 -35"; } }
+      else { if(me===1){ txt="🛡 상대 필살기 가드!"; fg.myG=Math.min(3,fg.myG+2); } else { md=35; txt="💥 상대 필살기! 나 -35"; } }
+    } else {
+      var w=(me-ai+3)%3;
+      if(w===0){ fg.myG=Math.min(3,fg.myG+1); fg.aiG=Math.min(3,fg.aiG+1); txt="🤜 맞불! 무승부 (기+1)"; }
+      else if(w===1){
+        if(me===0){ ad=15; fg.myG=Math.min(3,fg.myG+1); txt="👊 공격 적중! 상대 -15"; }
+        else if(me===1){ fg.myG=Math.min(3,fg.myG+2); txt="🛡 가드 성공! 기+2"; }
+        else { ad=12; fg.myG=Math.min(3,fg.myG+1); txt="🤏 잡기 성공! 상대 -12"; }
+      } else {
+        if(ai===0){ md=15; fg.aiG=Math.min(3,fg.aiG+1); txt="😰 상대 공격! 나 -15"; }
+        else if(ai===1){ fg.aiG=Math.min(3,fg.aiG+2); txt="😒 상대 가드… 기+2"; }
+        else { md=12; fg.aiG=Math.min(3,fg.aiG+1); txt="😰 상대 잡기! 나 -12"; }
+      }
+    }
+    fg.myHP=Math.max(0,fg.myHP-md); fg.aiHP=Math.max(0,fg.aiHP-ad);
+    if(md>0){ shake("fgMeImg"); vib(30); } if(ad>0){ shake("fgAiImg"); vib(15); }
+    return txt;
+  }
+  function shake(id){ var e=$(id); e.style.transition="transform .06s"; var b=(id==="fgAiImg"?-1:1); e.style.transform=(id==="fgAiImg"?"scaleX(-1) ":"")+"translateX("+(6*b)+"px)"; setTimeout(function(){ e.style.transform=(id==="fgAiImg"?"scaleX(-1)":""); },90); }
+  function fgTurn(me){
+    if(fg.over||fg.busy) return;
+    if(me===3&&fg.myG<3) return;
+    fg.busy=true;
+    var ai=aiPick();
+    var txt=resolveFg(me,ai);
+    $("fgVs").textContent=txt; renderFg();
+    beep(400,0.05);
+    setTimeout(function(){
+      if(fg.myHP<=0||fg.aiHP<=0){ endFight(); return; }
+      fg.busy=false; renderFg();
+      $("fgVs").textContent="다음 기술을 골라라!";
+    },850);
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('#fgBtns [data-fg]'),function(b){ b.onclick=function(){ fgTurn(+b.dataset.fg); }; });
+  function endFight(){
+    fg.over=true; fg.busy=false;
+    var meWin=fg.aiHP<=0 && fg.myHP>0;
+    var tie=fg.aiHP<=0 && fg.myHP<=0;
+    if(meWin){ var w=fg.bet*2; win(w); vib([40,40,40]); $("fgVs").innerHTML='<span style="color:var(--gold)">🏆 승리! ₭'+fmt(w)+' 획득 (×2)</span>'; }
+    else if(tie){ win(fg.bet); $("fgVs").innerHTML='<span style="color:#9fd">🤝 무승부 — 배팅 환불</span>'; }
+    else { saveNow(); vib([60,40,60]); $("fgVs").innerHTML='<span style="color:#ff8080">💀 패배… 다음엔 이기자!</span>'; }
+    renderFg();
+    setTimeout(function(){ $("fgModal").style.display="none"; },1800);
+  }
+  $("fgClose").onclick=function(){ fg.over=true; $("fgModal").style.display="none"; };
 
   // ===== 행인 NPC (지나가다 동전 던져줌, 가끔 부자 등장) =====
   // 등급별 어울리는 행인 (1~6 골목/동네, 7~13 도심, 14~21 부촌, 22~26 우주, 27~30 환상)
