@@ -656,6 +656,7 @@
 
   <!-- 오락실 -->
   <div class="page" id="page-arcade">
+    <div style="font-weight:800;font-size:14px;margin:10px 2px 2px;color:var(--gold);border-bottom:1px solid rgba(251,191,36,.25);padding-bottom:3px">🏆 대작 게임</div>
     <div class="card arcadeItem">
       <div class="big">🐍</div>
       <div style="flex:1">
@@ -664,13 +665,41 @@
       </div>
       <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="wormBtn">입장</button>
     </div>
+    <div class="card arcadeItem" style="border:1px solid var(--pink)">
+      <div class="big">🥊</div>
+      <div style="flex:1"><h3 style="margin:0">콩즈 파이터 <span class="muted">🔥 대전</span></h3><div class="muted" style="font-size:12px">공격·가드·잡기 심리전 + 필살기 바나나빔! 콩즈로 한판</div></div>
+      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="fgBtn">대전</button>
+    </div>
+    <div class="card arcadeItem" style="border:1px solid var(--purple)">
+      <div class="big">🗼</div>
+      <div style="flex:1"><h3 style="margin:0">콩즈 디펜스 <span class="muted">타워디펜스</span></h3><div class="muted" style="font-size:12px">콩즈 포탑 배치해 몰려오는 적을 막아라! 웨이브 생존</div></div>
+      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="tdBtn">방어</button>
+    </div>
+    <div class="card arcadeItem" style="border:1px solid var(--pink)">
+      <div class="big">🍬</div>
+      <div style="flex:1"><h3 style="margin:0">콩즈 크러쉬 <span class="muted">매치3</span></h3><div class="muted" style="font-size:12px">같은 젬 3개+ 맞춰 터뜨려라! 콤보 연쇄로 대박</div></div>
+      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="k3Btn">플레이</button>
+    </div>
+    <div class="card arcadeItem" style="border:1px solid var(--green)">
+      <div class="big">🏃</div>
+      <div style="flex:1"><h3 style="margin:0">콩즈 러너 <span class="muted">러닝액션</span></h3><div class="muted" style="font-size:12px">탭해서 점프! 장애물 피하고 코인 먹으며 질주</div></div>
+      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="rnBtn">달리기</button>
+    </div>
     <div class="card arcadeItem">
-      <div class="big">📦</div>
-      <div style="flex:1">
-        <h3 style="margin:0">폐지 타이밍 <span class="muted">₭ 더블업</span></h3>
-        <div class="muted" style="font-size:12px">초록존에 STOP! 성공마다 ×2 — 실패하면 꽝 😈</div>
-      </div>
-      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="pjBtn">도전</button>
+      <div class="big">✈️</div>
+      <div style="flex:1"><h3 style="margin:0">콩즈 스카이 <span class="muted" id="skyLeftT">하루 5판</span></h3><div class="muted" style="font-size:12px">콩즈 전투기로 하늘 슈팅! 👾 격추하고 ₭ 획득</div></div>
+      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="skyBtn">출격</button>
+    </div>
+    <div style="font-weight:800;font-size:14px;margin:10px 2px 2px;color:var(--gold);border-bottom:1px solid rgba(251,191,36,.25);padding-bottom:3px">🕹️ 아케이드</div>
+    <div class="card arcadeItem">
+      <div class="big">🔨</div>
+      <div style="flex:1"><h3 style="margin:0">두더지 잡기 <span class="muted" id="moleLeftT">하루 5판</span></h3><div class="muted" style="font-size:12px">튀어나온 🦍 탭! 🕵️사기꾼은 감점 → ₭ 획득</div></div>
+      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="moleBtn">플레이</button>
+    </div>
+    <div class="card arcadeItem">
+      <div class="big">🧠</div>
+      <div style="flex:1"><h3 style="margin:0">콩즈 기억력 <span class="muted" id="simonLeftT">하루 5판</span></h3><div class="muted" style="font-size:12px">깜빡이는 순서 따라 누르기! 길수록 ₭ 대박</div></div>
+      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="simonBtn">플레이</button>
     </div>
     <div class="card arcadeItem">
       <div class="big">🍌</div>
@@ -680,6 +709,12 @@
       </div>
       <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="bnBtn">플레이</button>
     </div>
+    <div class="card arcadeItem" style="border:1px solid var(--gold)">
+      <div class="big">🚀</div>
+      <div style="flex:1"><h3 style="margin:0">콩즈 로켓 <span class="muted">🔥 크래시</span></h3><div class="muted" style="font-size:12px">배율이 치솟는다! 터지기 전에 탈출하면 대박 💥</div></div>
+      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="crashBtn">발사</button>
+    </div>
+    <div style="font-weight:800;font-size:14px;margin:10px 2px 2px;color:var(--gold);border-bottom:1px solid rgba(251,191,36,.25);padding-bottom:3px">🎰 한탕 게임 (베팅)</div>
     <div class="card arcadeItem">
       <div class="big">🎰</div>
       <div style="flex:1"><h3 style="margin:0">바나나 슬롯 <span class="muted">₭ 베팅</span></h3><div class="muted" style="font-size:12px">777 잭팟! 3개 맞추면 대박 · 💣폭탄 조심</div></div>
@@ -696,21 +731,6 @@
       <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="rpsBtn">대결</button>
     </div>
     <div class="card arcadeItem">
-      <div class="big">🔨</div>
-      <div style="flex:1"><h3 style="margin:0">두더지 잡기 <span class="muted" id="moleLeftT">하루 5판</span></h3><div class="muted" style="font-size:12px">튀어나온 🦍 탭! 🕵️사기꾼은 감점 → ₭ 획득</div></div>
-      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="moleBtn">플레이</button>
-    </div>
-    <div class="card arcadeItem">
-      <div class="big">🧠</div>
-      <div style="flex:1"><h3 style="margin:0">콩즈 기억력 <span class="muted" id="simonLeftT">하루 5판</span></h3><div class="muted" style="font-size:12px">깜빡이는 순서 따라 누르기! 길수록 ₭ 대박</div></div>
-      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="simonBtn">플레이</button>
-    </div>
-    <div class="card arcadeItem" style="border:1px solid var(--gold)">
-      <div class="big">🚀</div>
-      <div style="flex:1"><h3 style="margin:0">콩즈 로켓 <span class="muted">🔥 크래시</span></h3><div class="muted" style="font-size:12px">배율이 치솟는다! 터지기 전에 탈출하면 대박 💥</div></div>
-      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="crashBtn">발사</button>
-    </div>
-    <div class="card arcadeItem">
       <div class="big">🃏</div>
       <div style="flex:1"><h3 style="margin:0">하이로우 <span class="muted">🔥 연승배율</span></h3><div class="muted" style="font-size:12px">다음이 높다? 낮다? 연속 맞출수록 배율 폭발!</div></div>
       <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="hlBtn">도전</button>
@@ -720,35 +740,13 @@
       <div style="flex:1"><h3 style="margin:0">미스터리 박스 <span class="muted">🔥 랜덤</span></h3><div class="muted" style="font-size:12px">열어봐야 안다! 꽝부터 ×30 잭팟까지 🎰</div></div>
       <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="boxBtn">열기</button>
     </div>
-    <div class="card arcadeItem" style="border:1px solid var(--pink)">
-      <div class="big">🥊</div>
-      <div style="flex:1"><h3 style="margin:0">콩즈 파이터 <span class="muted">🔥 대전</span></h3><div class="muted" style="font-size:12px">공격·가드·잡기 심리전 + 필살기 바나나빔! 콩즈로 한판</div></div>
-      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="fgBtn">대전</button>
-    </div>
     <div class="card arcadeItem">
-      <div class="big">✈️</div>
-      <div style="flex:1"><h3 style="margin:0">콩즈 스카이 <span class="muted" id="skyLeftT">하루 5판</span></h3><div class="muted" style="font-size:12px">콩즈 전투기로 하늘 슈팅! 👾 격추하고 ₭ 획득</div></div>
-      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="skyBtn">출격</button>
-    </div>
-    <div class="card arcadeItem" style="border:1px solid var(--gold)">
-      <div class="big">🧬</div>
-      <div style="flex:1"><h3 style="margin:0">콩즈 진화 <span class="muted">2048 퍼즐</span></h3><div class="muted" style="font-size:12px">같은 콩즈 합쳐 진화! 노숙→…→펑키킹 등급을 만들어라</div></div>
-      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="k2Btn">플레이</button>
-    </div>
-    <div class="card arcadeItem" style="border:1px solid var(--pink)">
-      <div class="big">🍬</div>
-      <div style="flex:1"><h3 style="margin:0">콩즈 크러쉬 <span class="muted">매치3</span></h3><div class="muted" style="font-size:12px">같은 젬 3개+ 맞춰 터뜨려라! 콤보 연쇄로 대박</div></div>
-      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="k3Btn">플레이</button>
-    </div>
-    <div class="card arcadeItem" style="border:1px solid var(--green)">
-      <div class="big">🏃</div>
-      <div style="flex:1"><h3 style="margin:0">콩즈 러너 <span class="muted">러닝액션</span></h3><div class="muted" style="font-size:12px">탭해서 점프! 장애물 피하고 코인 먹으며 질주</div></div>
-      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="rnBtn">달리기</button>
-    </div>
-    <div class="card arcadeItem" style="border:1px solid var(--purple)">
-      <div class="big">🗼</div>
-      <div style="flex:1"><h3 style="margin:0">콩즈 디펜스 <span class="muted">타워디펜스</span></h3><div class="muted" style="font-size:12px">콩즈 포탑 배치해 몰려오는 적을 막아라! 웨이브 생존</div></div>
-      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="tdBtn">방어</button>
+      <div class="big">📦</div>
+      <div style="flex:1">
+        <h3 style="margin:0">폐지 타이밍 <span class="muted">₭ 더블업</span></h3>
+        <div class="muted" style="font-size:12px">초록존에 STOP! 성공마다 ×2 — 실패하면 꽝 😈</div>
+      </div>
+      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="pjBtn">도전</button>
     </div>
   </div>
 
