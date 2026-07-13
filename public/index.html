@@ -1241,7 +1241,12 @@
   var pj={active:false,pot:0,round:0,zL:0,zW:40,pos:0,dir:1,spd:1,bet:0,raf:0};
   function openPj(){
     if(!PLAY_OK){ needWallet(); return; }
-    $("pjModal").style.display="flex"; $("pjPlay").style.display="none";
+    pj.active=false; cancelAnimationFrame(pj.raf);
+    $("pjModal").style.display="flex";
+    $("pjBet").style.display="flex";   // 배팅 선택 다시 표시 (재진입 버그 수정)
+    $("pjPlay").style.display="none";
+    $("pjStop").style.display="";
+    $("pjCash").style.display="none";
     $("pjSub").textContent="배팅액을 고르세요 (보유 ₭"+fmt(S.money)+")";
     var box=$("pjBet"); box.innerHTML="";
     var opts=[["소액",Math.max(100,Math.floor(S.money*0.05))],["중박",Math.max(500,Math.floor(S.money*0.2))],["한방",Math.max(2000,Math.floor(S.money*0.5))]];
@@ -1450,16 +1455,19 @@
 
   // ===== ✊ 가위바위보 =====
   var RPS=["✌️","✊","✋"], RPS_NM=["가위","바위","보"];
-  var rpsBet=0;
-  $("rpsBtn").onclick=function(){ pickBet("✊ 가위바위보", function(bet){ rpsBet=bet; $("rpsModal").style.display="flex"; $("rpsMsg").textContent="가위·바위·보 중 하나!"; $("rpsFight").textContent="🤛 vs 🤜"; }); };
+  var rpsBet=0, rpsDone=false;
+  function rpsPickEnabled(on){ Array.prototype.forEach.call(document.querySelectorAll('#rpsPick [data-rps]'),function(b){ b.disabled=!on; b.style.opacity=on?1:.4; }); }
+  $("rpsBtn").onclick=function(){ pickBet("✊ 가위바위보", function(bet){ rpsBet=bet; rpsDone=false; rpsPickEnabled(true); $("rpsModal").style.display="flex"; $("rpsMsg").textContent="가위·바위·보 중 하나! (배팅 ₭"+fmt(bet)+")"; $("rpsFight").textContent="🤛 vs 🤜"; }); };
   Array.prototype.forEach.call(document.querySelectorAll('#rpsPick [data-rps]'),function(btn){
     btn.onclick=function(){
+      if(rpsDone) return; rpsDone=true; rpsPickEnabled(false); // 한 배팅당 1판만 (중복 획득 방지)
       var me=+btn.dataset.rps, dealer=Math.floor(Math.random()*3);
       $("rpsFight").textContent=RPS[me]+" vs "+RPS[dealer];
       var outcome=(me-dealer+3)%3; // 0=비김 1=이김 2=짐
-      if(outcome===1){ var w=rpsBet*2; win(w); vib(30); $("rpsMsg").innerHTML='<span style="color:var(--gold)">🎉 이겼다! ₭'+fmt(w)+' 획득 (×2)</span>'; }
-      else if(outcome===0){ win(rpsBet); $("rpsMsg").innerHTML='<span style="color:#9fd">🤝 비김 — 배팅액 환불</span>'; }
-      else { saveNow(); vib([30,30]); $("rpsMsg").innerHTML='<span style="color:#ff8080">💥 졌어요… 다음 판!</span>'; }
+      var extra=' <span style="font-size:12px;color:#9b8cc0">— [대결] 눌러 한 판 더</span>';
+      if(outcome===1){ var w=rpsBet*2; win(w); vib(30); $("rpsMsg").innerHTML='<span style="color:var(--gold)">🎉 이겼다! ₭'+fmt(w)+' 획득 (×2)</span>'+extra; }
+      else if(outcome===0){ win(rpsBet); $("rpsMsg").innerHTML='<span style="color:#9fd">🤝 비김 — 배팅액 환불</span>'+extra; }
+      else { saveNow(); vib([30,30]); $("rpsMsg").innerHTML='<span style="color:#ff8080">💥 졌어요… 다음 판!</span>'+extra; }
     };
   });
   $("rpsClose").onclick=function(){ $("rpsModal").style.display="none"; };
