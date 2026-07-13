@@ -547,7 +547,7 @@
     <div style="width:100%;max-width:380px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <div><div style="font-weight:800;font-size:16px">🍬 콩즈 크러쉬</div><div class="muted" style="font-size:11px">같은 젬 3개+ 맞추기</div></div>
-        <div style="text-align:center"><div style="font-size:11px;color:#b9a8e0">점수</div><div id="k3Score" style="font-weight:800;color:var(--gold)">0</div></div>
+        <div style="text-align:center"><div style="font-size:11px;color:#b9a8e0">점수 / 목표</div><div style="font-weight:800"><span id="k3Score" style="color:var(--gold)">0</span> <span style="font-size:11px;color:#9b8cc0">/ <span id="k3Target">0</span></span></div></div>
         <div style="text-align:center"><div style="font-size:11px;color:#b9a8e0">남은수</div><div id="k3Moves" style="font-weight:800">20</div></div>
         <button id="k3Close" style="background:#5a5a72;border:none;color:#fff;padding:6px 12px;border-radius:8px;align-self:flex-start">나가기</button>
       </div>
@@ -2316,48 +2316,57 @@
     });
   })();
 
-  // ===== 🍬 콩즈 크러쉬 (매치3) =====
+  // ===== 🍬 콩즈 크러쉬 (매치3 · 캔디크러쉬급) =====
   var K3N=8, K3GEM=["🍌","💎","🔥","🍇","🌿","❤️"], K3BG=["#c9971f","#1f93b8","#d84f1f","#7d2fc0","#1f8f42","#c41f45"];
-  var k3={grid:[],score:0,moves:20,sel:-1,busy:false,over:false};
+  var K3SP={1:"💣",2:"🌈"}; // 1=폭탄(3x3) 2=무지개(색깔전멸)
+  var k3={grid:[],sp:[],score:0,moves:20,target:0,sel:-1,busy:false,over:false,swiped:false};
   function k3Left(){ mgRoll(); return Math.max(0,5-(S.k3N||0)); }
-  $("k3Btn").onclick=function(){ showIntro("🍬 콩즈 크러쉬","같은 젬 <b>3개 이상</b>을 가로/세로로 맞추면 터져요! 💥<br>이웃한 두 젬을 <b>탭해서 자리 바꿔</b> 매치를 만드세요.<br>터진 자리로 젬이 떨어지며 <b>콤보 연쇄</b>가 터지면 대박!<br>제한된 이동 안에 최고 점수 → ₭ 획득 · 하루 5판", openK3); };
+  $("k3Btn").onclick=function(){ showIntro("🍬 콩즈 크러쉬","같은 젬 <b>3개 이상</b> 맞춰 터뜨려요! 💥<br>탭 또는 <b>스와이프(밀기)</b>로 이웃 젬과 교환.<br><b>4개</b> 맞추면 💣폭탄(주변 3×3), <b>5개</b>면 🌈무지개(같은색 전멸)!<br>제한 이동 안에 <b>목표 점수</b> 달성하면 클리어 🏆 · 하루 5판", openK3); };
   function openK3(){ if(!PLAY_OK){ needWallet(); return; } if(k3Left()<=0){ toast("오늘 콩즈 크러쉬는 끝! 내일 또 🍬"); return; } $("k3Modal").style.display="flex"; startK3(); }
-  function k3Matches(g){
-    var m={}; var add=function(i){ m[i]=1; };
-    for(var r=0;r<K3N;r++){ var run=1; for(var col=1;col<K3N;col++){ if(g[r*K3N+col]===g[r*K3N+col-1]&&g[r*K3N+col]>=0) run++; else { if(run>=3) for(var k=0;k<run;k++) add(r*K3N+col-1-k); run=1; } } if(run>=3) for(var k=0;k<run;k++) add(r*K3N+K3N-1-k); }
-    for(var col=0;col<K3N;col++){ var run=1; for(var r=1;r<K3N;r++){ if(g[r*K3N+col]===g[(r-1)*K3N+col]&&g[r*K3N+col]>=0) run++; else { if(run>=3) for(var k=0;k<run;k++) add((r-1-k)*K3N+col); run=1; } } if(run>=3) for(var k=0;k<run;k++) add((K3N-1-k)*K3N+col); }
-    return Object.keys(m).map(Number);
+  function k3FindRuns(g){
+    var runs=[];
+    for(var r=0;r<K3N;r++){ var run=[r*K3N]; for(var col=1;col<K3N;col++){ var i=r*K3N+col; if(g[i]>=0&&g[i]===g[i-1]) run.push(i); else { if(run.length>=3) runs.push({cells:run.slice(),len:run.length}); run=[i]; } } if(run.length>=3) runs.push({cells:run.slice(),len:run.length}); }
+    for(var col=0;col<K3N;col++){ var run=[col]; for(var r=1;r<K3N;r++){ var i=r*K3N+col; if(g[i]>=0&&g[i]===g[(r-1)*K3N+col]) run.push(i); else { if(run.length>=3) runs.push({cells:run.slice(),len:run.length}); run=[i]; } } if(run.length>=3) runs.push({cells:run.slice(),len:run.length}); }
+    return runs;
   }
-  function k3Gravity(g){ for(var col=0;col<K3N;col++){ var stack=[]; for(var r=K3N-1;r>=0;r--) if(g[r*K3N+col]>=0) stack.push(g[r*K3N+col]); var r2=K3N-1; for(var i=0;i<stack.length;i++){ g[r2*K3N+col]=stack[i]; r2--; } while(r2>=0){ g[r2*K3N+col]=Math.floor(Math.random()*6); r2--; } } }
+  function k3Gravity(){
+    for(var col=0;col<K3N;col++){ var st=[],ss=[];
+      for(var r=K3N-1;r>=0;r--){ var i=r*K3N+col; if(k3.grid[i]>=0){ st.push(k3.grid[i]); ss.push(k3.sp[i]); } }
+      var r2=K3N-1;
+      for(var k=0;k<st.length;k++){ var i=r2*K3N+col; k3.grid[i]=st[k]; k3.sp[i]=ss[k]; r2--; }
+      while(r2>=0){ var i=r2*K3N+col; k3.grid[i]=Math.floor(Math.random()*6); k3.sp[i]=0; r2--; }
+    }
+  }
   function startK3(){
     mgRoll(); if(k3Left()<=0){ $("k3Modal").style.display="none"; return; }
     S.k3N=(S.k3N||0)+1;
-    k3.grid=[]; for(var i=0;i<64;i++) k3.grid.push(Math.floor(Math.random()*6));
-    // 시작 시 매치 없게
-    var guard=0; while(k3Matches(k3.grid).length>0 && guard++<100){ k3Matches(k3.grid).forEach(function(i){ k3.grid[i]=Math.floor(Math.random()*6); }); }
-    k3.score=0; k3.moves=20; k3.sel=-1; k3.busy=false; k3.over=false;
-    $("k3New").style.display="none"; $("k3Msg").textContent="이웃한 젬을 탭해서 바꿔요!";
+    k3.grid=[]; k3.sp=[]; for(var i=0;i<64;i++){ k3.grid.push(Math.floor(Math.random()*6)); k3.sp.push(0); }
+    var guard=0; while(k3FindRuns(k3.grid).length>0 && guard++<200){ k3FindRuns(k3.grid).forEach(function(run){ run.cells.forEach(function(i){ k3.grid[i]=Math.floor(Math.random()*6); }); }); }
+    k3.score=0; k3.moves=20; k3.target=600; k3.sel=-1; k3.busy=false; k3.over=false;
+    $("k3New").style.display="none"; $("k3Msg").textContent="같은 젬 3개+ 맞추기! 목표 "+k3.target+"점";
     k3Render(); updateK3Hud();
   }
-  function updateK3Hud(){ $("k3Score").textContent=fmt(k3.score); $("k3Moves").textContent=k3.moves; }
+  function updateK3Hud(){ $("k3Score").textContent=fmt(k3.score); $("k3Moves").textContent=k3.moves; var t=$("k3Target"); if(t) t.textContent=k3.target; }
   function k3Render(){
     var el=$("k3Grid"); el.innerHTML="";
     for(var i=0;i<64;i++){ (function(i){
-      var t=k3.grid[i], d=document.createElement("div");
-      var seld=(k3.sel===i);
-      d.style.cssText="border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:min(5.5vw,24px);cursor:pointer;user-select:none;transition:transform .1s;"+(t>=0?("background:"+K3BG[t]+";"+(seld?"transform:scale(1.15);box-shadow:0 0 0 2px #fff, 0 0 10px #fff;z-index:2":"box-shadow:inset 0 -2px 4px rgba(0,0,0,.25)")):"background:transparent");
-      d.textContent=t>=0?K3GEM[t]:"";
+      var t=k3.grid[i], seld=(k3.sel===i), d=document.createElement("div");
+      d.style.cssText="border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:min(5.5vw,24px);cursor:pointer;user-select:none;transition:transform .1s;"+(t>=0?("background:"+K3BG[t]+";"+(seld?"transform:scale(1.15);box-shadow:0 0 0 2px #fff,0 0 10px #fff;z-index:2":"box-shadow:inset 0 -2px 4px rgba(0,0,0,.25)")):"background:transparent");
+      d.textContent = t<0?"" : (k3.sp[i]?K3SP[k3.sp[i]]:K3GEM[t]);
       d.onclick=function(){ k3Tap(i); };
       el.appendChild(d);
     })(i); }
   }
   function k3Adjacent(a,b){ var ra=Math.floor(a/K3N),ca=a%K3N,rb=Math.floor(b/K3N),cb=b%K3N; return (ra===rb&&Math.abs(ca-cb)===1)||(ca===cb&&Math.abs(ra-rb)===1); }
+  function k3BestIdx(run,swap){ if(swap!=null&&run.cells.indexOf(swap)>=0) return swap; return run.cells[Math.floor(run.cells.length/2)]; }
   function k3TrySwap(a,b){
     if(k3.busy||k3.over||a<0||b<0||!k3Adjacent(a,b)) return;
     k3.sel=-1;
     var tmp=k3.grid[a]; k3.grid[a]=k3.grid[b]; k3.grid[b]=tmp;
-    if(k3Matches(k3.grid).length>0){ k3.moves--; updateK3Hud(); k3Render(); k3.busy=true; setTimeout(k3Resolve,160); }
-    else { var t2=k3.grid[a]; k3.grid[a]=k3.grid[b]; k3.grid[b]=t2; k3Render(); toast("매치가 안 돼요!"); beep(180,0.08); }
+    var ts=k3.sp[a]; k3.sp[a]=k3.sp[b]; k3.sp[b]=ts;
+    var rainbowSwap = (k3.sp[a]===2||k3.sp[b]===2);
+    if(k3FindRuns(k3.grid).length>0 || rainbowSwap){ k3.moves--; updateK3Hud(); k3Render(); k3.busy=true; setTimeout(function(){ k3Resolve(b,rainbowSwap?[a,b]:null); },160); }
+    else { var t2=k3.grid[a]; k3.grid[a]=k3.grid[b]; k3.grid[b]=t2; var s2=k3.sp[a]; k3.sp[a]=k3.sp[b]; k3.sp[b]=s2; k3Render(); toast("매치가 안 돼요!"); beep(180,0.08); }
   }
   function k3Tap(i){
     if(k3.busy||k3.over||k3.swiped) return;
@@ -2366,44 +2375,51 @@
     if(!k3Adjacent(k3.sel,i)){ k3.sel=i; k3Render(); return; }
     k3TrySwap(k3.sel,i);
   }
-  // 스와이프(밀기)로 젬 이동
   (function(){
-    var g=$("k3Grid"), sx=0, sy=0, si=-1;
-    function cellFromXY(cx,cy){ var r=g.getBoundingClientRect(); var col=Math.floor((cx-r.left)/(r.width/8)), row=Math.floor((cy-r.top)/(r.height/8)); if(col<0||col>7||row<0||row>7) return -1; return row*8+col; }
-    g.addEventListener("touchstart",function(e){ if(k3.busy||k3.over) return; var t=e.touches[0]; if(!t) return; sx=t.clientX; sy=t.clientY; si=cellFromXY(sx,sy); k3.swiped=false; },{passive:true});
+    var g=$("k3Grid"), sx=0,sy=0,si=-1;
+    function cellXY(cx,cy){ var r=g.getBoundingClientRect(); var col=Math.floor((cx-r.left)/(r.width/8)),row=Math.floor((cy-r.top)/(r.height/8)); if(col<0||col>7||row<0||row>7) return -1; return row*8+col; }
+    g.addEventListener("touchstart",function(e){ if(k3.busy||k3.over) return; var t=e.touches[0]; if(!t) return; sx=t.clientX; sy=t.clientY; si=cellXY(sx,sy); k3.swiped=false; },{passive:true});
     g.addEventListener("touchmove",function(e){ e.preventDefault(); },{passive:false});
-    g.addEventListener("touchend",function(e){
-      if(si<0||k3.busy||k3.over) return; var t=e.changedTouches[0]; if(!t){ si=-1; return; }
-      var dx=t.clientX-sx, dy=t.clientY-sy;
-      if(Math.abs(dx)<14 && Math.abs(dy)<14){ si=-1; return; } // 작은 움직임=탭(onclick 처리)
-      k3.swiped=true; setTimeout(function(){ k3.swiped=false; },300);
-      var row=Math.floor(si/8), col=si%8, nb=-1;
-      if(Math.abs(dx)>Math.abs(dy)){ if(dx>0&&col<7) nb=si+1; else if(dx<0&&col>0) nb=si-1; }
-      else { if(dy>0&&row<7) nb=si+8; else if(dy<0&&row>0) nb=si-8; }
-      if(nb>=0) k3TrySwap(si,nb);
-      si=-1;
-    },{passive:true});
+    g.addEventListener("touchend",function(e){ if(si<0||k3.busy||k3.over) return; var t=e.changedTouches[0]; if(!t){si=-1;return;} var dx=t.clientX-sx,dy=t.clientY-sy; if(Math.abs(dx)<14&&Math.abs(dy)<14){si=-1;return;} k3.swiped=true; setTimeout(function(){k3.swiped=false;},300); var row=Math.floor(si/8),col=si%8,nb=-1; if(Math.abs(dx)>Math.abs(dy)){ if(dx>0&&col<7)nb=si+1; else if(dx<0&&col>0)nb=si-1; } else { if(dy>0&&row<7)nb=si+8; else if(dy<0&&row>0)nb=si-8; } if(nb>=0) k3TrySwap(si,nb); si=-1; },{passive:true});
   })();
-  function k3Resolve(){
+  function k3Resolve(swapIdx, forceCells){
     var combo=0;
     function step(){
-      var m=k3Matches(k3.grid);
-      if(m.length===0){ k3.busy=false; k3Render(); if(k3.moves<=0) endK3(); return; }
+      var runs=k3FindRuns(k3.grid);
+      if(runs.length===0 && !(forceCells&&combo===0)){ k3.busy=false; k3Render(); if(k3.score>=k3.target){ endK3(true); } else if(k3.moves<=0){ endK3(false); } return; }
       combo++;
-      m.forEach(function(i){ k3.grid[i]=-1; });
-      k3.score += m.length*10*combo; updateK3Hud();
-      if(combo>=2){ toast("🔥 "+combo+"연쇄 콤보!"); }
+      var clear={}, create=[];
+      runs.forEach(function(run){
+        run.cells.forEach(function(i){ clear[i]=1; });
+        if(run.len>=5) create.push({idx:k3BestIdx(run,swapIdx),sp:2});
+        else if(run.len===4) create.push({idx:k3BestIdx(run,swapIdx),sp:1});
+      });
+      if(forceCells&&combo===1){ forceCells.forEach(function(i){ clear[i]=1; }); }
+      // 특수젬 발동 (연쇄)
+      var changed=true, guard=0;
+      while(changed && guard++<30){ changed=false;
+        Object.keys(clear).forEach(function(k){ var i=+k;
+          if(k3.sp[i]===1){ k3.sp[i]=0; var r=Math.floor(i/8),cc=i%8; for(var x=-1;x<=1;x++)for(var y=-1;y<=1;y++){ var nr=r+x,nc=cc+y; if(nr>=0&&nr<8&&nc>=0&&nc<8){ var j=nr*8+nc; if(!clear[j]){ clear[j]=1; changed=true; } } } }
+          else if(k3.sp[i]===2){ k3.sp[i]=0; var col=k3.grid[i]; for(var j=0;j<64;j++) if(k3.grid[j]===col && !clear[j]){ clear[j]=1; changed=true; } }
+        });
+      }
+      var createIdx={}; create.forEach(function(x){ createIdx[x.idx]=1; });
+      var cleared=0;
+      Object.keys(clear).forEach(function(k){ var i=+k; if(!createIdx[i]){ if(k3.grid[i]>=0) cleared++; k3.grid[i]=-1; k3.sp[i]=0; } });
+      create.forEach(function(x){ k3.sp[x.idx]=x.sp; });
+      k3.score += cleared*12*combo; updateK3Hud();
+      if(combo>=2) toast("🔥 "+combo+"연쇄!");
       beep(500+combo*80,0.05); vib(15);
       k3Render();
-      setTimeout(function(){ k3Gravity(k3.grid); k3Render(); setTimeout(step,170); },170);
+      setTimeout(function(){ k3Gravity(); k3Render(); setTimeout(step,170); },170);
     }
     step();
   }
-  function endK3(){
+  function endK3(cleared){
     k3.over=true;
-    var reward=Math.floor(k3.score*Math.max(1,perTap()*0.15));
+    var reward=Math.floor(k3.score*Math.max(1,perTap()*0.15))*(cleared?2:1);
     win(reward);
-    $("k3Msg").innerHTML='<span style="color:var(--gold)">🏆 '+fmt(k3.score)+'점! ₭'+fmt(reward)+' 획득</span>'+(k3Left()>0?" · 남은 "+k3Left()+"판":" · 오늘 끝");
+    $("k3Msg").innerHTML=(cleared?'<span style="color:var(--gold)">🏆 클리어! ':'<span style="color:#ff8080">💀 목표 미달 ')+fmt(k3.score)+'점 · ₭'+fmt(reward)+(cleared?' (클리어 ×2!)':'')+'</span>'+(k3Left()>0?" · 남은 "+k3Left()+"판":" · 오늘 끝");
     $("k3New").style.display=""; $("k3New").textContent=k3Left()>0?"다시 하기 ("+k3Left()+"판)":"오늘 끝!";
   }
   $("k3New").onclick=function(){ if(k3Left()>0) startK3(); else $("k3Modal").style.display="none"; };
@@ -2424,7 +2440,7 @@
     for(var i=0;i<40;i++) rn.stars.push({x:Math.random()*cv.width,y:Math.random()*cv.height*0.6,s:0.3+Math.random()});
     updateRnHud(); cancelAnimationFrame(rn.raf); rnLoop();
   }
-  function rnJump(){ if(!rn.active) return; if(rn.jumps<2){ rn.vy=-13.5; rn.jumps++; beep(600,0.05); } }
+  function rnJump(){ if(!rn.active) return; if(rn.jumps<2){ rn.vy=-11; rn.jumps++; beep(600,0.05); } }
   var _rnc=$("rnCanvas");
   _rnc.addEventListener("touchstart",function(e){ e.preventDefault(); rnJump(); },{passive:false});
   _rnc.addEventListener("mousedown",function(){ rnJump(); });
@@ -2441,7 +2457,7 @@
     ctx.fillStyle="#2a2150"; ctx.fillRect(0,rn.ground+22,W,H);
     ctx.strokeStyle="#4a3a80"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(0,rn.ground+22); ctx.lineTo(W,rn.ground+22); ctx.stroke();
     // 물리
-    rn.vy+=0.72; rn.py+=rn.vy; if(rn.py>=rn.ground){ rn.py=rn.ground; rn.vy=0; rn.jumps=0; }
+    rn.vy+=0.5; rn.py+=rn.vy; if(rn.py>=rn.ground){ rn.py=rn.ground; rn.vy=0; rn.jumps=0; }
     // 장애물 스폰
     rn.spawnT--; if(rn.spawnT<=0){ rn.spawnT=Math.max(28,70-rn.dist*0.04)+Math.random()*30; var fly=Math.random()<0.3; rn.obs.push({x:W+20,y:fly?rn.ground-70:rn.ground,fly:fly,t:fly?"🦅":(Math.random()<0.5?"🌵":"🪨")}); }
     // 코인 스폰
@@ -2483,7 +2499,7 @@
     var W=cv.width,H=cv.height;
     // 지그재그 경로 (waypoint)
     td.path=[[0,H*0.15],[W*0.82,H*0.15],[W*0.82,H*0.42],[W*0.18,H*0.42],[W*0.18,H*0.7],[W*0.85,H*0.7],[W*0.85,H*0.92],[0,H*0.92]];
-    td.active=true; td.lives=10; td.gold=100; td.wave=0; td.cost=50; td.towers=[]; td.enemies=[]; td.shots=[]; td.spawnQ=0; td.spawnT=0; td.t=0; td.waveClear=true; td.over=false;
+    td.active=true; td.lives=15; td.gold=160; td.wave=0; td.cost=45; td.towers=[]; td.enemies=[]; td.shots=[]; td.spawnQ=0; td.spawnT=0; td.t=0; td.waveClear=true; td.over=false;
     updateTdHud(); cancelAnimationFrame(td.raf); tdLoop();
   }
   function updateTdHud(){ $("tdLives").textContent=td.lives; $("tdGold").textContent=td.gold; $("tdWave").textContent=td.wave; $("tdCost").textContent=td.cost; }
@@ -2494,7 +2510,7 @@
     if(td.gold<td.cost){ toast("골드 부족! (🪙"+td.cost+" 필요)"); return; }
     if(tdOnPath(x,y)){ toast("길 위엔 못 지어요!"); return; }
     for(var i=0;i<td.towers.length;i++) if(Math.hypot(td.towers[i].x-x,td.towers[i].y-y)<32){ toast("너무 가까워요!"); return; }
-    td.towers.push({x:x,y:y,range:95,cd:26,cdT:0,dmg:9}); td.gold-=td.cost; td.cost+=12; updateTdHud(); beep(600,0.06);
+    td.towers.push({x:x,y:y,range:110,cd:22,cdT:0,dmg:13}); td.gold-=td.cost; td.cost+=15; updateTdHud(); beep(600,0.06);
   }
   _tdc.addEventListener("touchstart",function(e){ e.preventDefault(); if(e.touches[0]) tdPlace(e.touches[0].clientX,e.touches[0].clientY); },{passive:false});
   _tdc.addEventListener("mousedown",function(e){ tdPlace(e.clientX,e.clientY); });
@@ -2508,14 +2524,14 @@
     ctx.strokeStyle="#3f6f48"; ctx.lineWidth=2; ctx.stroke();
     // 웨이브 스폰
     if(td.waveClear && td.enemies.length===0){ td.wave++; td.waveClear=false; td.spawnQ=4+td.wave*2; td.spawnT=0; updateTdHud(); }
-    if(td.spawnQ>0){ td.spawnT--; if(td.spawnT<=0){ td.spawnT=Math.max(22,45-td.wave); td.spawnQ--; var hp=18+td.wave*10; td.enemies.push({seg:0,t:0,hp:hp,max:hp,spd:0.6+td.wave*0.04,e:["👾","💀","👿"][td.wave%3]}); if(td.spawnQ===0) td.waveClear=true; } }
+    if(td.spawnQ>0){ td.spawnT--; if(td.spawnT<=0){ td.spawnT=Math.max(22,45-td.wave); td.spawnQ--; var hp=14+td.wave*7; td.enemies.push({seg:0,t:0,hp:hp,max:hp,spd:0.55+td.wave*0.035,e:["👾","💀","👿"][td.wave%3]}); if(td.spawnQ===0) td.waveClear=true; } }
     // 적 이동
     ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.font="22px sans-serif";
     td.enemies=td.enemies.filter(function(en){
       var a=td.path[en.seg],b=td.path[en.seg+1]; var seglen=Math.hypot(b[0]-a[0],b[1]-a[1])||1;
       en.t+=(en.spd*2.4)/seglen;
       while(en.t>=1){ en.t-=1; en.seg++; if(en.seg>=td.path.length-1){ td.lives--; updateTdHud(); if(td.lives<=0) tdEnd(); return false; } var a2=td.path[en.seg],b2=td.path[en.seg+1]; seglen=Math.hypot(b2[0]-a2[0],b2[1]-a2[1])||1; }
-      if(en.hp<=0){ td.gold+=6; updateTdHud(); beep(400,0.03); return false; }
+      if(en.hp<=0){ td.gold+=8; updateTdHud(); beep(400,0.03); return false; }
       var p=tdEnemyPos(en); en.px=p[0]; en.py=p[1];
       ctx.fillText(en.e,p[0],p[1]);
       // HP바
@@ -2529,8 +2545,9 @@
       var best=null,bestProg=-1;
       td.enemies.forEach(function(en){ if(en.px==null) return; var d=Math.hypot(en.px-tw.x,en.py-tw.y); if(d<=tw.range){ var prog=en.seg+en.t; if(prog>bestProg){ bestProg=prog; best=en; } } });
       if(best && tw.cdT<=0){ tw.cdT=tw.cd; td.shots.push({x:tw.x,y:tw.y,tgt:best,dmg:tw.dmg}); }
-      ctx.font="26px sans-serif"; ctx.fillText("🦍",tw.x,tw.y);
-      if(best){ ctx.strokeStyle="rgba(255,255,255,.06)"; ctx.beginPath(); ctx.arc(tw.x,tw.y,tw.range,0,6.3); ctx.stroke(); }
+      ctx.strokeStyle="rgba(120,220,150,.12)"; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(tw.x,tw.y,tw.range,0,6.3); ctx.stroke();
+      ctx.font="28px sans-serif"; ctx.fillText("🦍",tw.x,tw.y);
+      if(best){ ctx.strokeStyle="rgba(255,120,120,.4)"; ctx.beginPath(); ctx.moveTo(tw.x,tw.y); ctx.lineTo(best.px,best.py); ctx.stroke(); }
     });
     // 탄
     ctx.fillStyle="#ffd54a";
