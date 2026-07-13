@@ -953,8 +953,12 @@ app.post("/api/linklogin", (req, res) => {
   if (!name || !validSig(name, ph, String(b.sig || ""))) return res.status(403).json({ ok: false, message: "링크가 유효하지 않아요. 카톡에서 [게임시작]으로 새 링크를 받아주세요." });
   const p = db.players[name] || (db.players[name] = {});
   if (ph) { if (!p.ph) p.ph = ph; else if (p.ph !== ph) return res.json({ ok: false, message: "동일 닉네임 사칭이 의심돼요. 관리자에게 문의하세요." }); }
+  // 이미 비밀번호가 있는 계정 = 설정 완료됨. 링크만으로는 로그인 불가(비번 필수).
+  // → 남에게 링크가 유출돼도 계정 탈취 불가. 본인이면 닉네임+비번으로 로그인.
+  if (p.pinHash) return res.json({ ok: true, hasPin: true, name });
+  // 비밀번호가 아직 없는 최초 유저만 링크로 세션 발급 (첫 설정용)
   const ses = pushSes(p);
-  res.json({ ok: true, ses, name, token: BOT_TOKEN, needPin: !p.pinHash });
+  res.json({ ok: true, ses, name, token: BOT_TOKEN, needPin: true });
 });
 
 // 로그인 (닉네임+비밀번호 → 세션)

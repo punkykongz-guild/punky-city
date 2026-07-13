@@ -326,11 +326,12 @@
         <button class="bigBtn" id="loginKakao" style="background:#5a5a72">💬 카카오톡 열기</button>
       </div>
       <div id="authPin" style="display:none">
+        <div id="pinWarn" style="font-size:11.5px;line-height:1.5;margin-bottom:8px;color:#ffb0b0;background:rgba(255,80,80,.12);border:1px solid rgba(255,120,120,.35);border-radius:8px;padding:7px 10px"></div>
         <div style="font-size:13px;line-height:1.6;margin-bottom:10px">🔑 비밀번호를 만들면 어떤 폰·어떤 링크에서도 로그인해서 내 계정을 쓸 수 있어요!</div>
         <input id="pinA" type="password" placeholder="비밀번호 (4자 이상)" style="width:100%;box-sizing:border-box;padding:11px;margin-bottom:8px;border-radius:8px;border:1px solid #4a3b6e;background:#160b2e;color:#fff;font-size:14px"/>
         <input id="pinB" type="password" placeholder="비밀번호 확인" style="width:100%;box-sizing:border-box;padding:11px;margin-bottom:8px;border-radius:8px;border:1px solid #4a3b6e;background:#160b2e;color:#fff;font-size:14px"/>
         <button class="bigBtn" id="pinBtn">설정 완료</button>
-        <button class="bigBtn" id="pinSkip" style="margin-top:8px;background:#5a5a72">나중에 할게요</button>
+        <button class="bigBtn" id="pinSkip" style="margin-top:8px;background:#5a5a72">제가 아니에요 (로그인)</button>
       </div>
       <div id="authMsg" style="min-height:16px;font-size:12px;color:#ff8f8f;margin-top:10px"></div>
     </div>
@@ -1446,7 +1447,7 @@
     ["authChoice","authLogin","authPin"].forEach(function(id){ $(id).style.display="none"; });
     $("authMsg").textContent="";
     if(mode==="choice"){ $("authSub").textContent="본인 확인"; $("authChoiceTxt").innerHTML="당신이 <b>[ "+URL_NAME+" ]</b> 님 본인인가요?"; $("authChoice").style.display="block"; }
-    else if(mode==="pin"){ $("authSub").textContent=NAME+"님, 환영해요!"; $("authPin").style.display="block"; }
+    else if(mode==="pin"){ $("authSub").textContent=NAME+"님, 환영해요!"; $("pinWarn").innerHTML="⚠️ 본인이 <b>["+NAME+"]</b>님이 아니라면 설정하지 마세요! 아래 <b>[제가 아니에요]</b>를 눌러 내 계정으로 로그인하세요."; $("authPin").style.display="block"; }
     else { $("authSub").textContent="로그인"; $("authLogin").style.display="block"; }
   }
   function hideAuth(){ $("authWrap").style.display="none"; }
@@ -1483,15 +1484,38 @@
         hideAuth(); bootMain(); toast("🔑 비밀번호 설정 완료!");
       });
     };
-    $("pinSkip").onclick=function(){ hideAuth(); bootMain(); };
+    $("pinSkip").onclick=function(){
+      // "제가 아니에요" — 방금 링크로 저장된 로그인 취소하고 내 계정 로그인 화면으로
+      localStorage.removeItem("pkc_login"); LOGIN=null; NAME=""; SES="";
+      showAuth("login");
+      $("authMsg").textContent="본인 닉네임과 비밀번호로 로그인하세요";
+    };
   }
   function boot(){
     wireAuth();
+    // 이미 이 폰에 로그인돼 있으면 → 어떤 링크를 열든 내 계정
     if(LOGIN&&LOGIN.name&&LOGIN.ses){
       if(URL_NAME&&URL_NAME!==LOGIN.name) toast("🦍 "+LOGIN.name+"님 계정으로 접속했어요");
       bootMain(); return;
     }
-    if(URL_NAME&&SIG){ showAuth("choice"); return; }
+    // 로그인 안 된 상태에서 봇 링크(name+sig)로 들어옴
+    if(URL_NAME&&SIG){
+      showAuth("login"); $("authMsg").textContent="확인 중...";
+      post("/api/linklogin",{name:URL_NAME,sig:SIG,ph:PH},function(d){
+        $("authMsg").textContent="";
+        if(d&&d.ok&&d.needPin){
+          // 이 닉네임은 아직 비번 없는 '최초 유저' → 본인 설정 화면
+          NAME=d.name; SES=d.ses; if(d.token) TOKEN=d.token;
+          saveLogin(d.name,d.ses,d.token);
+          showAuth("pin");
+        } else {
+          // 이미 설정된 계정(비번 있음)이거나 링크 만료 → 로그인 화면
+          // (남의 링크로 들어와도 여기! 그 사람 계정으로 자동 로그인 안 됨)
+          showAuth("login");
+        }
+      });
+      return;
+    }
     showAuth("login");
   }
   function bootMain(){
