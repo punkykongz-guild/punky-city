@@ -461,6 +461,17 @@
   </div>
 
   <!-- 콩즈 파이터 -->
+  <!-- 콩즈 파이터 메뉴 -->
+  <div id="fgMenu" style="position:fixed;inset:0;background:rgba(8,4,20,.95);display:none;z-index:85;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center">
+    <h2>🥊 콩즈 파이터</h2>
+    <div class="muted" style="font-size:12.5px;margin-bottom:14px;max-width:300px">대전 방식을 골라요. 실시간은 다른 길드원과 붙어요!</div>
+    <button class="bigBtn" id="fgMenuAi" style="max-width:300px">🤖 AI 대전 <span style="font-size:11px">(₭ 배팅 · ×2)</span></button>
+    <button class="bigBtn" id="fgMenuPvp" style="max-width:300px;margin-top:8px;background:#b91c1c">⚔️ 실시간 대전 <span style="font-size:11px">(승리 시 랭킹+P)</span></button>
+    <button class="bigBtn" id="fgMenuRank" style="max-width:300px;margin-top:8px;background:#5a5a72">🏆 파이터 랭킹</button>
+    <button class="bigBtn" id="fgMenuClose" style="max-width:300px;margin-top:8px;background:#3a3a52">닫기</button>
+    <div id="fgRankBox" style="display:none;margin-top:14px;max-width:300px;width:100%;background:rgba(255,255,255,.06);border-radius:10px;padding:12px 14px;font-size:13px;text-align:left"></div>
+  </div>
+
   <div id="fgModal" style="position:fixed;inset:0;background:linear-gradient(180deg,#2a1230,#0e0616);display:none;z-index:84;flex-direction:column;padding:14px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
       <div style="flex:1">
@@ -663,6 +674,7 @@
   <button class="bigBtn" id="mOk">확인</button>
 </div></div>
 <div id="toast"></div>
+<script src="/socket.io/socket.io.js"></script>
 
 <script>
 (function(){
@@ -1785,7 +1797,12 @@
 
   // ===== 🥊 콩즈 파이터 (심리전 대전 + 필살기) =====
   var fg={bet:0,myHP:100,aiHP:100,myG:0,aiG:0,over:false,busy:false,aiId:1};
-  $("fgBtn").onclick=function(){ showIntro("🥊 콩즈 파이터", "내 콩즈 vs 도전자 콩즈 대결! 🥊<br>👊공격 > 🤏잡기 > 🛡가드 > 👊공격 (상성)<br>🛡가드로 막으면 <b>기 게이지</b>가 차고, 3칸 모으면 <b style='color:#ff8080'>🔥필살기(-35)</b>!<br>상대 HP를 0으로 만들면 <b>×2</b> 승리 🏆", function(){ pickBet("🥊 콩즈 파이터", startFight); }); };
+  var FG_RULES="👊공격 > 🤏잡기 > 🛡가드 > 👊공격 (상성)<br>🛡가드로 막으면 <b>기 게이지</b>가 차고, 3칸 모으면 <b style='color:#ff8080'>🔥필살기(-35)</b>!<br>상대 HP를 0으로 만들면 승리!";
+  $("fgBtn").onclick=function(){ if(!PLAY_OK){ needWallet(); return; } $("fgRankBox").style.display="none"; $("fgMenu").style.display="flex"; };
+  $("fgMenuClose").onclick=function(){ $("fgMenu").style.display="none"; };
+  $("fgMenuAi").onclick=function(){ $("fgMenu").style.display="none"; showIntro("🤖 AI 대전", "내 콩즈 vs 도전자 콩즈! 🥊<br>"+FG_RULES+"<br>이기면 <b>×2</b> 획득!", function(){ pickBet("🥊 콩즈 파이터", startFight); }); };
+  $("fgMenuPvp").onclick=function(){ $("fgMenu").style.display="none"; showIntro("⚔️ 실시간 대전", "다른 길드원과 진검승부! 🥊<br>"+FG_RULES+"<br>이기면 <b>랭킹 승수 +1</b> & 포인트!<br><span style='color:#9b8cc0'>상대를 찾는 중이면 잠깐 기다려요.</span>", function(){ fgQueuePvp(""); }); };
+  $("fgMenuRank").onclick=function(){ fgLoadRank(); };
   function fgKimg(id){ return "https://cdn.helius-rpc.com/cdn-cgi/image/width=200/https://punkykongz.com/nft/punkykongz/image/"+id+".jpg"; }
   function startFight(bet){
     fg.bet=bet; fg.myHP=100; fg.aiHP=100; fg.myG=0; fg.aiG=0; fg.over=false; fg.busy=false;
@@ -1848,7 +1865,7 @@
       $("fgVs").textContent="다음 기술을 골라라!";
     },850);
   }
-  Array.prototype.forEach.call(document.querySelectorAll('#fgBtns [data-fg]'),function(b){ b.onclick=function(){ fgTurn(+b.dataset.fg); }; });
+  Array.prototype.forEach.call(document.querySelectorAll('#fgBtns [data-fg]'),function(b){ b.onclick=function(){ var a=+b.dataset.fg; if(fg.mode==="pvp"){ fgPvpPick(a); } else { fgTurn(a); } }; });
   function endFight(){
     fg.over=true; fg.busy=false;
     var meWin=fg.aiHP<=0 && fg.myHP>0;
@@ -1859,7 +1876,98 @@
     renderFg();
     setTimeout(function(){ $("fgModal").style.display="none"; },1800);
   }
-  $("fgClose").onclick=function(){ fg.over=true; $("fgModal").style.display="none"; };
+  $("fgClose").onclick=function(){ fg.over=true; if(fg.mode==="pvp"&&fgSock){ try{ fgSock.emit("fight:leave"); }catch(e){} } $("fgModal").style.display="none"; };
+
+  // ===== ⚔️ 콩즈 파이터 PvP (실시간) =====
+  var fgSock=null; var ACTICON=["👊","🛡","🤏","🔥"];
+  function fgConnect(cb){
+    if(fgSock&&fgSock.connected){ cb&&cb(); return; }
+    if(typeof io==="undefined"){ toast("실시간 서버 로드 실패 — 새로고침 해주세요"); return; }
+    if(!fgSock){
+      fgSock=io({transports:["websocket","polling"]});
+      fgSock.on("fight:waiting",function(){ fgPvpWait(); });
+      fgSock.on("fight:matched",function(d){ fgPvpMatched(d); });
+      fgSock.on("fight:go",function(d){ fgPvpGo(d); });
+      fgSock.on("fight:round",function(d){ fgPvpRound(d); });
+      fgSock.on("fight:end",function(d){ fgPvpEnd(d); });
+      fgSock.on("fight:error",function(d){ toast(d.message||"대전 오류"); $("fgModal").style.display="none"; });
+    }
+    if(fgSock.connected){ cb&&cb(); } else { fgSock.once("connect",function(){ cb&&cb(); }); }
+  }
+  function fgQueuePvp(want){
+    if(!PLAY_OK){ needWallet(); return; }
+    fg.mode="pvp"; fg.over=false; fg.picked=false; fg.myG=0;
+    fgConnect(function(){
+      var myId=(typeof currentAvatarId==="function"&&currentAvatarId())||(profile.tokenIds&&profile.tokenIds[0])||1;
+      fg.myImgId=myId;
+      fgSock.emit("fight:queue",{name:NAME,key:DEVKEY,sig:SIG,ph:PH,ses:SES,avatarId:myId,want:want||""});
+    });
+  }
+  function fgPvpButtons(on){
+    Array.prototype.forEach.call(document.querySelectorAll('#fgBtns [data-fg]'),function(b){
+      var isSuper=(b.id==="fgSuper");
+      b.disabled = !on || (isSuper && fg.myG<3);
+      b.style.opacity=b.disabled?.5:1;
+    });
+  }
+  function fgSetImg(el,id){ el.onerror=function(){ el.onerror=null; el.src="https://cdn.helius-rpc.com/cdn-cgi/image/width=200/https://punkykongz.com/nft/punkykongz/image/"+id+".png"; }; el.src=fgKimg(id); }
+  function fgPvpWait(){
+    $("fgModal").style.display="flex";
+    $("fgMeName").textContent=NAME||"나"; $("fgAiName").textContent="???";
+    $("fgMeHP").style.width="100%"; $("fgAiHP").style.width="100%";
+    $("fgMeG").textContent=gDots(0); $("fgAiG").textContent=gDots(0);
+    fgSetImg($("fgMeImg"),fg.myImgId||1); $("fgAiImg").src="";
+    $("fgVs").textContent="⚔️ 상대를 찾는 중... (같은 시간 접속자와 매칭)";
+    fgPvpButtons(false);
+  }
+  function fgPvpMatched(d){
+    fg.mode="pvp"; fg.over=false; fg.picked=false; fg.myG=0;
+    fgSetImg($("fgMeImg"),fg.myImgId||1); fgSetImg($("fgAiImg"),d.oppId||1);
+    $("fgMeName").textContent=NAME||"나"; $("fgAiName").textContent=d.opp;
+    $("fgMeHP").style.width="100%"; $("fgAiHP").style.width="100%";
+    $("fgMeG").textContent=gDots(0); $("fgAiG").textContent=gDots(0);
+    $("fgModal").style.display="flex";
+    $("fgVs").textContent="⚔️ "+d.opp+"님과 매칭! 곧 시작...";
+    fgPvpButtons(false); beep(700,0.1);
+  }
+  function fgPvpGo(d){
+    fg.picked=false; fgPvpButtons(true);
+    $("fgVs").textContent="라운드 "+(d.round||"")+" — 기술 선택! ⏱";
+  }
+  function fgPvpPick(a){
+    if(fg.over||fg.picked) return;
+    if(a===3&&fg.myG<3) return;
+    fg.picked=true; fgPvpButtons(false);
+    $("fgVs").textContent="선택 완료 "+ACTICON[a]+" — 상대 기다리는 중...";
+    try{ fgSock.emit("fight:pick",{action:a}); }catch(e){}
+  }
+  function fgPvpRound(d){
+    fg.myG=d.me.g;
+    var mdmg=(parseFloat($("fgMeHP").style.width)||100)>d.me.hp;
+    var admg=(parseFloat($("fgAiHP").style.width)||100)>d.opp.hp;
+    $("fgMeHP").style.width=d.me.hp+"%"; $("fgAiHP").style.width=d.opp.hp+"%";
+    $("fgMeG").textContent=gDots(d.me.g); $("fgAiG").textContent=gDots(d.opp.g);
+    $("fgVs").textContent="나 "+ACTICON[d.me.act]+"  vs  "+ACTICON[d.opp.act]+"  상대";
+    if(mdmg){ shake("fgMeImg"); vib(30); } if(admg){ shake("fgAiImg"); }
+    beep(400,0.05); fgPvpButtons(false);
+  }
+  function fgPvpEnd(d){
+    fg.over=true; fgPvpButtons(false);
+    if(d.win){ vib([40,40,40]); $("fgVs").innerHTML='<span style="color:var(--gold)">🏆 승리! (누적 '+d.wins+'승'+(d.reward>0?" +"+d.reward+"P":"")+')</span>'; }
+    else if(d.tie){ $("fgVs").innerHTML='<span style="color:#9fd">🤝 무승부!</span>'; }
+    else { vib([60,40,60]); $("fgVs").innerHTML='<span style="color:#ff8080">💀 패배… '+(d.reason||"다음엔 이기자!")+'</span>'; }
+    setTimeout(function(){ if(fg.over) $("fgModal").style.display="none"; },2600);
+  }
+  function fgLoadRank(){
+    var box=$("fgRankBox"); box.style.display="block"; box.innerHTML="불러오는 중...";
+    fetch(API("/api/rank/fighter")).then(function(r){return r.json();}).then(function(j){
+      if(!j.ok||!j.list.length){ box.innerHTML="아직 승부 기록이 없어요. 첫 챔피언이 되어보세요! 🥊"; return; }
+      var h='<div style="font-weight:800;margin-bottom:6px">🏆 파이터 랭킹</div>';
+      var med=["🥇","🥈","🥉"];
+      j.list.forEach(function(e,i){ h+='<div style="display:flex;justify-content:space-between;padding:2px 0"><span>'+(med[i]||(i+1)+".")+" "+e.name+'</span><b>'+e.wins+'승</b></div>'; });
+      box.innerHTML=h;
+    }).catch(function(){ box.innerHTML="랭킹 로드 실패"; });
+  }
 
   // ===== 행인 NPC (지나가다 동전 던져줌, 가끔 부자 등장) =====
   // 등급별 어울리는 행인 (1~6 골목/동네, 7~13 도심, 14~21 부촌, 22~26 우주, 27~30 환상)
@@ -2436,6 +2544,8 @@
         }
       }
       renderBizInit(); render(); lottoPoll(); refreshBnLeft(); refreshMgLeft();
+      var _duel=qs.get("duel");
+      if(_duel && PLAY_OK){ setTimeout(function(){ toast("⚔️ "+_duel+"님에게 결투 신청! 매칭 시작..."); fgQueuePvp(_duel); },1400); }
     }).catch(function(e){
       // 부팅 중 예외가 나도 화면이 죽지 않게
       S=S||newSave(); applyProfile(profile); renderBizInit(); render();
