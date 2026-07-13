@@ -542,6 +542,21 @@
     </div>
   </div>
 
+  <!-- 콩즈 크러쉬 (매치3) -->
+  <div id="k3Modal" style="position:fixed;inset:0;background:#1a0b2e;display:none;z-index:84;flex-direction:column;align-items:center;justify-content:center;padding:14px">
+    <div style="width:100%;max-width:380px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div><div style="font-weight:800;font-size:16px">🍬 콩즈 크러쉬</div><div class="muted" style="font-size:11px">같은 젬 3개+ 맞추기</div></div>
+        <div style="text-align:center"><div style="font-size:11px;color:#b9a8e0">점수</div><div id="k3Score" style="font-weight:800;color:var(--gold)">0</div></div>
+        <div style="text-align:center"><div style="font-size:11px;color:#b9a8e0">남은수</div><div id="k3Moves" style="font-weight:800">20</div></div>
+        <button id="k3Close" style="background:#5a5a72;border:none;color:#fff;padding:6px 12px;border-radius:8px;align-self:flex-start">나가기</button>
+      </div>
+      <div id="k3Grid" style="position:relative;width:100%;aspect-ratio:1;background:#2a1348;border-radius:12px;padding:5px;box-sizing:border-box;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);gap:3px;touch-action:none"></div>
+      <div id="k3Msg" style="text-align:center;min-height:22px;font-size:13px;margin-top:8px"></div>
+      <button class="bigBtn" id="k3New" style="margin-top:2px;display:none">다시 하기</button>
+    </div>
+  </div>
+
   <div id="tabs">
     <button class="tabBtn on" data-page="biz">💼 사업</button>
     <button class="tabBtn" data-page="stage">📖 등급</button>
@@ -695,6 +710,11 @@
       <div class="big">🧬</div>
       <div style="flex:1"><h3 style="margin:0">콩즈 진화 <span class="muted">2048 퍼즐</span></h3><div class="muted" style="font-size:12px">같은 콩즈 합쳐 진화! 노숙→…→펑키킹 등급을 만들어라</div></div>
       <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="k2Btn">플레이</button>
+    </div>
+    <div class="card arcadeItem" style="border:1px solid var(--pink)">
+      <div class="big">🍬</div>
+      <div style="flex:1"><h3 style="margin:0">콩즈 크러쉬 <span class="muted">매치3</span></h3><div class="muted" style="font-size:12px">같은 젬 3개+ 맞춰 터뜨려라! 콤보 연쇄로 대박</div></div>
+      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="k3Btn">플레이</button>
     </div>
   </div>
 
@@ -1660,7 +1680,7 @@
   $("rpsClose").onclick=function(){ $("rpsModal").style.display="none"; };
 
   // ===== 미니게임 일일제한 (두더지/기억력) =====
-  function mgRoll(){ if(S.mgDate!==todayKey()){ S.mgDate=todayKey(); S.moleN=0; S.simonN=0; S.skyN=0; S.k2N=0; } }
+  function mgRoll(){ if(S.mgDate!==todayKey()){ S.mgDate=todayKey(); S.moleN=0; S.simonN=0; S.skyN=0; S.k2N=0; S.k3N=0; } }
   function moleLeft(){ mgRoll(); return Math.max(0,5-(S.moleN||0)); }
   function simonLeft(){ mgRoll(); return Math.max(0,5-(S.simonN||0)); }
   function refreshMgLeft(){ var a=$("moleLeftT"),b=$("simonLeftT"); if(a)a.textContent="오늘 "+moleLeft()+"판"; if(b)b.textContent="오늘 "+simonLeft()+"판"; }
@@ -2263,6 +2283,80 @@
       else if(e.key==="ArrowUp"){ k2Move(2); e.preventDefault(); } else if(e.key==="ArrowDown"){ k2Move(3); e.preventDefault(); }
     });
   })();
+
+  // ===== 🍬 콩즈 크러쉬 (매치3) =====
+  var K3N=8, K3GEM=["🍌","💎","🔥","🍇","🌿","❤️"], K3BG=["#c9971f","#1f93b8","#d84f1f","#7d2fc0","#1f8f42","#c41f45"];
+  var k3={grid:[],score:0,moves:20,sel:-1,busy:false,over:false};
+  function k3Left(){ mgRoll(); return Math.max(0,5-(S.k3N||0)); }
+  $("k3Btn").onclick=function(){ showIntro("🍬 콩즈 크러쉬","같은 젬 <b>3개 이상</b>을 가로/세로로 맞추면 터져요! 💥<br>이웃한 두 젬을 <b>탭해서 자리 바꿔</b> 매치를 만드세요.<br>터진 자리로 젬이 떨어지며 <b>콤보 연쇄</b>가 터지면 대박!<br>제한된 이동 안에 최고 점수 → ₭ 획득 · 하루 5판", openK3); };
+  function openK3(){ if(!PLAY_OK){ needWallet(); return; } if(k3Left()<=0){ toast("오늘 콩즈 크러쉬는 끝! 내일 또 🍬"); return; } $("k3Modal").style.display="flex"; startK3(); }
+  function k3Matches(g){
+    var m={}; var add=function(i){ m[i]=1; };
+    for(var r=0;r<K3N;r++){ var run=1; for(var col=1;col<K3N;col++){ if(g[r*K3N+col]===g[r*K3N+col-1]&&g[r*K3N+col]>=0) run++; else { if(run>=3) for(var k=0;k<run;k++) add(r*K3N+col-1-k); run=1; } } if(run>=3) for(var k=0;k<run;k++) add(r*K3N+K3N-1-k); }
+    for(var col=0;col<K3N;col++){ var run=1; for(var r=1;r<K3N;r++){ if(g[r*K3N+col]===g[(r-1)*K3N+col]&&g[r*K3N+col]>=0) run++; else { if(run>=3) for(var k=0;k<run;k++) add((r-1-k)*K3N+col); run=1; } } if(run>=3) for(var k=0;k<run;k++) add((K3N-1-k)*K3N+col); }
+    return Object.keys(m).map(Number);
+  }
+  function k3Gravity(g){ for(var col=0;col<K3N;col++){ var stack=[]; for(var r=K3N-1;r>=0;r--) if(g[r*K3N+col]>=0) stack.push(g[r*K3N+col]); var r2=K3N-1; for(var i=0;i<stack.length;i++){ g[r2*K3N+col]=stack[i]; r2--; } while(r2>=0){ g[r2*K3N+col]=Math.floor(Math.random()*6); r2--; } } }
+  function startK3(){
+    mgRoll(); if(k3Left()<=0){ $("k3Modal").style.display="none"; return; }
+    S.k3N=(S.k3N||0)+1;
+    k3.grid=[]; for(var i=0;i<64;i++) k3.grid.push(Math.floor(Math.random()*6));
+    // 시작 시 매치 없게
+    var guard=0; while(k3Matches(k3.grid).length>0 && guard++<100){ k3Matches(k3.grid).forEach(function(i){ k3.grid[i]=Math.floor(Math.random()*6); }); }
+    k3.score=0; k3.moves=20; k3.sel=-1; k3.busy=false; k3.over=false;
+    $("k3New").style.display="none"; $("k3Msg").textContent="이웃한 젬을 탭해서 바꿔요!";
+    k3Render(); updateK3Hud();
+  }
+  function updateK3Hud(){ $("k3Score").textContent=fmt(k3.score); $("k3Moves").textContent=k3.moves; }
+  function k3Render(){
+    var el=$("k3Grid"); el.innerHTML="";
+    for(var i=0;i<64;i++){ (function(i){
+      var t=k3.grid[i], d=document.createElement("div");
+      var seld=(k3.sel===i);
+      d.style.cssText="border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:min(5.5vw,24px);cursor:pointer;user-select:none;transition:transform .1s;"+(t>=0?("background:"+K3BG[t]+";"+(seld?"transform:scale(1.15);box-shadow:0 0 0 2px #fff, 0 0 10px #fff;z-index:2":"box-shadow:inset 0 -2px 4px rgba(0,0,0,.25)")):"background:transparent");
+      d.textContent=t>=0?K3GEM[t]:"";
+      d.onclick=function(){ k3Tap(i); };
+      el.appendChild(d);
+    })(i); }
+  }
+  function k3Adjacent(a,b){ var ra=Math.floor(a/K3N),ca=a%K3N,rb=Math.floor(b/K3N),cb=b%K3N; return (ra===rb&&Math.abs(ca-cb)===1)||(ca===cb&&Math.abs(ra-rb)===1); }
+  function k3Tap(i){
+    if(k3.busy||k3.over) return;
+    if(k3.sel<0){ k3.sel=i; k3Render(); return; }
+    if(k3.sel===i){ k3.sel=-1; k3Render(); return; }
+    if(!k3Adjacent(k3.sel,i)){ k3.sel=i; k3Render(); return; }
+    var a=k3.sel, b=i; k3.sel=-1;
+    // 스왑 시도
+    var tmp=k3.grid[a]; k3.grid[a]=k3.grid[b]; k3.grid[b]=tmp;
+    if(k3Matches(k3.grid).length>0){ k3.moves--; updateK3Hud(); k3Render(); k3.busy=true; setTimeout(k3Resolve,160); }
+    else { // 무효 → 되돌림
+      var t2=k3.grid[a]; k3.grid[a]=k3.grid[b]; k3.grid[b]=t2; k3Render(); toast("매치가 안 돼요!"); beep(180,0.08);
+    }
+  }
+  function k3Resolve(){
+    var combo=0;
+    function step(){
+      var m=k3Matches(k3.grid);
+      if(m.length===0){ k3.busy=false; k3Render(); if(k3.moves<=0) endK3(); return; }
+      combo++;
+      m.forEach(function(i){ k3.grid[i]=-1; });
+      k3.score += m.length*10*combo; updateK3Hud();
+      if(combo>=2){ toast("🔥 "+combo+"연쇄 콤보!"); }
+      beep(500+combo*80,0.05); vib(15);
+      k3Render();
+      setTimeout(function(){ k3Gravity(k3.grid); k3Render(); setTimeout(step,170); },170);
+    }
+    step();
+  }
+  function endK3(){
+    k3.over=true;
+    var reward=Math.floor(k3.score*Math.max(1,perTap()*0.15));
+    win(reward);
+    $("k3Msg").innerHTML='<span style="color:var(--gold)">🏆 '+fmt(k3.score)+'점! ₭'+fmt(reward)+' 획득</span>'+(k3Left()>0?" · 남은 "+k3Left()+"판":" · 오늘 끝");
+    $("k3New").style.display=""; $("k3New").textContent=k3Left()>0?"다시 하기 ("+k3Left()+"판)":"오늘 끝!";
+  }
+  $("k3New").onclick=function(){ if(k3Left()>0) startK3(); else $("k3Modal").style.display="none"; };
+  $("k3Close").onclick=function(){ $("k3Modal").style.display="none"; };
 
   // ===== 행인 NPC (지나가다 동전 던져줌, 가끔 부자 등장) =====
   // 등급별 어울리는 행인 (1~6 골목/동네, 7~13 도심, 14~21 부촌, 22~26 우주, 27~30 환상)
