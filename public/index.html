@@ -129,8 +129,8 @@
     background:rgba(5,8,18,.55);color:#fff;font-size:11.5px;padding:6px 10px;border-radius:999px;cursor:pointer;}
   #aiBadge{position:absolute;top:42px;right:8px;z-index:6;display:none;
     background:rgba(5,8,18,.6);color:#ffd54a;font-size:10.5px;padding:4px 10px;border-radius:999px;}
-  #avatarBtn{position:absolute;top:8px;right:8px;z-index:6;border:1px solid var(--line);
-    background:rgba(5,8,18,.55);color:#fff;font-size:11.5px;padding:6px 10px;border-radius:999px;cursor:pointer;}
+  #avatarBtn{position:fixed;top:10px;right:10px;z-index:40;border:1px solid var(--line);
+    background:rgba(5,8,18,.78);backdrop-filter:blur(4px);color:#fff;font-size:11.5px;padding:6px 11px;border-radius:999px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35);}
   #avatarModal{position:fixed;inset:0;background:rgba(5,2,15,.85);display:none;z-index:60;
     align-items:center;justify-content:center;padding:20px;}
   #avatarModal.on{display:flex;}
@@ -355,6 +355,16 @@
       <h2>🍌 바나나 러시</h2>
       <p class="muted" style="max-width:280px;text-align:center;font-size:13px">20초 동안 🍌를 최대한 많이 탭! 💣폭탄을 누르면 감점. 점수만큼 ₭ 획득!</p>
       <button class="bigBtn" id="bnGo" style="max-width:240px">시작!</button>
+    </div>
+  </div>
+
+  <!-- 게임 설명 (공용) -->
+  <div id="introModal" style="position:fixed;inset:0;background:rgba(8,4,20,.95);display:none;z-index:85;flex-direction:column;align-items:center;justify-content:center;padding:24px">
+    <div style="background:#231240;border:1px solid var(--purple);border-radius:16px;padding:22px;max-width:340px;width:100%;text-align:center">
+      <h2 id="introTitle" style="margin:0 0 12px;font-size:20px"></h2>
+      <div id="introBody" style="font-size:13.5px;line-height:1.85;color:#ddd0f5;text-align:left;background:rgba(255,255,255,.05);border-radius:10px;padding:12px 14px"></div>
+      <button class="bigBtn" id="introGo" style="margin-top:16px;font-size:16px">🎮 게임 시작</button>
+      <button class="bigBtn" id="introClose" style="margin-top:8px;background:#5a5a72">닫기</button>
     </div>
   </div>
 
@@ -1389,7 +1399,7 @@
     $("pjModal").style.display="none";
   };
   $("pjClose").onclick=function(){ pj.active=false; cancelAnimationFrame(pj.raf); $("pjModal").style.display="none"; };
-  $("pjBtn").onclick=openPj;
+  $("pjBtn").onclick=function(){ showIntro("📦 폐지 타이밍", "움직이는 막대를 <b style='color:#6fe07a'>초록존</b>에서 STOP! ✋<br>성공하면 상금 <b>×2</b> → 계속 갈지 💰챙길지 선택.<br>초록존은 갈수록 좁아져요. 실패하면 배팅액 꽝!", openPj); };
 
   // ===== 바나나 러시 =====
   var BN_CAP=5;
@@ -1480,11 +1490,20 @@
     $("betModal").style.display="flex";
   }
   $("betClose").onclick=function(){ $("betModal").style.display="none"; };
+  // 게임 설명 → 시작
+  var introCb=null;
+  function showIntro(title, body, cb){
+    if(!PLAY_OK){ needWallet(); return; }
+    introCb=cb; $("introTitle").innerHTML=title; $("introBody").innerHTML=body;
+    $("introModal").style.display="flex";
+  }
+  $("introGo").onclick=function(){ $("introModal").style.display="none"; if(introCb){ var f=introCb; introCb=null; f(); } };
+  $("introClose").onclick=function(){ $("introModal").style.display="none"; introCb=null; };
   function win(amt){ S.money+=amt; S.lifetime+=amt; renderFast(); saveNow(); }
 
   // ===== 🎰 바나나 슬롯 =====
   var SLOT_SYM=["🍌","🦍","💎","🔔","7️⃣","💣"];
-  $("slotBtn").onclick=function(){ pickBet("🎰 바나나 슬롯", spinSlot); };
+  $("slotBtn").onclick=function(){ showIntro("🎰 바나나 슬롯", "릴 3개를 돌려 그림을 맞춰요. 🎰<br>7️⃣7️⃣7️⃣=<b>×40</b>, 💎×20, 🦍×12, 🍌×8<br>2개만 맞아도 ×2! 💣폭탄 나오면 꽝.", function(){ pickBet("🎰 바나나 슬롯", spinSlot); }); };
   function spinSlot(bet){
     $("slotModal").style.display="flex"; $("slotMsg").textContent="두구두구...";
     var res=[0,1,2].map(function(){ return Math.floor(Math.random()*SLOT_SYM.length); });
@@ -1512,7 +1531,7 @@
   $("slotClose").onclick=function(){ $("slotModal").style.display="none"; };
 
   // ===== 🪜 콩즈 사다리 =====
-  $("ldBtn").onclick=function(){ pickBet("🪜 콩즈 사다리", startLadder); };
+  $("ldBtn").onclick=function(){ showIntro("🪜 콩즈 사다리", "사다리 4개 중 하나를 골라 타요. 🪜<br>×1.5 ~ <b>×10</b>까지! 꽝도 있으니 운을 시험해봐요.", function(){ pickBet("🪜 콩즈 사다리", startLadder); }); };
   function startLadder(bet){
     $("ldModal").style.display="flex"; $("ldMsg").textContent=""; $("ldSub").textContent="출발 사다리를 고르세요";
     var lanes=$("ldLanes"); lanes.innerHTML="";
@@ -1538,7 +1557,7 @@
   var RPS=["✌️","✊","✋"], RPS_NM=["가위","바위","보"];
   var rpsBet=0, rpsDone=false;
   function rpsPickEnabled(on){ Array.prototype.forEach.call(document.querySelectorAll('#rpsPick [data-rps]'),function(b){ b.disabled=!on; b.style.opacity=on?1:.4; }); }
-  $("rpsBtn").onclick=function(){ pickBet("✊ 가위바위보", function(bet){ rpsBet=bet; rpsDone=false; rpsPickEnabled(true); $("rpsModal").style.display="flex"; $("rpsMsg").textContent="가위·바위·보 중 하나! (배팅 ₭"+fmt(bet)+")"; $("rpsFight").textContent="🤛 vs 🤜"; }); };
+  $("rpsBtn").onclick=function(){ showIntro("✊ 가위바위보", "딜러와 가위바위보 한 판! ✊✌️✋<br>이기면 <b>×2</b>, 비기면 환불, 지면 꽝.<br>[대결]을 다시 누르면 새 판이에요.", function(){ pickBet("✊ 가위바위보", function(bet){ rpsBet=bet; rpsDone=false; rpsPickEnabled(true); $("rpsModal").style.display="flex"; $("rpsMsg").textContent="가위·바위·보 중 하나! (배팅 ₭"+fmt(bet)+")"; $("rpsFight").textContent="🤛 vs 🤜"; }); }); };
   Array.prototype.forEach.call(document.querySelectorAll('#rpsPick [data-rps]'),function(btn){
     btn.onclick=function(){
       if(rpsDone) return; rpsDone=true; rpsPickEnabled(false); // 한 배팅당 1판만 (중복 획득 방지)
@@ -1661,7 +1680,7 @@
 
   // ===== 🚀 콩즈 로켓 (크래시) =====
   var crash={active:false,mult:1,at:1,bet:0,cashed:false,raf:0};
-  $("crashBtn").onclick=function(){ pickBet("🚀 콩즈 로켓", startCrash); };
+  $("crashBtn").onclick=function(){ showIntro("🚀 콩즈 로켓", "🚀 배율이 계속 <b>치솟아요</b>! (1.00x→∞)<br>터지기 전에 <b style='color:#6fe07a'>💰탈출</b>을 누르면 그 배율만큼 획득!<br>욕심부리다 터지면 꽝… 언제 터질진 아무도 몰라요 💥", function(){ pickBet("🚀 콩즈 로켓", startCrash); }); };
   function genCrash(){ var r=Math.random(); if(r<0.03) return 1.00; return Math.max(1.01, Math.round((0.97/(1-r))*100)/100); }
   function startCrash(bet){
     crash.bet=bet; crash.mult=1.00; crash.at=genCrash(); crash.cashed=false; crash.active=true;
@@ -1699,7 +1718,7 @@
 
   // ===== 🃏 하이로우 =====
   var hl={num:50,pot:0,bet:0,playing:false};
-  $("hlBtn").onclick=function(){ pickBet("🃏 하이로우", startHiLo); };
+  $("hlBtn").onclick=function(){ showIntro("🃏 하이로우", "숫자(1~100)를 보고 <b>다음이 높을지/낮을지</b> 예측! 🃏<br>맞추면 배율이 붙고, 연속 성공하면 폭발 📈<br>위험한 쪽일수록 배율이 커요. 아무때나 💰챙기기, 틀리면 꽝.", function(){ pickBet("🃏 하이로우", startHiLo); }); };
   function hlPayouts(n){
     var pHigh=(100-n)/99, pLow=(n-1)/99;
     var ph=pHigh>0?Math.max(1.05,Math.round(0.95/pHigh*100)/100):0;
@@ -1742,7 +1761,7 @@
   $("hlClose").onclick=function(){ hl.playing=false; $("hlModal").style.display="none"; };
 
   // ===== 🎁 미스터리 박스 =====
-  $("boxBtn").onclick=function(){ pickBet("🎁 미스터리 박스", openBox); };
+  $("boxBtn").onclick=function(){ showIntro("🎁 미스터리 박스", "상자를 열면 랜덤 보상! 🎁<br>💨꽝부터 💎×2, 👑×5, 🎰<b>×30 잭팟</b>까지.<br>운을 시험하는 미스터리 박스!", function(){ pickBet("🎁 미스터리 박스", openBox); }); };
   function openBox(bet){
     $("boxModal").style.display="flex"; $("boxMsg").textContent="두구두구...";
     var ic=$("boxIcon"); ic.textContent="🎁";
@@ -1766,7 +1785,7 @@
 
   // ===== 🥊 콩즈 파이터 (심리전 대전 + 필살기) =====
   var fg={bet:0,myHP:100,aiHP:100,myG:0,aiG:0,over:false,busy:false,aiId:1};
-  $("fgBtn").onclick=function(){ pickBet("🥊 콩즈 파이터", startFight); };
+  $("fgBtn").onclick=function(){ showIntro("🥊 콩즈 파이터", "내 콩즈 vs 도전자 콩즈 대결! 🥊<br>👊공격 > 🤏잡기 > 🛡가드 > 👊공격 (상성)<br>🛡가드로 막으면 <b>기 게이지</b>가 차고, 3칸 모으면 <b style='color:#ff8080'>🔥필살기(-35)</b>!<br>상대 HP를 0으로 만들면 <b>×2</b> 승리 🏆", function(){ pickBet("🥊 콩즈 파이터", startFight); }); };
   function fgKimg(id){ return "https://cdn.helius-rpc.com/cdn-cgi/image/width=200/https://punkykongz.com/nft/punkykongz/image/"+id+".png"; }
   function startFight(bet){
     fg.bet=bet; fg.myHP=100; fg.aiHP=100; fg.myG=0; fg.aiG=0; fg.over=false; fg.busy=false;
