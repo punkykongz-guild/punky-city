@@ -712,7 +712,7 @@ app.get("/api/profile", async (req, res) => {
   if (profile.wallet) tokenIds = await getOwnedTokenIds(profile.wallet);
   // 시트 NFT 수량이 없으면(미연동/테스트) 지갑 실보유 수로 동료 보너스 계산
   if (!profile.nft && tokenIds.length) profile.nft = tokenIds.length;
-  const toks = tokenIds.slice(0, 200);
+  const toks = tokenIds.slice(0, 1000); // 대량 홀더(300+) 대응 — 지갑 실보유 전부
   const imgMap = {};
   toks.forEach((t) => { if (t.img) imgMap[t.id] = t.img; });
   res.json({ ...profile, tokenIds: toks.map((t) => t.id), imgMap, imageBase: "https://punkykongz.com/nft/punkykongz/image/" });
