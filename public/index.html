@@ -1880,8 +1880,8 @@
       applyAvatarImage();
       $("matesInfo").textContent="(총 "+p.tokenIds.length+"마리 · 수입 +"+(p.nft*0.5).toFixed(1)+"% · 1마리당 +0.5%)";
       var m=$("mates"); m.innerHTML="";
-      p.tokenIds.slice(0,18).forEach(function(id){
-        var im=document.createElement("img"); im.src=kimg(id,200); m.appendChild(im);
+      p.tokenIds.forEach(function(id){ // 전체 표시 (100마리+ 대비 작은 썸네일 + 지연 로딩)
+        var im=document.createElement("img"); im.src=kimg(id,120); im.loading="lazy"; im.title="#"+id; m.appendChild(im);
       });
     }
   }
@@ -1913,9 +1913,9 @@
     } else {
       $("avatarHint").textContent="보유한 펑키콩즈 "+profile.tokenIds.length+"마리 중 아바타를 고르세요";
       var cur=currentAvatarId();
-      profile.tokenIds.slice(0,200).forEach(function(id){
-        var im=document.createElement("img");
-        im.src=kimg(id,200); im.title="Punky Kongz #"+id;
+      profile.tokenIds.forEach(function(id){
+        var im=document.createElement("img"); im.loading="lazy";
+        im.src=kimg(id,160); im.title="Punky Kongz #"+id;
         if(id===cur) im.className="sel";
         im.onclick=function(){
           S.avatarId=id; applyAvatarImage(); saveNow();
