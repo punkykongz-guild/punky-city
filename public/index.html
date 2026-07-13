@@ -2013,16 +2013,16 @@
     }).catch(function(){ box.innerHTML="랭킹 로드 실패"; });
   }
 
-  // ===== ✈️ 콩즈 스카이 (슈팅) =====
-  var sky={active:false,score:0,lives:3,px:180,py:500,bullets:[],enemies:[],stars:[],raf:0,lastShot:0,spawnT:0,t:0};
+  // ===== ✈️ 콩즈 스카이 (슈팅·스테이지·아이템·보스) =====
+  var sky={active:false,score:0,lives:3,px:180,py:500,bullets:[],ebullets:[],enemies:[],items:[],stars:[],raf:0,lastShot:0,spawnT:0,t:0,stage:0,kills:0,quota:0,power:1,shield:0,boss:null,banner:"",bannerT:0};
   function skyLeft(){ mgRoll(); return Math.max(0,5-(S.skyN||0)); }
   function refreshSkyLeft(){ var e=$("skyLeftT"); if(e) e.textContent="오늘 "+skyLeft()+"판"; }
-  $("skyBtn").onclick=function(){ showIntro("✈️ 콩즈 스카이","콩즈 전투기로 하늘을 지켜라! ✈️<br>손가락으로 움직이면 <b>자동 발사</b> 🔥<br>👾 적을 격추! 부딪히면 라이프 감소(❤️3개).<br>격추 수만큼 ₭ 획득 · 하루 5판", openSky); };
+  $("skyBtn").onclick=function(){ showIntro("✈️ 콩즈 스카이","콩즈 전투기로 하늘을 지켜라! ✈️<br>움직이면 <b>자동 발사</b> 🔥 👾적 격추!<br>가끔 <b>아이템</b> 드롭 → ⚡파워업 🛡실드 ❤️생명 💣폭탄<br>적을 다 잡으면 <b>보스</b> 등장! 격파하면 <b>다음 스테이지</b> 🏆<br>부딪히면 라이프 감소(❤️3) · 하루 5판", openSky); };
   function openSky(){
     if(!PLAY_OK){ needWallet(); return; }
     if(skyLeft()<=0){ toast("오늘 콩즈 스카이는 끝! 내일 또 ✈️"); return; }
     $("skyModal").style.display="flex"; $("skyStart").style.display="flex";
-    $("skyStart").innerHTML='<h2>✈️ 콩즈 스카이</h2><p class="muted" style="max-width:280px;text-align:center;font-size:13px">손가락으로 전투기를 움직이면 자동 발사! 👾적 격추, 부딪히면 라이프 감소.</p><button class="bigBtn" id="skyGo" style="max-width:220px">출격! ('+skyLeft()+'판)</button>';
+    $("skyStart").innerHTML='<h2>✈️ 콩즈 스카이</h2><p class="muted" style="max-width:290px;text-align:center;font-size:13px">아이템 먹고 강해져서 보스를 격파! 스테이지를 계속 클리어하세요.</p><button class="bigBtn" id="skyGo" style="max-width:220px">출격! ('+skyLeft()+'판)</button>';
     $("skyGo").onclick=startSky;
   }
   function startSky(){
@@ -2030,38 +2030,72 @@
     S.skyN=(S.skyN||0)+1; refreshSkyLeft();
     $("skyStart").style.display="none";
     var cv=$("skyCanvas"); cv.width=cv.clientWidth||360; cv.height=cv.clientHeight||560;
-    sky.active=true; sky.score=0; sky.lives=3; sky.bullets=[]; sky.enemies=[]; sky.stars=[];
-    sky.px=cv.width/2; sky.py=cv.height*0.8; sky.lastShot=0; sky.spawnT=0; sky.t=0;
+    sky.active=true; sky.score=0; sky.lives=3; sky.bullets=[]; sky.ebullets=[]; sky.enemies=[]; sky.items=[]; sky.stars=[];
+    sky.px=cv.width/2; sky.py=cv.height*0.8; sky.lastShot=0; sky.spawnT=0; sky.t=0; sky.stage=0; sky.power=1; sky.shield=0; sky.boss=null;
     for(var i=0;i<45;i++) sky.stars.push({x:Math.random()*cv.width,y:Math.random()*cv.height,s:0.4+Math.random()*1.6});
-    updateSkyHud();
+    nextStage(); updateSkyHud();
     cancelAnimationFrame(sky.raf); skyLoop();
   }
-  function skyMove(cx,cy){ var cv=$("skyCanvas"),r=cv.getBoundingClientRect(); sky.px=Math.max(18,Math.min(cv.width-18,cx-r.left)); sky.py=Math.max(cv.height*0.35,Math.min(cv.height-28,cy-r.top)); }
+  function nextStage(){ sky.stage++; sky.kills=0; sky.quota=7+sky.stage*4; sky.boss=null; sky.banner="STAGE "+sky.stage; sky.bannerT=sky.t+90; beep(700,0.12); }
+  function skyMove(cx,cy){ var cv=$("skyCanvas"),r=cv.getBoundingClientRect(); sky.px=Math.max(18,Math.min(cv.width-18,cx-r.left)); sky.py=Math.max(cv.height*0.3,Math.min(cv.height-28,cy-r.top)); }
   var _skc=$("skyCanvas");
   _skc.addEventListener("touchstart",function(e){ e.preventDefault(); if(e.touches[0]) skyMove(e.touches[0].clientX,e.touches[0].clientY); },{passive:false});
   _skc.addEventListener("touchmove",function(e){ e.preventDefault(); if(e.touches[0]) skyMove(e.touches[0].clientX,e.touches[0].clientY); },{passive:false});
   _skc.addEventListener("mousemove",function(e){ if(e.buttons) skyMove(e.clientX,e.clientY); });
   function updateSkyHud(){ $("skyScore").textContent=sky.score; $("skyLives").textContent="❤️".repeat(Math.max(0,sky.lives)); }
-  var SKY_EN=["👾","🛸","🦅","👿"];
+  var SKY_EN=["👾","🛸","🦅","👿"], ITEMICON={power:"⚡",shield:"🛡",life:"❤️",bomb:"💣"};
+  function skyFire(){
+    var p=sky.power,x=sky.px,y=sky.py-18;
+    if(p<=1) sky.bullets.push({x:x,y:y,vx:0});
+    else if(p===2){ sky.bullets.push({x:x-8,y:y,vx:0}); sky.bullets.push({x:x+8,y:y,vx:0}); }
+    else if(p===3){ sky.bullets.push({x:x,y:y,vx:0}); sky.bullets.push({x:x-9,y:y+4,vx:-1.6}); sky.bullets.push({x:x+9,y:y+4,vx:1.6}); }
+    else { for(var a=-2;a<=2;a++) sky.bullets.push({x:x+a*7,y:y+Math.abs(a)*3,vx:a*1.5}); }
+  }
+  function skyDropItem(x,y){ var r=Math.random(); var ty=r<0.5?"power":(r<0.72?"shield":(r<0.9?"bomb":"life")); sky.items.push({x:x,y:y,ty:ty}); }
+  function skyGetItem(it){
+    if(it.ty==="power"){ sky.power=Math.min(4,sky.power+1); toast("⚡ 파워업! Lv."+sky.power); beep(950,0.1); }
+    else if(it.ty==="shield"){ sky.shield=sky.t+360; toast("🛡 실드!"); beep(820,0.1); }
+    else if(it.ty==="life"){ sky.lives=Math.min(5,sky.lives+1); updateSkyHud(); toast("❤️ 생명 +1"); beep(1000,0.1); }
+    else { sky.score+=sky.enemies.length; sky.enemies=[]; if(sky.boss) sky.boss.hp-=8; updateSkyHud(); toast("💣 폭탄!"); vib([30,30]); beep(200,0.2); }
+  }
+  function skyHit(){ if(sky.t<sky.shield) return; sky.lives--; updateSkyHud(); beep(150,0.15); vib(40); sky.shield=sky.t+50; if(sky.lives<=0) endSky(); }
   function skyLoop(){
     if(!sky.active) return;
     var cv=$("skyCanvas"),ctx=cv.getContext("2d"),W=cv.width,H=cv.height; sky.t++;
     ctx.fillStyle="#0a0e26"; ctx.fillRect(0,0,W,H);
     ctx.fillStyle="rgba(255,255,255,.55)";
     sky.stars.forEach(function(st){ st.y+=st.s; if(st.y>H){st.y=0;st.x=Math.random()*W;} ctx.fillRect(st.x,st.y,1.5,1.5); });
-    if(sky.t-sky.lastShot>=9){ sky.lastShot=sky.t; sky.bullets.push({x:sky.px,y:sky.py-18}); }
-    sky.spawnT++; if(sky.spawnT>=Math.max(20,52-sky.score)){ sky.spawnT=0; sky.enemies.push({x:22+Math.random()*(W-44),y:-20,v:1.4+Math.random()*1.4+sky.score*0.012,t:SKY_EN[Math.floor(Math.random()*4)]}); }
+    if(sky.t-sky.lastShot>=9){ sky.lastShot=sky.t; skyFire(); }
+    if(!sky.boss){
+      sky.spawnT++;
+      if(sky.spawnT>=Math.max(15,44-sky.stage*3) && sky.kills<sky.quota){ sky.spawnT=0; sky.enemies.push({x:22+Math.random()*(W-44),y:-20,v:1.3+Math.random()*1.1+sky.stage*0.28,t:SKY_EN[Math.floor(Math.random()*4)]}); }
+      if(sky.kills>=sky.quota && sky.enemies.length===0){ var hp=18+sky.stage*12; sky.boss={x:W/2,y:70,hp:hp,max:hp,v:1.4+sky.stage*0.2,dir:1,fireT:0}; sky.banner="💀 BOSS!"; sky.bannerT=sky.t+70; beep(200,0.2); }
+    }
     ctx.fillStyle="#ffd54a";
-    sky.bullets=sky.bullets.filter(function(b){ b.y-=8.5; if(b.y<-12) return false; ctx.fillRect(b.x-2,b.y,4,12); return true; });
-    ctx.font="26px sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
+    sky.bullets=sky.bullets.filter(function(b){ b.y-=8.5; b.x+=(b.vx||0); if(b.y<-12) return false; ctx.fillRect(b.x-2,b.y,4,11); return true; });
+    ctx.fillStyle="#ff6a6a";
+    sky.ebullets=sky.ebullets.filter(function(b){ b.y+=b.vy; b.x+=b.vx; if(b.y>H+10||b.x<-10||b.x>W+10) return false; ctx.beginPath();ctx.arc(b.x,b.y,4,0,6.3);ctx.fill(); if(Math.abs(b.x-sky.px)<17&&Math.abs(b.y-sky.py)<17){ skyHit(); return false; } return true; });
+    ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.font="22px sans-serif";
+    sky.items=sky.items.filter(function(it){ it.y+=2.2; if(it.y>H+16) return false; if(Math.abs(it.x-sky.px)<24&&Math.abs(it.y-sky.py)<24){ skyGetItem(it); return false; } ctx.fillText(ITEMICON[it.ty],it.x,it.y); return true; });
+    ctx.font="26px sans-serif";
     sky.enemies=sky.enemies.filter(function(en){
       en.y+=en.v;
-      for(var i=0;i<sky.bullets.length;i++){ var b=sky.bullets[i]; if(Math.abs(b.x-en.x)<18&&Math.abs(b.y-en.y)<18){ sky.bullets.splice(i,1); sky.score++; updateSkyHud(); beep(480+sky.score*3,0.04); return false; } }
-      if(Math.abs(en.x-sky.px)<22&&Math.abs(en.y-sky.py)<22){ sky.lives--; updateSkyHud(); beep(150,0.15); vib(40); if(sky.lives<=0){ endSky(); } return false; }
+      for(var i=0;i<sky.bullets.length;i++){ var b=sky.bullets[i]; if(Math.abs(b.x-en.x)<18&&Math.abs(b.y-en.y)<18){ sky.bullets.splice(i,1); sky.score++; sky.kills++; updateSkyHud(); beep(470+sky.score*2,0.04); if(Math.random()<0.16) skyDropItem(en.x,en.y); return false; } }
+      if(Math.abs(en.x-sky.px)<22&&Math.abs(en.y-sky.py)<22){ skyHit(); return false; }
       if(en.y>H+20) return false;
       ctx.fillText(en.t,en.x,en.y); return true;
     });
-    ctx.font="30px sans-serif"; ctx.fillText("🦍",sky.px,sky.py); ctx.font="16px sans-serif"; ctx.fillText("🔥",sky.px,sky.py+17);
+    if(sky.boss){
+      var bo=sky.boss; bo.x+=bo.v*bo.dir; if(bo.x<30||bo.x>W-30) bo.dir*=-1;
+      bo.fireT++; if(bo.fireT>=Math.max(26,48-sky.stage*3)){ bo.fireT=0; var ang=Math.atan2(sky.py-bo.y,sky.px-bo.x); sky.ebullets.push({x:bo.x,y:bo.y+22,vx:Math.cos(ang)*3.1,vy:Math.sin(ang)*3.1}); }
+      for(var i=0;i<sky.bullets.length;i++){ var b=sky.bullets[i]; if(Math.abs(b.x-bo.x)<34&&Math.abs(b.y-bo.y)<30){ sky.bullets.splice(i,1); bo.hp--; if(bo.hp<=0){ sky.score+=15+sky.stage*5; updateSkyHud(); sky.boss=null; sky.banner="STAGE CLEAR! 🎉"; sky.bannerT=sky.t+80; beep(1000,0.2); vib([40,40,40]); setTimeout(function(){ if(sky.active) nextStage(); },1400); break; } } }
+      if(sky.boss){ ctx.font="52px sans-serif"; ctx.fillText("👹",bo.x,bo.y); ctx.fillStyle="#3a1a2a"; ctx.fillRect(W/2-70,10,140,8); ctx.fillStyle="#ff5a5a"; ctx.fillRect(W/2-70,10,140*Math.max(0,bo.hp/bo.max),8);
+        if(Math.abs(bo.x-sky.px)<32&&Math.abs(bo.y-sky.py)<30) skyHit(); }
+    }
+    if(sky.t<sky.shield){ ctx.strokeStyle="rgba(120,200,255,.85)"; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(sky.px,sky.py,24,0,6.3); ctx.stroke(); }
+    ctx.font="30px sans-serif"; ctx.textAlign="center"; ctx.fillText("🦍",sky.px,sky.py); ctx.font="15px sans-serif"; ctx.fillText("🔥",sky.px,sky.py+17);
+    ctx.fillStyle="rgba(255,255,255,.8)"; ctx.font="12px sans-serif"; ctx.textAlign="left"; ctx.fillText("STAGE "+sky.stage+"  ⚡Lv."+sky.power,8,H-10);
+    if(sky.t<sky.bannerT){ ctx.fillStyle="rgba(255,213,74,.95)"; ctx.font="bold 28px sans-serif"; ctx.textAlign="center"; ctx.fillText(sky.banner,W/2,H*0.4); }
     sky.raf=requestAnimationFrame(skyLoop);
   }
   function endSky(){
@@ -2069,7 +2103,7 @@
     var reward=Math.floor(sky.score*Math.max(1,perTap()*1.2));
     win(reward);
     $("skyStart").style.display="flex";
-    $("skyStart").innerHTML='<h2>✈️ 격추 '+sky.score+'대!</h2><p class="muted" style="font-size:14px">₭'+fmt(reward)+' 획득!</p><button class="bigBtn" id="skyAgain" style="max-width:220px">'+(skyLeft()>0?"또 출격 ("+skyLeft()+"판)":"오늘 끝!")+'</button><button class="bigBtn" id="skyDone" style="max-width:220px;background:#5a5a72;margin-top:8px">나가기</button>';
+    $("skyStart").innerHTML='<h2>✈️ 스테이지 '+sky.stage+' · 격추 '+sky.score+'</h2><p class="muted" style="font-size:14px">₭'+fmt(reward)+' 획득!</p><button class="bigBtn" id="skyAgain" style="max-width:220px">'+(skyLeft()>0?"또 출격 ("+skyLeft()+"판)":"오늘 끝!")+'</button><button class="bigBtn" id="skyDone" style="max-width:220px;background:#5a5a72;margin-top:8px">나가기</button>';
     $("skyAgain").onclick=function(){ if(skyLeft()>0) startSky(); else $("skyModal").style.display="none"; };
     $("skyDone").onclick=function(){ $("skyModal").style.display="none"; };
   }
