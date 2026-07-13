@@ -1435,10 +1435,13 @@ app.get("/api/admin/inspect", async (req, res) => {
   const p = db.players[name];
   let sheet = null;
   try { const raw = await callBackend("profile", name, ""); if (raw) sheet = JSON.parse(raw); } catch (e) { sheet = { err: String(e) }; }
+  let tokenIds = 0, helErr = null;
+  const wallet = (sheet && sheet.wallet) || "";
+  if (wallet) { try { const ids = await getOwnedTokenIds(wallet); tokenIds = ids.length; } catch (e) { helErr = String(e); } }
   res.json({ ok: true, name, exists: !!p,
     hasPin: !!(p && p.pinHash), sessCount: (p && p.sess && p.sess.length) || (p && p.ses ? 1 : 0),
     ph: !!(p && p.ph), stage: p && p.stage, money: p && Math.floor(p.money || 0),
-    sheet });
+    hasHeliusKey: !!HELIUS_API_KEY, serverTokenIds: tokenIds, helErr, sheet });
 });
 app.get("/api/spectate", (req, res) => {
   if (!checkToken(req, res)) return;
