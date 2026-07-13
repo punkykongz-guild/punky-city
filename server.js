@@ -1192,23 +1192,28 @@ function performLottoDraw(due, force) {
     const w = Math.floor((pl && pl.lottoWeek) || 0);
     if (w > 0) pool.push([nm, w]);
   }
-  const splits = [0.5, 0.3, 0.2];
+  const splits = [0.5, 0.3, 0.2]; // 1등 50% 2등 30% 3등 20%
   const winners = [];
+  let paid = 0;
   for (let i = 0; i < 3 && pool.length > 0; i++) {
     const nm = weightedPick(pool);
     if (!nm) break;
-    const contrib = (pool.find((e) => e[0] === nm) || [null, 0])[1];
-    const prize = Math.floor(pot * splits[i]);
-    if (db.players[nm]) db.players[nm].money = (db.players[nm].money || 0) + prize; // 상금 ₭ 지급
-    winners.push({ name: nm, prize, contrib: Math.floor(contrib) });
+    const contrib = Math.floor((pool.find((e) => e[0] === nm) || [null, 0])[1]);
+    const raw = Math.floor(pot * splits[i]);   // 팟 배분액
+    const cap = contrib * 100;                 // 상한: 응모금(이번주 기여)의 100배
+    const prize = Math.min(raw, cap);          // 상한 초과분은 못 받음
+    if (db.players[nm]) db.players[nm].money = (db.players[nm].money || 0) + prize;
+    winners.push({ name: nm, prize, contrib, rank: i + 1, capped: prize < raw, raw });
+    paid += prize;
     pool = pool.filter((e) => e[0] !== nm); // 중복 당첨 방지
   }
-  db.lottoDraw = { drawnFor: due, at: Date.now(), pot, winners };
-  db.lottoPot = 0; // 추첨과 동시에 새 주 누적 시작
+  const carry = Math.max(0, pot - paid); // 상한 초과분 + 미배정(당첨자<3) 전액 → 차주 이월
+  db.lottoDraw = { drawnFor: due, at: Date.now(), pot, winners, carry };
+  db.lottoPot = carry; // 이월금으로 새 주 시작 (추첨과 동시에 누적 재개)
   for (const pl of Object.values(db.players || {})) { if (pl) pl.lottoWeek = 0; }
   markDirty();
   backupToSheet().catch(() => {});
-  console.log(`🎰 주간 로또 추첨: 팟 ${pot} → 당첨 ${winners.map((w) => w.name + "(" + w.prize + ")").join(", ") || "없음"}`);
+  console.log(`🎰 주간 로또: 팟 ${pot} → 지급 ${paid}, 이월 ${carry} | 당첨 ${winners.map((w) => w.name + "(" + w.prize + (w.capped ? "★상한" : "") + ")").join(", ") || "없음"}`);
 }
 function checkLottoDraw() {
   const due = lastMonday13KST();

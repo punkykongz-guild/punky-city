@@ -291,7 +291,7 @@
       </div>
       <!-- 응모 기간 (화13~월13) -->
       <div id="lottoEntry">
-        <p class="muted" style="margin-bottom:6px">모든 콩달러 지출의 <b>1%</b> + 지렁이 입장료가 실시간으로 쌓이는 <b>길드 공동 당첨금</b>! <b>매주 월요일 13시 자동 추첨</b>으로 3명 당첨 🎊</p>
+        <p class="muted" style="margin-bottom:6px">모든 콩달러 지출의 <b>1%</b> + 지렁이 입장료가 실시간으로 쌓이는 <b>길드 공동 당첨금</b>! <b>매주 월 13시 자동추첨</b> — 1등 50% · 2등 30% · 3등 20%<br><span style="color:#ffd54a">💡 상금은 <b>내 기여금의 최대 100배</b>까지! 초과분은 다음 주로 이월돼요.</span></p>
         <div style="text-align:center;padding:8px 0">
           <div style="font-size:11px;color:#b9a8e0;letter-spacing:1px">현재 누적 당첨금</div>
           <div id="lottoPot" style="font-size:30px;font-weight:900;color:var(--gold);letter-spacing:-.02em;line-height:1.2">₭ 0</div>
@@ -299,6 +299,7 @@
           <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.12);font-size:12px;color:#c9b8ef">
             🙋 내 이번주 기여 <b id="lottoMine" style="color:#fff">₭ 0</b> <span id="lottoOdds" style="color:#6fe07a"></span>
           </div>
+          <div id="lottoCap" style="font-size:11px;color:#ffd54a;margin-top:3px"></div>
           <div id="lottoCountdown" style="font-size:11px;color:#8a7db0;margin-top:4px"></div>
         </div>
         <button class="bigBtn" id="lottoBtn" style="background:#7c3aed">🎟 자동 응모중 — 기여할수록 당첨확률 UP!</button>
@@ -1030,10 +1031,12 @@
     lottoPending += Math.max(0, spend*0.01);
   }
   function renderMine(){
-    var el=$("lottoMine"); if(el) el.textContent="₭ "+fmt(lottoMine+Math.floor(lottoPending));
+    var m=lottoMine+Math.floor(lottoPending);
+    var el=$("lottoMine"); if(el) el.textContent="₭ "+fmt(m);
     var od=$("lottoOdds");
-    if(od){ var goal=lottoTarget+Math.floor(lottoPending); var m=lottoMine+Math.floor(lottoPending);
+    if(od){ var goal=lottoTarget+Math.floor(lottoPending);
       od.textContent = (goal>0&&m>0) ? "· 당첨확률 ~"+(Math.min(100,Math.round(m/goal*1000)/10))+"%" : ""; }
+    var cd=$("lottoCap"); if(cd) cd.textContent = m>0 ? "🏆 내 최대 수령 한도 ₭"+fmt(m*100)+" (기여금 100배)" : "";
   }
   function lottoFlush(){ // 쌓인 기여분을 서버로 (글로벌 팟에 합산)
     if(lottoPending<1||!NAME||!PLAY_OK) return;
@@ -1066,7 +1069,7 @@
       for(var i=0;i<lottoWinners.length;i++){ var w=lottoWinners[i];
         html+='<div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.06);border-radius:8px;padding:7px 12px;margin-bottom:5px">'+
           '<span style="font-weight:700">'+(MEDAL[i]||"🎗")+' '+(w.name||"?")+'</span>'+
-          '<b style="color:var(--gold)">₭ '+fmt(w.prize||0)+'</b></div>';
+          '<b style="color:var(--gold)">₭ '+fmt(w.prize||0)+(w.capped?' <span style="font-size:9px;color:#ff9">·100배상한</span>':'')+'</b></div>';
       }
       $("lottoWinners").innerHTML=html;
       var pm=$("lottoPotMini"); if(pm) pm.textContent="₭ "+fmt(lottoTarget+Math.floor(lottoPending));
@@ -1087,7 +1090,7 @@
   $("lottoBtn").onclick=function(){
     var m=lottoMine+Math.floor(lottoPending), g=lottoTarget+Math.floor(lottoPending);
     var odd=(g>0&&m>0)?Math.min(100,Math.round(m/g*1000)/10):0;
-    toast("🎟 이미 자동 응모중! 이번주 기여 ₭"+fmt(m)+" · 당첨확률 ~"+odd+"% (기여할수록 UP)");
+    toast("🎟 자동 응모중! 기여 ₭"+fmt(m)+" · 확률 ~"+odd+"% · 최대 수령 ₭"+fmt(m*100)+" (100배)");
   };
   setInterval(lottoFlush, 8000);   // 8초마다 내 적립분 전송
   setInterval(lottoPoll, 6000);    // 6초마다 팟/상태 갱신
