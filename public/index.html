@@ -40,7 +40,7 @@
   #pointBox b{color:var(--green);text-shadow:0 0 8px rgba(74,222,128,.5);}
 
   /* ===== 돈 표시 ===== */
-  #moneyWrap{text-align:center;padding:2px 14px 0;}
+  #moneyWrap{text-align:center;padding:2px 14px 0;position:relative;}
   #money{font-size:36px;font-weight:900;letter-spacing:-.02em;
     background:linear-gradient(90deg,#fbbf24,#fde68a,#fbbf24);-webkit-background-clip:text;background-clip:text;color:transparent;
     filter:drop-shadow(0 2px 10px rgba(251,191,36,.35));}
@@ -129,8 +129,8 @@
     background:rgba(5,8,18,.55);color:#fff;font-size:11.5px;padding:6px 10px;border-radius:999px;cursor:pointer;}
   #aiBadge{position:absolute;top:42px;right:8px;z-index:6;display:none;
     background:rgba(5,8,18,.6);color:#ffd54a;font-size:10.5px;padding:4px 10px;border-radius:999px;}
-  #avatarBtn{position:fixed;top:10px;right:10px;z-index:40;border:1px solid var(--line);
-    background:rgba(5,8,18,.78);backdrop-filter:blur(4px);color:#fff;font-size:11.5px;padding:6px 11px;border-radius:999px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35);}
+  #avatarBtn{position:absolute;right:10px;bottom:2px;z-index:40;border:1px solid var(--line);
+    background:rgba(5,8,18,.78);backdrop-filter:blur(4px);color:#fff;font-size:11px;padding:5px 10px;border-radius:999px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35);}
   #avatarModal{position:fixed;inset:0;background:rgba(5,2,15,.85);display:none;z-index:60;
     align-items:center;justify-content:center;padding:20px;}
   #avatarModal.on{display:flex;}
@@ -248,6 +248,7 @@
   <div id="moneyWrap">
     <div id="money">₭ 0</div>
     <div id="income">초당 <b id="perSec">0</b> · 탭 <b id="perTap">1</b></div>
+    <button id="avatarBtn">🖼 콩즈 선택</button>
   </div>
 
   <div id="tapZone">
@@ -262,7 +263,6 @@
     <div id="heroDeco"></div>
     <div id="nameTag"></div>
     <div id="bubble"></div>
-    <button id="avatarBtn">🖼 콩즈 선택</button>
     <button id="bragBtn">📣 자랑하기</button>
     <div id="aiBadge">🎨 변신 준비중...</div>
     <button id="stageUpBtn"></button>
@@ -506,6 +506,27 @@
     <button class="bigBtn" id="fgClose" style="margin-top:8px;background:#5a5a72">그만두기</button>
   </div>
 
+  <!-- 콩즈 스카이 (슈팅) -->
+  <div id="skyModal" style="position:fixed;inset:0;background:#0a0e26;display:none;z-index:84;flex-direction:column">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;position:relative;z-index:2">
+      <div style="font-weight:800">🎯 <span id="skyScore">0</span></div>
+      <div id="skyLives" style="font-size:14px">❤️❤️❤️</div>
+      <button id="skyClose" style="background:#5a5a72;border:none;color:#fff;padding:6px 12px;border-radius:8px">나가기</button>
+    </div>
+    <canvas id="skyCanvas" style="flex:1;width:100%;touch-action:none;display:block"></canvas>
+    <div id="skyStart" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:3;background:rgba(8,4,20,.55)"></div>
+  </div>
+
+  <!-- 구경하기 -->
+  <div id="spyModal" style="position:fixed;inset:0;background:rgba(8,4,20,.96);display:none;z-index:84;flex-direction:column;padding:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h2 style="margin:0;font-size:18px">👀 콩즈 구경</h2>
+      <button id="spyClose" style="background:#5a5a72;border:none;color:#fff;padding:6px 12px;border-radius:8px">닫기</button>
+    </div>
+    <div id="spyDetail" style="display:none;margin-bottom:12px"></div>
+    <div id="spyList" style="flex:1;overflow-y:auto;background:#160b2e;border-radius:12px;padding:6px 10px">불러오는 중...</div>
+  </div>
+
   <div id="tabs">
     <button class="tabBtn on" data-page="biz">💼 사업</button>
     <button class="tabBtn" data-page="stage">📖 등급</button>
@@ -650,10 +671,20 @@
       <div style="flex:1"><h3 style="margin:0">콩즈 파이터 <span class="muted">🔥 대전</span></h3><div class="muted" style="font-size:12px">공격·가드·잡기 심리전 + 필살기 바나나빔! 콩즈로 한판</div></div>
       <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="fgBtn">대전</button>
     </div>
+    <div class="card arcadeItem">
+      <div class="big">✈️</div>
+      <div style="flex:1"><h3 style="margin:0">콩즈 스카이 <span class="muted" id="skyLeftT">하루 5판</span></h3><div class="muted" style="font-size:12px">콩즈 전투기로 하늘 슈팅! 👾 격추하고 ₭ 획득</div></div>
+      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="skyBtn">출격</button>
+    </div>
   </div>
 
   <!-- 길드 -->
   <div class="page" id="page-guild">
+    <div class="card arcadeItem" style="border:1px solid var(--purple)">
+      <div class="big">👀</div>
+      <div style="flex:1"><h3 style="margin:0">다른 콩즈 구경가기</h3><div class="muted" style="font-size:12px">길드원들의 시티를 구경해보세요!</div></div>
+      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="spyBtn">구경</button>
+    </div>
     <div class="card">
       <h3>🏗 길드타워 <span class="muted">모두의 활동으로 올라갑니다</span></h3>
       <div id="towerViz">…</div>
@@ -1598,7 +1629,7 @@
   $("rpsClose").onclick=function(){ $("rpsModal").style.display="none"; };
 
   // ===== 미니게임 일일제한 (두더지/기억력) =====
-  function mgRoll(){ if(S.mgDate!==todayKey()){ S.mgDate=todayKey(); S.moleN=0; S.simonN=0; } }
+  function mgRoll(){ if(S.mgDate!==todayKey()){ S.mgDate=todayKey(); S.moleN=0; S.simonN=0; S.skyN=0; } }
   function moleLeft(){ mgRoll(); return Math.max(0,5-(S.moleN||0)); }
   function simonLeft(){ mgRoll(); return Math.max(0,5-(S.simonN||0)); }
   function refreshMgLeft(){ var a=$("moleLeftT"),b=$("simonLeftT"); if(a)a.textContent="오늘 "+moleLeft()+"판"; if(b)b.textContent="오늘 "+simonLeft()+"판"; }
@@ -1981,6 +2012,101 @@
       box.innerHTML=h;
     }).catch(function(){ box.innerHTML="랭킹 로드 실패"; });
   }
+
+  // ===== ✈️ 콩즈 스카이 (슈팅) =====
+  var sky={active:false,score:0,lives:3,px:180,py:500,bullets:[],enemies:[],stars:[],raf:0,lastShot:0,spawnT:0,t:0};
+  function skyLeft(){ mgRoll(); return Math.max(0,5-(S.skyN||0)); }
+  function refreshSkyLeft(){ var e=$("skyLeftT"); if(e) e.textContent="오늘 "+skyLeft()+"판"; }
+  $("skyBtn").onclick=function(){ showIntro("✈️ 콩즈 스카이","콩즈 전투기로 하늘을 지켜라! ✈️<br>손가락으로 움직이면 <b>자동 발사</b> 🔥<br>👾 적을 격추! 부딪히면 라이프 감소(❤️3개).<br>격추 수만큼 ₭ 획득 · 하루 5판", openSky); };
+  function openSky(){
+    if(!PLAY_OK){ needWallet(); return; }
+    if(skyLeft()<=0){ toast("오늘 콩즈 스카이는 끝! 내일 또 ✈️"); return; }
+    $("skyModal").style.display="flex"; $("skyStart").style.display="flex";
+    $("skyStart").innerHTML='<h2>✈️ 콩즈 스카이</h2><p class="muted" style="max-width:280px;text-align:center;font-size:13px">손가락으로 전투기를 움직이면 자동 발사! 👾적 격추, 부딪히면 라이프 감소.</p><button class="bigBtn" id="skyGo" style="max-width:220px">출격! ('+skyLeft()+'판)</button>';
+    $("skyGo").onclick=startSky;
+  }
+  function startSky(){
+    mgRoll(); if(skyLeft()<=0){ $("skyModal").style.display="none"; return; }
+    S.skyN=(S.skyN||0)+1; refreshSkyLeft();
+    $("skyStart").style.display="none";
+    var cv=$("skyCanvas"); cv.width=cv.clientWidth||360; cv.height=cv.clientHeight||560;
+    sky.active=true; sky.score=0; sky.lives=3; sky.bullets=[]; sky.enemies=[]; sky.stars=[];
+    sky.px=cv.width/2; sky.py=cv.height*0.8; sky.lastShot=0; sky.spawnT=0; sky.t=0;
+    for(var i=0;i<45;i++) sky.stars.push({x:Math.random()*cv.width,y:Math.random()*cv.height,s:0.4+Math.random()*1.6});
+    updateSkyHud();
+    cancelAnimationFrame(sky.raf); skyLoop();
+  }
+  function skyMove(cx,cy){ var cv=$("skyCanvas"),r=cv.getBoundingClientRect(); sky.px=Math.max(18,Math.min(cv.width-18,cx-r.left)); sky.py=Math.max(cv.height*0.35,Math.min(cv.height-28,cy-r.top)); }
+  var _skc=$("skyCanvas");
+  _skc.addEventListener("touchstart",function(e){ e.preventDefault(); if(e.touches[0]) skyMove(e.touches[0].clientX,e.touches[0].clientY); },{passive:false});
+  _skc.addEventListener("touchmove",function(e){ e.preventDefault(); if(e.touches[0]) skyMove(e.touches[0].clientX,e.touches[0].clientY); },{passive:false});
+  _skc.addEventListener("mousemove",function(e){ if(e.buttons) skyMove(e.clientX,e.clientY); });
+  function updateSkyHud(){ $("skyScore").textContent=sky.score; $("skyLives").textContent="❤️".repeat(Math.max(0,sky.lives)); }
+  var SKY_EN=["👾","🛸","🦅","👿"];
+  function skyLoop(){
+    if(!sky.active) return;
+    var cv=$("skyCanvas"),ctx=cv.getContext("2d"),W=cv.width,H=cv.height; sky.t++;
+    ctx.fillStyle="#0a0e26"; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle="rgba(255,255,255,.55)";
+    sky.stars.forEach(function(st){ st.y+=st.s; if(st.y>H){st.y=0;st.x=Math.random()*W;} ctx.fillRect(st.x,st.y,1.5,1.5); });
+    if(sky.t-sky.lastShot>=9){ sky.lastShot=sky.t; sky.bullets.push({x:sky.px,y:sky.py-18}); }
+    sky.spawnT++; if(sky.spawnT>=Math.max(20,52-sky.score)){ sky.spawnT=0; sky.enemies.push({x:22+Math.random()*(W-44),y:-20,v:1.4+Math.random()*1.4+sky.score*0.012,t:SKY_EN[Math.floor(Math.random()*4)]}); }
+    ctx.fillStyle="#ffd54a";
+    sky.bullets=sky.bullets.filter(function(b){ b.y-=8.5; if(b.y<-12) return false; ctx.fillRect(b.x-2,b.y,4,12); return true; });
+    ctx.font="26px sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
+    sky.enemies=sky.enemies.filter(function(en){
+      en.y+=en.v;
+      for(var i=0;i<sky.bullets.length;i++){ var b=sky.bullets[i]; if(Math.abs(b.x-en.x)<18&&Math.abs(b.y-en.y)<18){ sky.bullets.splice(i,1); sky.score++; updateSkyHud(); beep(480+sky.score*3,0.04); return false; } }
+      if(Math.abs(en.x-sky.px)<22&&Math.abs(en.y-sky.py)<22){ sky.lives--; updateSkyHud(); beep(150,0.15); vib(40); if(sky.lives<=0){ endSky(); } return false; }
+      if(en.y>H+20) return false;
+      ctx.fillText(en.t,en.x,en.y); return true;
+    });
+    ctx.font="30px sans-serif"; ctx.fillText("🦍",sky.px,sky.py); ctx.font="16px sans-serif"; ctx.fillText("🔥",sky.px,sky.py+17);
+    sky.raf=requestAnimationFrame(skyLoop);
+  }
+  function endSky(){
+    sky.active=false; cancelAnimationFrame(sky.raf);
+    var reward=Math.floor(sky.score*Math.max(1,perTap()*1.2));
+    win(reward);
+    $("skyStart").style.display="flex";
+    $("skyStart").innerHTML='<h2>✈️ 격추 '+sky.score+'대!</h2><p class="muted" style="font-size:14px">₭'+fmt(reward)+' 획득!</p><button class="bigBtn" id="skyAgain" style="max-width:220px">'+(skyLeft()>0?"또 출격 ("+skyLeft()+"판)":"오늘 끝!")+'</button><button class="bigBtn" id="skyDone" style="max-width:220px;background:#5a5a72;margin-top:8px">나가기</button>';
+    $("skyAgain").onclick=function(){ if(skyLeft()>0) startSky(); else $("skyModal").style.display="none"; };
+    $("skyDone").onclick=function(){ $("skyModal").style.display="none"; };
+  }
+  $("skyClose").onclick=function(){ sky.active=false; cancelAnimationFrame(sky.raf); $("skyModal").style.display="none"; };
+
+  // ===== 👀 구경하기 =====
+  $("spyBtn").onclick=function(){
+    $("spyModal").style.display="flex"; $("spyDetail").style.display="none"; $("spyList").innerHTML="불러오는 중...";
+    fetch(API("/api/spectate")).then(function(r){return r.json();}).then(function(j){
+      if(!j.ok||!j.list.length){ $("spyList").innerHTML='<div class="muted" style="padding:14px;text-align:center">아직 구경할 콩즈가 없어요.</div>'; return; }
+      var h="";
+      j.list.forEach(function(p){
+        var stg=STAGES[Math.min(p.stage,STAGES.length-1)];
+        h+='<div class="spyRow" data-n="'+encodeURIComponent(p.name)+'" data-id="'+p.avatarId+'" data-s="'+p.stage+'" style="display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid #2a2140;cursor:pointer">'+
+          (p.avatarId?'<img data-spyimg="'+p.avatarId+'" style="width:40px;height:40px;border-radius:8px;background:#2a1a4a;object-fit:cover"/>':'<div style="width:40px;height:40px;border-radius:8px;background:#2a1a4a;display:flex;align-items:center;justify-content:center">🦍</div>')+
+          '<div style="flex:1"><div style="font-weight:700">'+p.name+'</div><div class="muted" style="font-size:11px">'+(stg?stg.nm:"Lv."+p.stage)+' · ₭'+fmt(p.money)+(p.wins?" · 🥊"+p.wins+"승":"")+'</div></div><div style="font-size:16px">👀</div></div>';
+      });
+      $("spyList").innerHTML=h;
+      Array.prototype.forEach.call(document.querySelectorAll('#spyList img[data-spyimg]'),function(im){ var id=+im.getAttribute("data-spyimg"); setKimg(im,id,80); });
+      Array.prototype.forEach.call(document.querySelectorAll('.spyRow'),function(row){ row.onclick=function(){ spyView(decodeURIComponent(row.dataset.n),+row.dataset.id,+row.dataset.s); }; });
+    }).catch(function(){ $("spyList").innerHTML='<div class="muted" style="padding:14px">로드 실패</div>'; });
+  };
+  function spyView(name,avatarId,stage){
+    var st=Math.min(Math.max(1,stage),30);
+    var scene=STAGES[Math.min(st,STAGES.length-1)];
+    var d=$("spyDetail"); d.style.display="block";
+    d.innerHTML='<div style="font-weight:800;margin-bottom:6px">'+name+'님의 시티</div><div id="spyScene" style="position:relative;border-radius:12px;overflow:hidden;height:170px;background:#1a1030;background-size:cover;background-position:center bottom"></div><div class="muted" style="font-size:12px;margin-top:6px">'+(scene?scene.nm+" — "+scene.scene:"")+'</div>';
+    var sc=$("spyScene");
+    if(avatarId){
+      var comp="/gen/avatar_"+avatarId+"_"+st+".png";
+      var probe=new Image();
+      probe.onload=function(){ sc.style.backgroundImage="url("+comp+")"; };
+      probe.onerror=function(){ sc.style.backgroundImage="url(assets/bg/stage"+st+".webp)"; var im=document.createElement("img"); setKimg(im,avatarId,200); im.style.cssText="position:absolute;bottom:0;left:50%;transform:translateX(-50%);height:72%"; sc.appendChild(im); };
+      probe.src=comp;
+    } else { sc.style.backgroundImage="url(assets/bg/stage"+st+".webp)"; }
+  }
+  $("spyClose").onclick=function(){ $("spyModal").style.display="none"; };
 
   // ===== 행인 NPC (지나가다 동전 던져줌, 가끔 부자 등장) =====
   // 등급별 어울리는 행인 (1~6 골목/동네, 7~13 도심, 14~21 부촌, 22~26 우주, 27~30 환상)
@@ -2556,7 +2682,7 @@
             modal("😴 오프라인 보상","자리를 비운 "+Math.floor(gap/60)+"분 동안\n동료들이 ₭"+fmt(earned)+" 벌어놨어요!"); }
         }
       }
-      renderBizInit(); render(); lottoPoll(); refreshBnLeft(); refreshMgLeft();
+      renderBizInit(); render(); lottoPoll(); refreshBnLeft(); refreshMgLeft(); refreshSkyLeft();
       var _duel=qs.get("duel");
       if(_duel && PLAY_OK){ setTimeout(function(){ toast("⚔️ "+_duel+"님에게 결투 신청! 매칭 시작..."); fgQueuePvp(_duel); },1400); }
     }).catch(function(e){

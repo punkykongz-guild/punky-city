@@ -1420,6 +1420,15 @@ app.get("/api/bank", (req, res) => {
 
 // ===== 랭킹 API (지렁이 누적 / 펑키시티) =====
 if (!db.worm) db.worm = {};
+app.get("/api/spectate", (req, res) => {
+  if (!checkToken(req, res)) return;
+  const list = Object.entries(db.players || {})
+    .filter(([n, p]) => p && ((p.money || 0) > 0 || (p.stage || 0) > 1 || p.avatarId))
+    .map(([name, p]) => ({ name, stage: p.stage || 1, money: Math.floor(p.money || 0), avatarId: p.avatarId || 0, wins: (db.fgWins && db.fgWins[name]) || 0 }))
+    .sort((a, b) => (b.stage - a.stage) || (b.money - a.money))
+    .slice(0, 60);
+  res.json({ ok: true, list });
+});
 app.get("/api/rank/fighter", (req, res) => {
   if (!checkToken(req, res)) return;
   const list = Object.entries(db.fgWins || {}).map(([name, w]) => ({ name, wins: w }))
