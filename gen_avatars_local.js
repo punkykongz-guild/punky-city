@@ -17,9 +17,12 @@ const imgMap = profile.imgMap || {};
 async function gen(id, stage) {
   const out = path.join(__dirname, "public", "gen", `avatar_${id}_${stage}.png`);
   if (fs.existsSync(out)) { console.log(`skip ${id}_${stage} (있음)`); return true; }
-  const orig = imgMap[id] || `https://punkykongz.com/nft/punkykongz/image/${id}.jpg`;
-  let imgRes = await fetch(`https://cdn.helius-rpc.com/cdn-cgi/image/width=512/${orig}`);
-  if (!imgRes.ok) imgRes = await fetch(orig);
+  const jpg = imgMap[id] || `https://punkykongz.com/nft/punkykongz/image/${id}.jpg`;
+  const png = `https://punkykongz.com/nft/punkykongz/image/${id}.png`;
+  let imgRes = await fetch(`https://cdn.helius-rpc.com/cdn-cgi/image/width=512/${jpg}`);
+  if (!imgRes.ok) imgRes = await fetch(jpg);
+  if (!imgRes.ok) imgRes = await fetch(`https://cdn.helius-rpc.com/cdn-cgi/image/width=512/${png}`); // 최신 없으면 구형
+  if (!imgRes.ok) imgRes = await fetch(png);
   if (!imgRes.ok) { console.log(`원본 실패 ${id}: ${imgRes.status}`); return false; }
   const b64 = Buffer.from(await imgRes.arrayBuffer()).toString("base64");
 
