@@ -1169,6 +1169,13 @@ app.get("/api/lotto", (req, res) => {
   if (!checkToken(req, res)) return;
   res.json({ ok: true, pot: Math.floor(db.lottoPot || 0), entryFee: null, open: false });
 });
+// 관리자: 로또 팟 설정/리셋 (주간 추첨 후 0으로) — LINK_SECRET 필요
+app.get("/api/admin/lotto", (req, res) => {
+  if (!LINK_SECRET || String(req.query.secret || "") !== LINK_SECRET) return res.status(403).json({ ok: false });
+  const set = req.query.set;
+  if (set !== undefined) { db.lottoPot = Math.max(0, Math.floor(Number(set) || 0)); markDirty(); }
+  res.json({ ok: true, pot: Math.floor(db.lottoPot || 0) });
+});
 app.post("/api/lotto/add", (req, res) => {
   if (!checkToken(req, res)) return;
   const name = String((req.body && req.body.name) || "").trim();
