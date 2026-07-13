@@ -570,14 +570,14 @@
 
   <!-- 콩즈 디펜스 -->
   <div id="tdModal" style="position:fixed;inset:0;background:#0d1a12;display:none;z-index:84;flex-direction:column">
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;position:relative;z-index:2;gap:6px;flex-wrap:wrap">
-      <div style="font-weight:800">🧡 <span id="tdLives">10</span></div>
-      <div style="font-weight:800;color:var(--gold)">🪙 <span id="tdGold">100</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;position:relative;z-index:2;gap:8px">
+      <div style="font-weight:800">🧡 <span id="tdLives">15</span></div>
+      <div style="font-weight:800;color:var(--gold)">🪙 <span id="tdGold">160</span></div>
       <div style="font-weight:800">🌊 W<span id="tdWave">0</span></div>
       <button id="tdClose" style="background:#5a5a72;border:none;color:#fff;padding:6px 12px;border-radius:8px">나가기</button>
     </div>
-    <div style="text-align:center;font-size:11px;color:#9fca9f;padding-bottom:4px" id="tdHint">빈 곳을 탭해 포탑 배치 (🪙<span id="tdCost">50</span>)</div>
     <canvas id="tdCanvas" style="flex:1;width:100%;touch-action:none;display:block"></canvas>
+    <div id="tdBar" style="display:flex;gap:6px;padding:8px 10px;background:#0a140d;position:relative;z-index:2"></div>
     <div id="tdStart" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:3;background:rgba(8,4,20,.5)"></div>
   </div>
 
@@ -2487,76 +2487,125 @@
   }
   $("rnClose").onclick=function(){ rn.active=false; cancelAnimationFrame(rn.raf); $("rnModal").style.display="none"; };
 
-  // ===== 🗼 콩즈 디펜스 (타워디펜스) =====
-  var td={active:false,lives:10,gold:100,wave:0,cost:50,towers:[],enemies:[],shots:[],path:[],spawnQ:0,spawnT:0,raf:0,t:0,waveClear:true,over:false};
+  // ===== 🗼 콩즈 디펜스 (타워디펜스 · 프리미엄) =====
+  var TD_TOWER=[
+    {nm:"사수",e:"🔫",cost:50,range:110,cd:20,dmg:13,splash:0,slow:0,c:"#4ade80"},
+    {nm:"대포",e:"💥",cost:95,range:95,cd:48,dmg:22,splash:42,slow:0,c:"#f59e0b"},
+    {nm:"빙결",e:"❄️",cost:75,range:92,cd:30,dmg:5,splash:0,slow:0.45,c:"#38bdf8"}
+  ];
+  var TD_ENEMY={
+    normal:{e:"👾",hp:16,spd:0.6,g:8,sz:22},
+    fast:{e:"🏃",hp:11,spd:1.15,g:7,sz:20},
+    tank:{e:"🛡️",hp:52,spd:0.4,g:15,sz:24},
+    boss:{e:"👹",hp:340,spd:0.32,g:90,sz:46}
+  };
+  var td={active:false,lives:15,gold:160,wave:0,towers:[],enemies:[],shots:[],fx:[],path:[],spawnList:[],spawnT:0,sel:0,raf:0,t:0,waveClear:true,over:false,banner:"",bannerT:0};
   function tdLeft(){ mgRoll(); return Math.max(0,5-(S.tdN||0)); }
-  $("tdBtn").onclick=function(){ showIntro("🗼 콩즈 디펜스","몰려오는 적을 막아라! 👾<br>빈 곳을 <b>탭하면 콩즈 포탑</b>이 배치돼요 (골드 필요).<br>포탑은 범위 안 적을 <b>자동 공격</b>! 적 처치 = 골드.<br>적이 끝까지 가면 🧡생명 감소, 0되면 끝.<br>웨이브 생존 점수만큼 ₭ · 하루 5판", openTd); };
-  function openTd(){ if(!PLAY_OK){ needWallet(); return; } if(tdLeft()<=0){ toast("오늘 콩즈 디펜스는 끝! 내일 또 🗼"); return; } $("tdModal").style.display="flex"; $("tdStart").style.display="flex"; $("tdStart").innerHTML='<h2>🗼 콩즈 디펜스</h2><p class="muted" style="max-width:290px;text-align:center;font-size:13px">빈 곳을 탭해 포탑을 세우고, 길을 따라 오는 적을 막으세요!</p><button class="bigBtn" id="tdGo" style="max-width:220px">시작! ('+tdLeft()+'판)</button>'; $("tdGo").onclick=startTd; }
+  $("tdBtn").onclick=function(){ showIntro("🗼 콩즈 디펜스","몰려오는 적을 막아라! 👾<br>아래에서 <b>포탑 종류</b>를 고르고 빈 곳을 <b>탭</b>해 배치.<br>🔫사수(단일) 💥대포(광역) ❄️빙결(감속)<br>이미 세운 포탑을 <b>탭하면 업그레이드</b>! 적 처치=골드.<br>5웨이브마다 <b>보스</b> 등장 👹 · 하루 5판", openTd); };
+  function openTd(){ if(!PLAY_OK){ needWallet(); return; } if(tdLeft()<=0){ toast("오늘 콩즈 디펜스는 끝! 내일 또 🗼"); return; } $("tdModal").style.display="flex"; $("tdStart").style.display="flex"; $("tdStart").innerHTML='<h2>🗼 콩즈 디펜스</h2><p class="muted" style="max-width:290px;text-align:center;font-size:13px">포탑을 세워 웨이브를 막고 보스를 처치하세요! 포탑 탭 = 업그레이드.</p><button class="bigBtn" id="tdGo" style="max-width:220px">시작! ('+tdLeft()+'판)</button>'; $("tdGo").onclick=startTd; }
+  function tdRenderBar(){
+    var bar=$("tdBar"); bar.innerHTML="";
+    TD_TOWER.forEach(function(tw,i){
+      var b=document.createElement("button"); var can=td.gold>=tw.cost, seld=(td.sel===i);
+      b.style.cssText="flex:1;border:2px solid "+(seld?tw.c:"transparent")+";background:"+(seld?"rgba(255,255,255,.12)":"rgba(255,255,255,.05)")+";color:#fff;border-radius:10px;padding:6px 2px;font-size:12px;opacity:"+(can?1:.45);
+      b.innerHTML='<div style="font-size:20px">'+tw.e+'</div>'+tw.nm+'<br><span style="color:var(--gold);font-size:11px">🪙'+tw.cost+'</span>';
+      b.onclick=function(){ td.sel=i; tdRenderBar(); };
+      bar.appendChild(b);
+    });
+  }
   function startTd(){
     mgRoll(); if(tdLeft()<=0){ $("tdModal").style.display="none"; return; }
     S.tdN=(S.tdN||0)+1; $("tdStart").style.display="none";
-    var cv=$("tdCanvas"); cv.width=cv.clientWidth||360; cv.height=cv.clientHeight||500;
-    var W=cv.width,H=cv.height;
-    // 지그재그 경로 (waypoint)
-    td.path=[[0,H*0.15],[W*0.82,H*0.15],[W*0.82,H*0.42],[W*0.18,H*0.42],[W*0.18,H*0.7],[W*0.85,H*0.7],[W*0.85,H*0.92],[0,H*0.92]];
-    td.active=true; td.lives=15; td.gold=160; td.wave=0; td.cost=45; td.towers=[]; td.enemies=[]; td.shots=[]; td.spawnQ=0; td.spawnT=0; td.t=0; td.waveClear=true; td.over=false;
-    updateTdHud(); cancelAnimationFrame(td.raf); tdLoop();
+    var cv=$("tdCanvas"); cv.width=cv.clientWidth||360; cv.height=cv.clientHeight||480; var W=cv.width,H=cv.height;
+    td.path=[[0,H*0.13],[W*0.82,H*0.13],[W*0.82,H*0.4],[W*0.18,H*0.4],[W*0.18,H*0.66],[W*0.85,H*0.66],[W*0.85,H*0.9],[0,H*0.9]];
+    td.active=true; td.lives=15; td.gold=160; td.wave=0; td.towers=[]; td.enemies=[]; td.shots=[]; td.fx=[]; td.spawnList=[]; td.spawnT=0; td.sel=0; td.t=0; td.waveClear=true; td.over=false; td.banner=""; td.bannerT=0;
+    tdRenderBar(); updateTdHud(); cancelAnimationFrame(td.raf); tdLoop();
   }
-  function updateTdHud(){ $("tdLives").textContent=td.lives; $("tdGold").textContent=td.gold; $("tdWave").textContent=td.wave; $("tdCost").textContent=td.cost; }
-  function tdOnPath(x,y){ for(var i=0;i<td.path.length-1;i++){ var a=td.path[i],b=td.path[i+1]; var dx=b[0]-a[0],dy=b[1]-a[1]; var L=Math.hypot(dx,dy)||1; var t=Math.max(0,Math.min(1,((x-a[0])*dx+(y-a[1])*dy)/(L*L))); var px=a[0]+dx*t,py=a[1]+dy*t; if(Math.hypot(x-px,y-py)<28) return true; } return false; }
+  function updateTdHud(){ $("tdLives").textContent=td.lives; $("tdGold").textContent=td.gold; $("tdWave").textContent=td.wave; tdRenderBar(); }
+  function tdOnPath(x,y){ for(var i=0;i<td.path.length-1;i++){ var a=td.path[i],b=td.path[i+1]; var dx=b[0]-a[0],dy=b[1]-a[1]; var L=dx*dx+dy*dy||1; var t=Math.max(0,Math.min(1,((x-a[0])*dx+(y-a[1])*dy)/L)); var px=a[0]+dx*t,py=a[1]+dy*t; if(Math.hypot(x-px,y-py)<26) return true; } return false; }
   var _tdc=$("tdCanvas");
-  function tdPlace(cx,cy){
+  function tdTap(cx,cy){
     if(!td.active) return; var cv=$("tdCanvas"),r=cv.getBoundingClientRect(); var x=cx-r.left,y=cy-r.top;
-    if(td.gold<td.cost){ toast("골드 부족! (🪙"+td.cost+" 필요)"); return; }
+    // 기존 포탑 탭 → 업그레이드
+    for(var i=0;i<td.towers.length;i++){ var tw=td.towers[i]; if(Math.hypot(tw.x-x,tw.y-y)<20){ tdUpgrade(tw); return; } }
+    // 새 포탑 배치
+    var spec=TD_TOWER[td.sel];
+    if(td.gold<spec.cost){ toast("골드 부족! (🪙"+spec.cost+")"); return; }
     if(tdOnPath(x,y)){ toast("길 위엔 못 지어요!"); return; }
-    for(var i=0;i<td.towers.length;i++) if(Math.hypot(td.towers[i].x-x,td.towers[i].y-y)<32){ toast("너무 가까워요!"); return; }
-    td.towers.push({x:x,y:y,range:110,cd:22,cdT:0,dmg:13}); td.gold-=td.cost; td.cost+=15; updateTdHud(); beep(600,0.06);
+    for(var i=0;i<td.towers.length;i++) if(Math.hypot(td.towers[i].x-x,td.towers[i].y-y)<30){ toast("너무 가까워요!"); return; }
+    td.towers.push({x:x,y:y,type:td.sel,lv:1,range:spec.range,cd:spec.cd,cdT:0,dmg:spec.dmg,splash:spec.splash,slow:spec.slow,e:spec.e}); td.gold-=spec.cost; updateTdHud(); beep(600,0.06);
   }
-  _tdc.addEventListener("touchstart",function(e){ e.preventDefault(); if(e.touches[0]) tdPlace(e.touches[0].clientX,e.touches[0].clientY); },{passive:false});
-  _tdc.addEventListener("mousedown",function(e){ tdPlace(e.clientX,e.clientY); });
-  function tdEnemyPos(en){ var a=td.path[en.seg],b=td.path[en.seg+1]; return [a[0]+(b[0]-a[0])*en.t, a[1]+(b[1]-a[1])*en.t]; }
+  function tdUpgrade(tw){
+    if(tw.lv>=3){ toast("최대 레벨!"); return; }
+    var cost=Math.floor(TD_TOWER[tw.type].cost*tw.lv*1.4);
+    if(td.gold<cost){ toast("업그레이드 골드 부족! (🪙"+cost+")"); return; }
+    td.gold-=cost; tw.lv++; tw.dmg=Math.floor(tw.dmg*1.5); tw.range=Math.floor(tw.range*1.12); if(tw.slow) tw.slow=Math.min(0.75,tw.slow+0.12); updateTdHud(); beep(800,0.08); vib(20);
+    td.fx.push({x:tw.x,y:tw.y,r:6,mr:34,t:12,col:"120,220,150"});
+  }
+  _tdc.addEventListener("touchstart",function(e){ e.preventDefault(); if(e.touches[0]) tdTap(e.touches[0].clientX,e.touches[0].clientY); },{passive:false});
+  _tdc.addEventListener("mousedown",function(e){ tdTap(e.clientX,e.clientY); });
+  function tdEnemyPos(en){ var a=td.path[en.seg],b=td.path[en.seg+1]; return [a[0]+(b[0]-a[0])*en.t,a[1]+(b[1]-a[1])*en.t]; }
+  function tdStartWave(){
+    td.wave++; td.waveClear=false; var boss=(td.wave%5===0); td.spawnList=[];
+    if(boss){ td.spawnList.push("boss"); for(var i=0;i<4;i++) td.spawnList.push("normal"); }
+    else { var n=5+td.wave*2; for(var i=0;i<n;i++){ var r=Math.random(); td.spawnList.push(r<0.22?"fast":r<0.38?"tank":"normal"); } }
+    td.spawnT=0; td.banner="WAVE "+td.wave+(boss?" · 👹 BOSS!":""); td.bannerT=td.t+80; updateTdHud(); beep(boss?200:600,0.14);
+  }
+  function tdSpawn(){
+    var ty=td.spawnList.shift(); var base=TD_ENEMY[ty]; var mul=1+td.wave*0.14;
+    td.enemies.push({seg:0,t:0,type:ty,hp:base.hp*mul,max:base.hp*mul,baseSpd:base.spd,e:base.e,g:base.g,sz:base.sz,slowT:0});
+  }
   function tdLoop(){
     if(!td.active) return;
     var cv=$("tdCanvas"),ctx=cv.getContext("2d"),W=cv.width,H=cv.height; td.t++;
     ctx.fillStyle="#0d1a12"; ctx.fillRect(0,0,W,H);
-    // 경로 그리기
-    ctx.strokeStyle="#2f5738"; ctx.lineWidth=26; ctx.lineCap="round"; ctx.lineJoin="round"; ctx.beginPath(); ctx.moveTo(td.path[0][0],td.path[0][1]); for(var i=1;i<td.path.length;i++) ctx.lineTo(td.path[i][0],td.path[i][1]); ctx.stroke();
-    ctx.strokeStyle="#3f6f48"; ctx.lineWidth=2; ctx.stroke();
-    // 웨이브 스폰
-    if(td.waveClear && td.enemies.length===0){ td.wave++; td.waveClear=false; td.spawnQ=4+td.wave*2; td.spawnT=0; updateTdHud(); }
-    if(td.spawnQ>0){ td.spawnT--; if(td.spawnT<=0){ td.spawnT=Math.max(22,45-td.wave); td.spawnQ--; var hp=14+td.wave*7; td.enemies.push({seg:0,t:0,hp:hp,max:hp,spd:0.55+td.wave*0.035,e:["👾","💀","👿"][td.wave%3]}); if(td.spawnQ===0) td.waveClear=true; } }
-    // 적 이동
-    ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.font="22px sans-serif";
+    ctx.strokeStyle="#2f5738"; ctx.lineWidth=28; ctx.lineCap="round"; ctx.lineJoin="round"; ctx.beginPath(); ctx.moveTo(td.path[0][0],td.path[0][1]); for(var i=1;i<td.path.length;i++) ctx.lineTo(td.path[i][0],td.path[i][1]); ctx.stroke();
+    ctx.strokeStyle="#3f6f48"; ctx.lineWidth=3; ctx.stroke();
+    if(td.waveClear && td.enemies.length===0 && td.spawnList.length===0){ tdStartWave(); }
+    if(td.spawnList.length>0){ td.spawnT--; if(td.spawnT<=0){ td.spawnT=Math.max(20,42-td.wave); tdSpawn(); if(td.spawnList.length===0) td.waveClear=true; } }
+    // 적
+    ctx.textAlign="center"; ctx.textBaseline="middle";
     td.enemies=td.enemies.filter(function(en){
+      var sp=en.baseSpd*(en.slowT>0?0.45:1); if(en.slowT>0) en.slowT--;
       var a=td.path[en.seg],b=td.path[en.seg+1]; var seglen=Math.hypot(b[0]-a[0],b[1]-a[1])||1;
-      en.t+=(en.spd*2.4)/seglen;
-      while(en.t>=1){ en.t-=1; en.seg++; if(en.seg>=td.path.length-1){ td.lives--; updateTdHud(); if(td.lives<=0) tdEnd(); return false; } var a2=td.path[en.seg],b2=td.path[en.seg+1]; seglen=Math.hypot(b2[0]-a2[0],b2[1]-a2[1])||1; }
-      if(en.hp<=0){ td.gold+=8; updateTdHud(); beep(400,0.03); return false; }
+      en.t+=(sp*2.4)/seglen;
+      while(en.t>=1){ en.t-=1; en.seg++; if(en.seg>=td.path.length-1){ td.lives-=(en.type==="boss"?5:1); updateTdHud(); if(td.lives<=0) tdEnd(); return false; } var a2=td.path[en.seg],b2=td.path[en.seg+1]; seglen=Math.hypot(b2[0]-a2[0],b2[1]-a2[1])||1; }
+      if(en.hp<=0){ td.gold+=en.g; updateTdHud(); beep(400,0.03); td.fx.push({x:en.px,y:en.py,r:4,mr:16,t:8,col:"255,213,74"}); return false; }
       var p=tdEnemyPos(en); en.px=p[0]; en.py=p[1];
-      ctx.fillText(en.e,p[0],p[1]);
-      // HP바
-      ctx.fillStyle="#3a1a1a"; ctx.fillRect(p[0]-12,p[1]-16,24,3); ctx.fillStyle="#ff5a5a"; ctx.fillRect(p[0]-12,p[1]-16,24*Math.max(0,en.hp/en.max),3);
+      if(en.slowT>0){ ctx.fillStyle="rgba(120,200,255,.5)"; ctx.beginPath(); ctx.arc(p[0],p[1],en.sz*0.6,0,6.3); ctx.fill(); }
+      ctx.font=en.sz+"px sans-serif"; ctx.fillText(en.e,p[0],p[1]);
+      var bw=en.sz; ctx.fillStyle="#3a1a1a"; ctx.fillRect(p[0]-bw/2,p[1]-en.sz*0.7,bw,3); ctx.fillStyle=en.type==="boss"?"#ff3a3a":"#ff7a5a"; ctx.fillRect(p[0]-bw/2,p[1]-en.sz*0.7,bw*Math.max(0,en.hp/en.max),3);
       return true;
     });
     // 포탑
     td.towers.forEach(function(tw){
       tw.cdT--;
-      // 타겟: 범위 내 가장 앞선 적
-      var best=null,bestProg=-1;
-      td.enemies.forEach(function(en){ if(en.px==null) return; var d=Math.hypot(en.px-tw.x,en.py-tw.y); if(d<=tw.range){ var prog=en.seg+en.t; if(prog>bestProg){ bestProg=prog; best=en; } } });
-      if(best && tw.cdT<=0){ tw.cdT=tw.cd; td.shots.push({x:tw.x,y:tw.y,tgt:best,dmg:tw.dmg}); }
-      ctx.strokeStyle="rgba(120,220,150,.12)"; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(tw.x,tw.y,tw.range,0,6.3); ctx.stroke();
-      ctx.font="28px sans-serif"; ctx.fillText("🦍",tw.x,tw.y);
-      if(best){ ctx.strokeStyle="rgba(255,120,120,.4)"; ctx.beginPath(); ctx.moveTo(tw.x,tw.y); ctx.lineTo(best.px,best.py); ctx.stroke(); }
+      ctx.strokeStyle="rgba(120,220,150,.1)"; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(tw.x,tw.y,tw.range,0,6.3); ctx.stroke();
+      var best=null,bp=-1;
+      td.enemies.forEach(function(en){ if(en.px==null) return; if(Math.hypot(en.px-tw.x,en.py-tw.y)<=tw.range){ var pr=en.seg+en.t; if(pr>bp){ bp=pr; best=en; } } });
+      if(best && tw.cdT<=0){ tw.cdT=tw.cd;
+        td.shots.push({x:tw.x,y:tw.y,tgt:best,dmg:tw.dmg,splash:tw.splash,slow:tw.slow,col:TD_TOWER[tw.type].c});
+      }
+      ctx.font="26px sans-serif"; ctx.fillText(tw.e,tw.x,tw.y);
+      // 레벨 점
+      for(var l=0;l<tw.lv;l++){ ctx.fillStyle="var(--gold)"; ctx.fillStyle="#fbbf24"; ctx.beginPath(); ctx.arc(tw.x-8+l*8,tw.y+15,2.5,0,6.3); ctx.fill(); }
+      if(best){ ctx.strokeStyle="rgba(255,120,120,.25)"; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(tw.x,tw.y); ctx.lineTo(best.px,best.py); ctx.stroke(); }
     });
     // 탄
-    ctx.fillStyle="#ffd54a";
-    td.shots=td.shots.filter(function(s){ if(!s.tgt||s.tgt.hp<=0||s.tgt.px==null) return false; var dx=s.tgt.px-s.x,dy=s.tgt.py-s.y,d=Math.hypot(dx,dy)||1; if(d<10){ s.tgt.hp-=s.dmg; return false; } s.x+=dx/d*9; s.y+=dy/d*9; ctx.beginPath(); ctx.arc(s.x,s.y,3.5,0,6.3); ctx.fill(); return true; });
+    td.shots=td.shots.filter(function(s){ if(!s.tgt||s.tgt.hp<=0||s.tgt.px==null) return false; var dx=s.tgt.px-s.x,dy=s.tgt.py-s.y,d=Math.hypot(dx,dy)||1;
+      if(d<12){ s.tgt.hp-=s.dmg; if(s.slow) s.tgt.slowT=90;
+        if(s.splash){ td.fx.push({x:s.tgt.px,y:s.tgt.py,r:6,mr:s.splash,t:12,col:"245,158,11"}); td.enemies.forEach(function(en){ if(en!==s.tgt&&en.px!=null&&Math.hypot(en.px-s.tgt.px,en.py-s.tgt.py)<s.splash) en.hp-=s.dmg*0.6; }); }
+        return false; }
+      s.x+=dx/d*10; s.y+=dy/d*10; ctx.fillStyle=s.col; ctx.beginPath(); ctx.arc(s.x,s.y,s.splash?5:3.5,0,6.3); ctx.fill(); return true; });
+    // 이펙트
+    td.fx=td.fx.filter(function(f){ f.t--; if(f.t<=0) return false; var p=1-f.t/12; ctx.strokeStyle="rgba("+f.col+","+(f.t/12)+")"; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(f.x,f.y,f.r+(f.mr-f.r)*p,0,6.3); ctx.stroke(); return true; });
+    // 배너
+    if(td.t<td.bannerT){ ctx.fillStyle="rgba(255,213,74,.95)"; ctx.font="bold 24px sans-serif"; ctx.textAlign="center"; ctx.fillText(td.banner,W/2,H*0.5); }
     td.raf=requestAnimationFrame(tdLoop);
   }
   function tdEnd(){
     td.active=false; cancelAnimationFrame(td.raf); vib([50,40,50]);
-    var reward=Math.floor(td.wave*td.wave*Math.max(1,perTap())*3);
+    var reward=Math.floor(td.wave*td.wave*Math.max(1,perTap())*4);
     win(reward);
     $("tdStart").style.display="flex";
     $("tdStart").innerHTML='<h2>🏳️ 웨이브 '+td.wave+' 방어!</h2><p class="muted" style="font-size:14px">₭'+fmt(reward)+' 획득!</p><button class="bigBtn" id="tdAgain" style="max-width:220px">'+(tdLeft()>0?"또 방어 ("+tdLeft()+"판)":"오늘 끝!")+'</button><button class="bigBtn" id="tdDone" style="max-width:220px;background:#5a5a72;margin-top:8px">나가기</button>';
