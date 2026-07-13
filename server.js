@@ -1429,6 +1429,17 @@ app.get("/api/admin/delplayer", (req, res) => {
   markDirty();
   res.json({ ok: true, deleted: del });
 });
+app.get("/api/admin/inspect", async (req, res) => {
+  if (!LINK_SECRET || String(req.query.secret || "") !== LINK_SECRET) return res.status(403).json({ ok: false });
+  const name = String(req.query.name || "").trim().normalize("NFC");
+  const p = db.players[name];
+  let sheet = null;
+  try { const raw = await callBackend("profile", name, ""); if (raw) sheet = JSON.parse(raw); } catch (e) { sheet = { err: String(e) }; }
+  res.json({ ok: true, name, exists: !!p,
+    hasPin: !!(p && p.pinHash), sessCount: (p && p.sess && p.sess.length) || (p && p.ses ? 1 : 0),
+    ph: !!(p && p.ph), stage: p && p.stage, money: p && Math.floor(p.money || 0),
+    sheet });
+});
 app.get("/api/spectate", (req, res) => {
   if (!checkToken(req, res)) return;
   const list = Object.entries(db.players || {})
