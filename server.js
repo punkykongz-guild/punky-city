@@ -731,9 +731,15 @@ app.post("/api/idle/save", (req, res) => {
   const name = String((req.body.name || "")).trim().normalize("NFC");
   if (!checkDev(name, String((req.body.key || "")), String((req.body.sig || "")), String((req.body.ph || "")), String((req.body.ses || "")))) return res.json({ ok: false, error: "locked", message: LOCK_MSG, yours: findNameByKey(String(req.query.key || (req.body&&req.body.key) || "")) });
   const save = req.body.save;
-  if (!name || typeof save !== "object") return res.json({ ok: false });
-  const prev = db.players[name] || {};
-  db.players[name] = { ...save, rewardedStage: prev.rewardedStage || save.rewardedStage || 1, lastCollectDate: prev.lastCollectDate || "" };
+  if (!name || typeof save !== "object" || save === null) return res.json({ ok: false });
+  // 게임 세이브 필드만 갱신 (인증·저축·로또·기기 필드는 절대 클라 세이브로 덮어쓰지 않음)
+  const GAME_FIELDS = ["money", "lifetime", "stage", "levels", "souls", "avatarId", "lastSeen",
+                       "bnDate", "bnCount", "mgDate", "moleN", "simonN"];
+  const p = db.players[name] || (db.players[name] = {});
+  for (const f of GAME_FIELDS) if (f in save) p[f] = save[f];
+  // rewardedStage/lastCollectDate 는 서버가 관리(중복 보상·수금 방지) → 클라값 무시
+  if (p.rewardedStage == null) p.rewardedStage = 1;
+  if (p.lastCollectDate == null) p.lastCollectDate = "";
   markDirty();
   res.json({ ok: true });
 });
