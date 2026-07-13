@@ -1556,6 +1556,17 @@
   $("introGo").onclick=function(){ $("introModal").style.display="none"; if(introCb){ var f=introCb; introCb=null; f(); } };
   $("introClose").onclick=function(){ $("introModal").style.display="none"; introCb=null; };
   function win(amt){ S.money+=amt; S.lifetime+=amt; renderFast(); saveNow(); }
+  // ===== 🔥 연승 콤보 (도박 미니게임 공용) =====
+  var gStreak=0, gStreakBest=0;
+  function comboWin(){
+    gStreak++; if(gStreak>gStreakBest) gStreakBest=gStreak;
+    var bonus=0;
+    if(gStreak>=3 && gStreak%3===0){ bonus=Math.floor(Math.max(1,perTap())*gStreak*4); win(bonus); toast("🔥 "+gStreak+"연승! 콤보보너스 +₭"+fmt(bonus)); }
+    else if(gStreak>=2){ toast("🔥 "+gStreak+"연승!"); }
+    return bonus;
+  }
+  function comboLose(){ if(gStreak>=3) toast("💥 "+gStreak+"연승 끊김…"); gStreak=0; }
+  function comboTag(){ return gStreak>=2 ? " 🔥"+gStreak : ""; }
 
   // ===== 🎰 바나나 슬롯 =====
   var SLOT_SYM=["🍌","🦍","💎","🔔","7️⃣","💣"];
@@ -1580,8 +1591,8 @@
       msg="🎉 "+SLOT_SYM[a]+" 3개! ×"+mult+" 당첨!";
     } else if(a===b||b===c||a===c){ mult=2; msg="✨ 2개 매치! ×2"; }
     else { mult=0; msg="아쉽! 다음 기회에 🍀"; }
-    if(mult>0){ var w=bet*mult; win(w); vib(30); msg+=" (₭"+fmt(w)+")"; }
-    else { saveNow(); vib([30,30]); }
+    if(mult>0){ var w=bet*mult; win(w); vib(30); comboWin(); msg+=" (₭"+fmt(w)+")"+comboTag(); }
+    else { saveNow(); vib([30,30]); comboLose(); }
     $("slotMsg").textContent=msg;
   }
   $("slotClose").onclick=function(){ $("slotModal").style.display="none"; };
@@ -1603,8 +1614,8 @@
     var r=Math.random(), mult;
     if(r<0.70) mult=0; else if(r<0.92) mult=1.5; else if(r<0.99) mult=3; else mult=8;
     setTimeout(function(){
-      if(mult>0){ var w=Math.floor(bet*mult); win(w); vib(30); $("ldMsg").innerHTML='<span style="color:var(--gold)">×'+mult+' 당첨! ₭'+fmt(w)+' 🎉</span>'; }
-      else { saveNow(); vib([30,30]); $("ldMsg").innerHTML='<span style="color:#ff8080">꽝! 아쉬워요 😭</span>'; }
+      if(mult>0){ var w=Math.floor(bet*mult); win(w); vib(30); comboWin(); $("ldMsg").innerHTML='<span style="color:var(--gold)">×'+mult+' 당첨! ₭'+fmt(w)+' 🎉'+comboTag()+'</span>'; }
+      else { saveNow(); vib([30,30]); comboLose(); $("ldMsg").innerHTML='<span style="color:#ff8080">꽝! 아쉬워요 😭</span>'; }
     },1200);
   }
   $("ldClose").onclick=function(){ $("ldModal").style.display="none"; };
@@ -1621,9 +1632,9 @@
       $("rpsFight").textContent=RPS[me]+" vs "+RPS[dealer];
       var outcome=(me-dealer+3)%3; // 0=비김 1=이김 2=짐
       var extra=' <span style="font-size:12px;color:#9b8cc0">— [대결] 눌러 한 판 더</span>';
-      if(outcome===1){ var w=Math.floor(rpsBet*1.8); win(w); vib(30); $("rpsMsg").innerHTML='<span style="color:var(--gold)">🎉 이겼다! ₭'+fmt(w)+' 획득 (×1.8)</span>'+extra; }
+      if(outcome===1){ var w=Math.floor(rpsBet*1.8); win(w); vib(30); comboWin(); $("rpsMsg").innerHTML='<span style="color:var(--gold)">🎉 이겼다! ₭'+fmt(w)+' 획득 (×1.8)'+comboTag()+'</span>'+extra; }
       else if(outcome===0){ win(rpsBet); $("rpsMsg").innerHTML='<span style="color:#9fd">🤝 비김 — 배팅액 환불</span>'+extra; }
-      else { saveNow(); vib([30,30]); $("rpsMsg").innerHTML='<span style="color:#ff8080">💥 졌어요… 다음 판!</span>'+extra; }
+      else { saveNow(); vib([30,30]); comboLose(); $("rpsMsg").innerHTML='<span style="color:#ff8080">💥 졌어요… 다음 판!</span>'+extra; }
     };
   });
   $("rpsClose").onclick=function(){ $("rpsModal").style.display="none"; };
@@ -1759,14 +1770,14 @@
     crash.active=false; cancelAnimationFrame(crash.raf);
     $("crashCash").disabled=true; beep(120,0.3); vib([50,40,50]);
     $("crashRocket").textContent="💥"; $("crashMult").style.color="#ff5a5a";
-    $("crashMsg").innerHTML='<span style="color:#ff8080">💥 '+crash.at.toFixed(2)+'x 에서 터졌다! ₭'+fmt(crash.bet)+' 소멸…</span>';
+    $("crashMsg").innerHTML='<span style="color:#ff8080">💥 '+crash.at.toFixed(2)+'x 에서 터졌다! ₭'+fmt(crash.bet)+' 소멸…</span>'; comboLose();
     saveNow();
     setTimeout(function(){ $("crashMult").style.color="var(--gold)"; },1500);
   }
   $("crashCash").onclick=function(){
     if(!crash.active||crash.cashed) return;
     crash.cashed=true; crash.active=false; cancelAnimationFrame(crash.raf);
-    var w=Math.floor(crash.bet*crash.mult); win(w); beep(900,0.12); vib(30);
+    var w=Math.floor(crash.bet*crash.mult); win(w); beep(900,0.12); vib(30); comboWin();
     $("crashCash").disabled=true;
     $("crashMsg").innerHTML='<span style="color:var(--gold)">🚀 '+crash.mult.toFixed(2)+'x 탈출! ₭'+fmt(w)+' 획득!</span>';
   };
@@ -1805,7 +1816,7 @@
       $("hlMsg").innerHTML='<span style="color:var(--gold)">✅ '+nx+'! 상금 ₭'+fmt(hl.pot)+'</span>';
       $("hlCash").style.display=""; renderHiLo();
     } else {
-      hl.playing=false; beep(160,0.2); vib([30,30]);
+      hl.playing=false; beep(160,0.2); vib([30,30]); comboLose();
       $("hlNum").textContent=nx;
       $("hlMsg").innerHTML='<span style="color:#ff8080">💥 '+nx+'! 꽝… ₭'+fmt(hl.pot)+' 소멸</span>';
       $("hlCash").style.display="none"; $("hlHigh").disabled=true; $("hlLow").disabled=true; saveNow();
@@ -1813,7 +1824,7 @@
   }
   $("hlHigh").onclick=function(){ hlGuess(true); };
   $("hlLow").onclick=function(){ hlGuess(false); };
-  $("hlCash").onclick=function(){ if(!hl.playing) return; hl.playing=false; win(hl.pot); beep(900,0.12); vib(30); toast("💰 ₭"+fmt(hl.pot)+" 획득! (배팅 ₭"+fmt(hl.bet)+")"); $("hlModal").style.display="none"; };
+  $("hlCash").onclick=function(){ if(!hl.playing) return; hl.playing=false; win(hl.pot); beep(900,0.12); vib(30); comboWin(); toast("💰 ₭"+fmt(hl.pot)+" 획득!"+comboTag()); $("hlModal").style.display="none"; };
   $("hlClose").onclick=function(){ hl.playing=false; $("hlModal").style.display="none"; };
 
   // ===== 🎁 미스터리 박스 =====
@@ -1832,9 +1843,9 @@
       else if(r<0.995){ mult=4; icon="👑"; }
       else { mult=20; icon="🎰"; }
       ic.textContent=icon;
-      if(mult>0){ var w=bet*mult; win(w); vib(30); beep(mult>=5?1000:700,0.12);
+      if(mult>0){ var w=bet*mult; win(w); vib(30); beep(mult>=5?1000:700,0.12); comboWin();
         $("boxMsg").innerHTML='<span style="color:var(--gold)">'+(mult>=30?"🎉 잭팟!! ":(mult>=5?"🔥 대박! ":""))+"×"+mult+' — ₭'+fmt(w)+' 획득!</span>';
-      } else { saveNow(); vib([30,30]); $("boxMsg").innerHTML='<span style="color:#ff8080">💨 꽝! 다음 기회에…</span>'; }
+      } else { saveNow(); vib([30,30]); comboLose(); $("boxMsg").innerHTML='<span style="color:#ff8080">💨 꽝! 다음 기회에…</span>'; }
     },1500);
   }
   $("boxClose").onclick=function(){ $("boxModal").style.display="none"; };
