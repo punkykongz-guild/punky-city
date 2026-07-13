@@ -15,6 +15,11 @@
  */
 const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
+
+// ===== 전역 안전망: 어떤 오류도 서버 프로세스를 죽이지 못하게 =====
+process.on("uncaughtException", (e) => { console.error("[uncaughtException]", (e && e.stack) || e); });
+process.on("unhandledRejection", (e) => { console.error("[unhandledRejection]", (e && e.stack) || e); });
+
 const express = require("express");
 const http = require("http");
 const fs = require("fs");
@@ -1109,7 +1114,7 @@ function fgResolve(match) {
   try { B.socket.emit("fight:round", { round: match.round, me: { hp: B.hp, g: B.g, act: mb }, opp: { hp: A.hp, g: A.g, act: ma } }); } catch (e) {}
   if (A.hp <= 0 || B.hp <= 0) {
     const winner = (A.hp <= 0 && B.hp <= 0) ? -1 : (B.hp <= 0 ? 0 : 1);
-    setTimeout(() => fgEnd(match, winner), 900);
+    setTimeout(() => { try { fgEnd(match, winner); } catch (e) { console.error("[fgEnd]", e); } }, 900);
   } else {
     fgBeginRound(match);
   }
@@ -1119,7 +1124,7 @@ function fgBeginRound(match) {
   if (match.over) return;
   if (match.timer) clearTimeout(match.timer);
   match.players.forEach((p) => { try { p.socket.emit("fight:go", { round: match.round + 1 }); } catch (e) {} });
-  match.timer = setTimeout(() => { if (!match.over) fgResolve(match); }, FG_TURN_MS);
+  match.timer = setTimeout(() => { try { if (!match.over) fgResolve(match); } catch (e) { console.error("[fgResolve-timer]", e); } }, FG_TURN_MS);
 }
 
 function fgStartMatch(a, b) {
@@ -1247,7 +1252,7 @@ io.on("connection", (socket) => {
     let a = parseInt(d && d.action, 10); if (!(a >= 0 && a <= 3)) a = 1;
     p.pick = a;
     const other = match.players.find((x) => x.socket.id !== socket.id);
-    if (other && other.pick != null) fgResolve(match);
+    if (other && other.pick != null) { try { fgResolve(match); } catch (e) { console.error("[fgResolve]", e); } }
   });
   socket.on("fight:leave", () => fgOnLeave(socket));
 

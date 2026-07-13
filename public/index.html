@@ -340,7 +340,8 @@
       <button class="bigBtn" id="pjStop" style="margin-top:14px">STOP! ✋</button>
       <button class="bigBtn" id="pjCash" style="margin-top:8px;background:#2a7d4f;display:none">💰 상금 챙기기</button>
     </div>
-    <button class="bigBtn" id="pjClose" style="margin-top:12px;background:#5a5a72;max-width:340px">닫기</button>
+<button class="bigBtn" id="pjReplay" style="margin-top:10px;background:#2a7d4f;max-width:340px">🔄 한 번 더</button>
+        <button class="bigBtn" id="pjClose" style="margin-top:12px;background:#5a5a72;max-width:340px">닫기</button>
   </div>
 
   <!-- 바나나 러시 -->
@@ -383,7 +384,8 @@
       <span id="sr0">🍌</span><span id="sr1">🦍</span><span id="sr2">💎</span>
     </div>
     <div id="slotMsg" class="muted" style="min-height:22px;font-size:14px"></div>
-    <button class="bigBtn" id="slotClose" style="margin-top:12px;background:#5a5a72;max-width:300px">닫기</button>
+<button class="bigBtn" data-replay style="margin-top:10px;background:#2a7d4f;max-width:300px">🔄 한 번 더</button>
+        <button class="bigBtn" id="slotClose" style="margin-top:12px;background:#5a5a72;max-width:300px">닫기</button>
   </div>
 
   <!-- 콩즈 사다리 -->
@@ -392,7 +394,8 @@
     <div id="ldSub" class="muted" style="font-size:13px;margin-bottom:10px">출발 사다리를 고르세요</div>
     <div id="ldLanes" style="display:flex;gap:10px"></div>
     <div id="ldMsg" style="min-height:26px;font-size:16px;font-weight:800;margin-top:12px"></div>
-    <button class="bigBtn" id="ldClose" style="margin-top:10px;background:#5a5a72;max-width:300px">닫기</button>
+<button class="bigBtn" data-replay style="margin-top:10px;background:#2a7d4f;max-width:300px">🔄 한 번 더</button>
+        <button class="bigBtn" id="ldClose" style="margin-top:10px;background:#5a5a72;max-width:300px">닫기</button>
   </div>
 
   <!-- 가위바위보 -->
@@ -434,7 +437,8 @@
     <div id="crashMult" style="font-size:64px;font-weight:900;color:var(--gold);text-shadow:0 0 24px rgba(251,191,36,.5)">1.00x</div>
     <div id="crashMsg" class="muted" style="min-height:22px;font-size:14px;margin-top:6px"></div>
     <button class="bigBtn" id="crashCash" style="margin-top:16px;background:#2a7d4f;max-width:280px;font-size:18px">💰 탈출!</button>
-    <button class="bigBtn" id="crashClose" style="margin-top:8px;background:#5a5a72;max-width:280px">닫기</button>
+<button class="bigBtn" data-replay style="margin-top:10px;background:#2a7d4f;max-width:300px">🔄 한 번 더</button>
+        <button class="bigBtn" id="crashClose" style="margin-top:8px;background:#5a5a72;max-width:280px">닫기</button>
   </div>
 
   <!-- 하이로우 -->
@@ -449,7 +453,8 @@
     </div>
     <div id="hlMsg" style="min-height:22px;font-size:14px;margin-top:12px"></div>
     <button class="bigBtn" id="hlCash" style="margin-top:6px;background:#c79a20;max-width:280px;display:none">💰 상금 챙기기</button>
-    <button class="bigBtn" id="hlClose" style="margin-top:8px;background:#5a5a72;max-width:280px">닫기</button>
+<button class="bigBtn" data-replay style="margin-top:10px;background:#2a7d4f;max-width:300px">🔄 한 번 더</button>
+        <button class="bigBtn" id="hlClose" style="margin-top:8px;background:#5a5a72;max-width:280px">닫기</button>
   </div>
 
   <!-- 미스터리 박스 -->
@@ -457,7 +462,8 @@
     <h2>🎁 미스터리 박스</h2>
     <div id="boxIcon" style="font-size:90px;margin:16px 0">🎁</div>
     <div id="boxMsg" class="muted" style="min-height:24px;font-size:16px;font-weight:700"></div>
-    <button class="bigBtn" id="boxClose" style="margin-top:14px;background:#5a5a72;max-width:280px">닫기</button>
+<button class="bigBtn" data-replay style="margin-top:10px;background:#2a7d4f;max-width:300px">🔄 한 번 더</button>
+        <button class="bigBtn" id="boxClose" style="margin-top:14px;background:#5a5a72;max-width:280px">닫기</button>
   </div>
 
   <!-- 콩즈 파이터 -->
@@ -1371,7 +1377,7 @@
   }
   function nextPjRound(){
     pj.round++;
-    pj.zW=Math.max(6, 32*Math.pow(0.68,pj.round-1));
+    pj.zW=Math.max(5, 26*Math.pow(0.66,pj.round-1));
     pj.zL=Math.random()*(100-pj.zW-8)+4;
     pj.spd=0.9+pj.round*0.35;
     pj.pos=0; pj.dir=1;
@@ -1486,8 +1492,10 @@
 
   // ===== 공용 베팅 선택 =====
   var betCb=null;
+  var lastBet=null;
   function pickBet(title, cb){
     if(!PLAY_OK){ needWallet(); return; }
+    lastBet={title:title, cb:cb};
     if(S.money<100){ toast("콩달러가 부족해요! 먼저 벌어오세요 🦍"); return; }
     betCb=cb; $("betTitle").textContent=title;
     $("betSub").textContent="배팅액을 고르세요 (보유 ₭"+fmt(S.money)+")";
@@ -1502,6 +1510,11 @@
     $("betModal").style.display="flex";
   }
   $("betClose").onclick=function(){ $("betModal").style.display="none"; };
+  // 게임 종료 후 "한 번 더" — 같은 게임 즉시 재시작
+  Array.prototype.forEach.call(document.querySelectorAll('[data-replay]'),function(b){
+    b.onclick=function(){ var m=b.closest('[id$="Modal"]'); if(m) m.style.display="none"; if(lastBet) pickBet(lastBet.title, lastBet.cb); };
+  });
+  var _pjr=document.getElementById("pjReplay"); if(_pjr) _pjr.onclick=function(){ $("pjModal").style.display="none"; openPj(); };
   // 게임 설명 → 시작
   var introCb=null;
   function showIntro(title, body, cb){
@@ -1532,7 +1545,7 @@
     var mult=0, msg="";
     if(hasBomb){ mult=0; msg="💣 폭탄! 꽝이에요 ㅠㅠ"; }
     else if(a===b&&b===c){
-      var m={4:25,2:12,1:8,0:5,3:5}; mult=m[a]||5;
+      var m={4:18,2:9,1:6,0:4,3:4}; mult=m[a]||4;
       msg="🎉 "+SLOT_SYM[a]+" 3개! ×"+mult+" 당첨!";
     } else if(a===b||b===c||a===c){ mult=2; msg="✨ 2개 매치! ×2"; }
     else { mult=0; msg="아쉽! 다음 기회에 🍀"; }
@@ -1557,7 +1570,7 @@
     $("ldSub").textContent="🚶 사다리 타는 중...";
     // 가중 결과: 꽝 55% / ×1.5 30% / ×3 12% / ×10 3%
     var r=Math.random(), mult;
-    if(r<0.63) mult=0; else if(r<0.88) mult=1.5; else if(r<0.98) mult=3; else mult=8;
+    if(r<0.70) mult=0; else if(r<0.92) mult=1.5; else if(r<0.99) mult=3; else mult=8;
     setTimeout(function(){
       if(mult>0){ var w=Math.floor(bet*mult); win(w); vib(30); $("ldMsg").innerHTML='<span style="color:var(--gold)">×'+mult+' 당첨! ₭'+fmt(w)+' 🎉</span>'; }
       else { saveNow(); vib([30,30]); $("ldMsg").innerHTML='<span style="color:#ff8080">꽝! 아쉬워요 😭</span>'; }
@@ -1577,7 +1590,7 @@
       $("rpsFight").textContent=RPS[me]+" vs "+RPS[dealer];
       var outcome=(me-dealer+3)%3; // 0=비김 1=이김 2=짐
       var extra=' <span style="font-size:12px;color:#9b8cc0">— [대결] 눌러 한 판 더</span>';
-      if(outcome===1){ var w=Math.floor(rpsBet*1.85); win(w); vib(30); $("rpsMsg").innerHTML='<span style="color:var(--gold)">🎉 이겼다! ₭'+fmt(w)+' 획득 (×1.85)</span>'+extra; }
+      if(outcome===1){ var w=Math.floor(rpsBet*1.8); win(w); vib(30); $("rpsMsg").innerHTML='<span style="color:var(--gold)">🎉 이겼다! ₭'+fmt(w)+' 획득 (×1.8)</span>'+extra; }
       else if(outcome===0){ win(rpsBet); $("rpsMsg").innerHTML='<span style="color:#9fd">🤝 비김 — 배팅액 환불</span>'+extra; }
       else { saveNow(); vib([30,30]); $("rpsMsg").innerHTML='<span style="color:#ff8080">💥 졌어요… 다음 판!</span>'+extra; }
     };
@@ -1693,7 +1706,7 @@
   // ===== 🚀 콩즈 로켓 (크래시) =====
   var crash={active:false,mult:1,at:1,bet:0,cashed:false,raf:0};
   $("crashBtn").onclick=function(){ showIntro("🚀 콩즈 로켓", "🚀 배율이 계속 <b>치솟아요</b>! (1.00x→∞)<br>터지기 전에 <b style='color:#6fe07a'>💰탈출</b>을 누르면 그 배율만큼 획득!<br>욕심부리다 터지면 꽝… 언제 터질진 아무도 몰라요 💥", function(){ pickBet("🚀 콩즈 로켓", startCrash); }); };
-  function genCrash(){ var r=Math.random(); if(r<0.07) return 1.00; return Math.max(1.01, Math.round((0.88/(1-r))*100)/100); }
+  function genCrash(){ var r=Math.random(); if(r<0.10) return 1.00; return Math.max(1.01, Math.round((0.80/(1-r))*100)/100); }
   function startCrash(bet){
     crash.bet=bet; crash.mult=1.00; crash.at=genCrash(); crash.cashed=false; crash.active=true;
     $("crashModal").style.display="flex"; $("crashCash").style.display=""; $("crashCash").disabled=false;
@@ -1733,8 +1746,8 @@
   $("hlBtn").onclick=function(){ showIntro("🃏 하이로우", "숫자(1~100)를 보고 <b>다음이 높을지/낮을지</b> 예측! 🃏<br>맞추면 배율이 붙고, 연속 성공하면 폭발 📈<br>위험한 쪽일수록 배율이 커요. 아무때나 💰챙기기, 틀리면 꽝.", function(){ pickBet("🃏 하이로우", startHiLo); }); };
   function hlPayouts(n){
     var pHigh=(100-n)/99, pLow=(n-1)/99;
-    var ph=pHigh>0?Math.max(1.02,Math.round(0.86/pHigh*100)/100):0;
-    var pl=pLow>0?Math.max(1.02,Math.round(0.86/pLow*100)/100):0;
+    var ph=pHigh>0?Math.max(1.02,Math.round(0.80/pHigh*100)/100):0;
+    var pl=pLow>0?Math.max(1.02,Math.round(0.80/pLow*100)/100):0;
     return [ph,pl];
   }
   function startHiLo(bet){
@@ -1782,11 +1795,11 @@
       clearInterval(shake); ic.style.transform="";
       // 가중 결과 (EV~0.95): 꽝60% ×1(환불)25% ×2 10% ×5 4% 잭팟×30 1%
       var r=Math.random(), mult, icon;
-      if(r<0.66){ mult=0; icon="💨"; }
-      else if(r<0.87){ mult=1; icon="🪙"; }
-      else if(r<0.955){ mult=2; icon="💎"; }
-      else if(r<0.99){ mult=4; icon="👑"; }
-      else { mult=25; icon="🎰"; }
+      if(r<0.70){ mult=0; icon="💨"; }
+      else if(r<0.90){ mult=1; icon="🪙"; }
+      else if(r<0.965){ mult=2; icon="💎"; }
+      else if(r<0.995){ mult=4; icon="👑"; }
+      else { mult=20; icon="🎰"; }
       ic.textContent=icon;
       if(mult>0){ var w=bet*mult; win(w); vib(30); beep(mult>=5?1000:700,0.12);
         $("boxMsg").innerHTML='<span style="color:var(--gold)">'+(mult>=30?"🎉 잭팟!! ":(mult>=5?"🔥 대박! ":""))+"×"+mult+' — ₭'+fmt(w)+' 획득!</span>';
@@ -1823,7 +1836,7 @@
     $("fgSuper").style.opacity=(fg.myG<3?.4:1);
   }
   function aiPick(){
-    if(fg.aiG>=3 && Math.random()<0.62) return 3;
+    if(fg.aiG>=3 && Math.random()<0.7) return 3;
     return Math.floor(Math.random()*3);
   }
   function resolveFg(me,ai){
