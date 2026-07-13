@@ -369,6 +369,38 @@
     <button id="avatarClose">닫기</button>
   </div></div>
 
+  <!-- 폐지 타이밍 (더블업) -->
+  <div id="pjModal" style="position:fixed;inset:0;background:rgba(8,4,20,.94);display:none;z-index:80;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center">
+    <h2 style="margin:0 0 4px">📦 폐지 타이밍</h2>
+    <div id="pjSub" class="muted" style="margin-bottom:14px;font-size:13px">배팅액을 고르세요</div>
+    <div id="pjBet" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:320px"></div>
+    <div id="pjPlay" style="display:none;width:100%;max-width:340px">
+      <div style="font-size:13px;color:var(--gold);margin-bottom:6px">현재 상금 <b id="pjPot">₭ 0</b> <span id="pjMul" style="color:#6fe07a"></span></div>
+      <div id="pjBar" style="position:relative;height:44px;background:#1a1030;border-radius:10px;overflow:hidden;border:1px solid var(--line)">
+        <div id="pjZone" style="position:absolute;top:0;bottom:0;background:linear-gradient(180deg,#2a5,#183);opacity:.55"></div>
+        <div id="pjMark" style="position:absolute;top:0;bottom:0;width:5px;background:var(--gold);box-shadow:0 0 10px var(--gold)"></div>
+      </div>
+      <button class="bigBtn" id="pjStop" style="margin-top:14px">STOP! ✋</button>
+      <button class="bigBtn" id="pjCash" style="margin-top:8px;background:#2a7d4f;display:none">💰 상금 챙기기</button>
+    </div>
+    <button class="bigBtn" id="pjClose" style="margin-top:12px;background:#5a5a72;max-width:340px">닫기</button>
+  </div>
+
+  <!-- 바나나 러시 -->
+  <div id="bnModal" style="position:fixed;inset:0;background:linear-gradient(180deg,#1a1240,#0e0820);display:none;z-index:80;flex-direction:column;overflow:hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;position:relative;z-index:2">
+      <div style="font-weight:800">🍌 <span id="bnScore">0</span></div>
+      <div style="font-weight:800;color:var(--gold)">⏱ <span id="bnTime">20</span>s</div>
+      <button id="bnClose" style="background:#5a5a72;border:none;color:#fff;padding:6px 12px;border-radius:8px">나가기</button>
+    </div>
+    <div id="bnField" style="position:absolute;inset:0;top:48px;overflow:hidden"></div>
+    <div id="bnStart" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:3;background:rgba(8,4,20,.6)">
+      <h2>🍌 바나나 러시</h2>
+      <p class="muted" style="max-width:280px;text-align:center;font-size:13px">20초 동안 🍌를 최대한 많이 탭! 💣폭탄을 누르면 감점. 점수만큼 ₭ 획득!</p>
+      <button class="bigBtn" id="bnGo" style="max-width:240px">시작!</button>
+    </div>
+  </div>
+
   <div id="tabs">
     <button class="tabBtn on" data-page="biz">💼 사업</button>
     <button class="tabBtn" data-page="stage">📖 등급</button>
@@ -409,9 +441,25 @@
       </div>
       <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="wormBtn">입장</button>
     </div>
+    <div class="card arcadeItem">
+      <div class="big">📦</div>
+      <div style="flex:1">
+        <h3 style="margin:0">폐지 타이밍 <span class="muted">₭ 더블업</span></h3>
+        <div class="muted" style="font-size:12px">초록존에 STOP! 성공마다 ×2 — 실패하면 꽝 😈</div>
+      </div>
+      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="pjBtn">도전</button>
+    </div>
+    <div class="card arcadeItem">
+      <div class="big">🍌</div>
+      <div style="flex:1">
+        <h3 style="margin:0">바나나 러시 <span class="muted" id="bnLeft">하루 5판</span></h3>
+        <div class="muted" style="font-size:12px">20초간 바나나 탭! 💣폭탄은 피하고 → ₭ 획득</div>
+      </div>
+      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="bnBtn">플레이</button>
+    </div>
     <div class="card">
-      <h3>🎰 미니게임</h3>
-      <p class="muted">폐지 타이밍 · 콩즈코인 투자 · 바나나 캐치 — 곧 오픈! 🚧</p>
+      <h3>🃏 콩즈코인 투자 <span class="muted">곧 오픈 🚧</span></h3>
+      <p class="muted" style="font-size:12px">차트 보고 ₭ 사고팔기 — 준비중!</p>
     </div>
   </div>
 
@@ -1105,6 +1153,148 @@
     renderMine(); // 내 기여금(확정+미전송분) 실시간 표시
   },120);
 
+  // ===== 미니게임 공통 =====
+  function todayKey(){ return new Date().toDateString(); }
+
+  // ===== 폐지 타이밍 (₭ 더블업) =====
+  var pj={active:false,pot:0,round:0,zL:0,zW:40,pos:0,dir:1,spd:1,bet:0,raf:0};
+  function openPj(){
+    if(!PLAY_OK){ needWallet(); return; }
+    $("pjModal").style.display="flex"; $("pjPlay").style.display="none";
+    $("pjSub").textContent="배팅액을 고르세요 (보유 ₭"+fmt(S.money)+")";
+    var box=$("pjBet"); box.innerHTML="";
+    var opts=[["소액",Math.max(100,Math.floor(S.money*0.05))],["중박",Math.max(500,Math.floor(S.money*0.2))],["한방",Math.max(2000,Math.floor(S.money*0.5))]];
+    opts.forEach(function(o){
+      var b=document.createElement("button"); b.className="bigBtn"; b.style.cssText="width:auto;padding:10px 16px;margin:0";
+      b.innerHTML=o[0]+"<br><span style='font-size:12px'>₭"+fmt(o[1])+"</span>";
+      if(S.money<o[1]) b.disabled=true;
+      b.onclick=function(){ startPj(o[1]); };
+      box.appendChild(b);
+    });
+  }
+  function startPj(bet){
+    S.money-=bet; lottoContribute(bet); renderFast();
+    pj.bet=bet; pj.pot=bet; pj.round=0; pj.active=true;
+    $("pjBet").style.display="none"; $("pjPlay").style.display="block"; $("pjCash").style.display="none";
+    $("pjSub").textContent="움직이는 막대를 초록존에서 STOP!";
+    nextPjRound();
+    cancelAnimationFrame(pj.raf); pjLoop();
+  }
+  function nextPjRound(){
+    pj.round++;
+    pj.zW=Math.max(7, 42*Math.pow(0.72,pj.round-1));
+    pj.zL=Math.random()*(100-pj.zW-8)+4;
+    pj.spd=0.9+pj.round*0.35;
+    pj.pos=0; pj.dir=1;
+    $("pjZone").style.left=pj.zL+"%"; $("pjZone").style.width=pj.zW+"%";
+    $("pjPot").textContent="₭ "+fmt(pj.pot);
+    $("pjMul").textContent=pj.round>1?("×"+Math.pow(2,pj.round-1)):"";
+  }
+  function pjLoop(){
+    if(!pj.active) return;
+    pj.pos+=pj.dir*pj.spd;
+    if(pj.pos>=100){pj.pos=100;pj.dir=-1;} if(pj.pos<=0){pj.pos=0;pj.dir=1;}
+    $("pjMark").style.left=pj.pos+"%";
+    pj.raf=requestAnimationFrame(pjLoop);
+  }
+  $("pjStop").onclick=function(){
+    if(!pj.active) return;
+    var hit=pj.pos>=pj.zL && pj.pos<=pj.zL+pj.zW;
+    if(hit){
+      pj.pot*=2; beep(700,0.08); vib(20);
+      $("pjPot").textContent="₭ "+fmt(pj.pot); $("pjMul").textContent="×"+Math.pow(2,pj.round);
+      $("pjCash").style.display="block"; $("pjSub").textContent="성공! 계속하면 STOP, 챙기려면 💰 ("+"연속 "+pj.round+")";
+      nextPjRound();
+    } else {
+      pj.active=false; cancelAnimationFrame(pj.raf); beep(160,0.25); vib([40,40,40]);
+      $("pjSub").innerHTML="💥 실패! ₭"+fmt(pj.pot)+" 소멸…";
+      $("pjStop").style.display="none"; $("pjCash").style.display="none";
+      saveNow();
+      setTimeout(function(){ $("pjStop").style.display=""; $("pjModal").style.display="none"; },1600);
+    }
+  };
+  $("pjCash").onclick=function(){
+    if(!pj.active) return;
+    pj.active=false; cancelAnimationFrame(pj.raf);
+    S.money+=pj.pot; renderFast(); saveNow();
+    beep(900,0.12); vib(30);
+    toast("💰 ₭"+fmt(pj.pot)+" 획득! (배팅 ₭"+fmt(pj.bet)+" → "+(pj.pot/pj.bet)+"배)");
+    $("pjModal").style.display="none";
+  };
+  $("pjClose").onclick=function(){ pj.active=false; cancelAnimationFrame(pj.raf); $("pjModal").style.display="none"; };
+  $("pjBtn").onclick=openPj;
+
+  // ===== 바나나 러시 =====
+  var BN_CAP=5;
+  var bn={active:false,score:0,time:0,items:[],raf:0,spawnT:0,timer:0};
+  function bnLeft(){ if(S.bnDate!==todayKey()){ return BN_CAP; } return Math.max(0, BN_CAP-(S.bnCount||0)); }
+  function refreshBnLeft(){ var e=$("bnLeft"); if(e) e.textContent="오늘 "+bnLeft()+"판 남음"; }
+  function openBn(){
+    if(!PLAY_OK){ needWallet(); return; }
+    if(bnLeft()<=0){ toast("오늘 바나나 러시는 다 하셨어요! 내일 또 와주세요 🍌"); return; }
+    $("bnStart").innerHTML='<h2>🍌 바나나 러시</h2><p class="muted" style="max-width:280px;text-align:center;font-size:13px">20초 동안 🍌를 최대한 많이 탭! 💣폭탄을 누르면 감점. 점수만큼 ₭ 획득!</p><button class="bigBtn" id="bnGo2" style="max-width:240px">시작! ('+bnLeft()+'판 남음)</button>';
+    $("bnGo2").onclick=function(){ startBnAgain(); };
+    $("bnModal").style.display="flex"; $("bnStart").style.display="flex"; $("bnField").innerHTML="";
+  }
+  var bnGo0=$("bnGo"); if(bnGo0) bnGo0.onclick=function(){ startBnAgain(); };
+  function bnSpawn(){
+    var f=$("bnField"), w=f.clientWidth||360;
+    var bomb=Math.random()<0.25;
+    var el=document.createElement("div");
+    el.textContent=bomb?"💣":"🍌";
+    el.style.cssText="position:absolute;font-size:34px;user-select:none;cursor:pointer;left:"+(Math.random()*(w-40))+"px;top:-44px;will-change:transform";
+    el.dataset.y=-44; el.dataset.v=(2.4+Math.random()*2.2+bn.score*0.01);
+    el.dataset.bomb=bomb?"1":"0";
+    el.addEventListener("touchstart",function(ev){ ev.preventDefault(); tapBn(el); },{passive:false});
+    el.addEventListener("mousedown",function(){ tapBn(el); });
+    f.appendChild(el); bn.items.push(el);
+  }
+  function tapBn(el){
+    if(!bn.active||el.dataset.hit) return; el.dataset.hit="1";
+    if(el.dataset.bomb==="1"){ bn.score=Math.max(0,bn.score-3); beep(150,0.15); vib([30,30]); el.textContent="💥"; }
+    else { bn.score++; beep(600+bn.score*4,0.05); el.textContent="✨"; }
+    $("bnScore").textContent=bn.score;
+    el.style.transition="opacity .2s"; el.style.opacity="0";
+    setTimeout(function(){ el.remove(); },200);
+    bn.items=bn.items.filter(function(x){return x!==el;});
+  }
+  function bnLoop(t){
+    if(!bn.active) return;
+    var f=$("bnField"), h=f.clientHeight||500;
+    bn.spawnT+=16; if(bn.spawnT>=Math.max(380,700-bn.score*6)){ bn.spawnT=0; bnSpawn(); }
+    bn.items.slice().forEach(function(el){
+      var y=parseFloat(el.dataset.y)+parseFloat(el.dataset.v);
+      el.dataset.y=y; el.style.transform="translateY("+(y+44)+"px)";
+      if(y>h){ el.remove(); bn.items=bn.items.filter(function(x){return x!==el;}); }
+    });
+    bn.raf=requestAnimationFrame(bnLoop);
+  }
+  function endBn(){
+    bn.active=false; clearInterval(bn.timer); cancelAnimationFrame(bn.raf);
+    bn.items.forEach(function(el){el.remove();}); bn.items=[];
+    var reward=Math.floor(bn.score*Math.max(1,perTap()*0.8));
+    S.money+=reward; S.lifetime+=reward; renderFast(); saveNow();
+    $("bnStart").style.display="flex";
+    $("bnStart").innerHTML='<h2>🍌 '+bn.score+'개 획득!</h2><p class="muted" style="font-size:14px">₭'+fmt(reward)+' 벌었어요!</p>'+
+      '<button class="bigBtn" id="bnAgain" style="max-width:240px">'+(bnLeft()>0?'한 판 더 ('+bnLeft()+'남음)':'오늘 끝!')+'</button>'+
+      '<button class="bigBtn" id="bnDone" style="max-width:240px;background:#5a5a72;margin-top:8px">나가기</button>';
+    $("bnAgain").onclick=function(){ if(bnLeft()>0){ startBnAgain(); } else { $("bnModal").style.display="none"; } };
+    $("bnDone").onclick=function(){ $("bnModal").style.display="none"; };
+  }
+  function startBnAgain(){
+    // 재시작 (판수 차감 포함)
+    if(S.bnDate!==todayKey()){ S.bnDate=todayKey(); S.bnCount=0; }
+    if(bnLeft()<=0){ $("bnModal").style.display="none"; return; }
+    S.bnCount=(S.bnCount||0)+1; refreshBnLeft();
+    $("bnStart").style.display="none"; $("bnField").innerHTML="";
+    bn.active=true; bn.score=0; bn.time=20; bn.items=[]; bn.spawnT=0;
+    $("bnScore").textContent="0"; $("bnTime").textContent="20";
+    bn.timer=setInterval(function(){ bn.time--; $("bnTime").textContent=bn.time; if(bn.time<=0) endBn(); },1000);
+    cancelAnimationFrame(bn.raf); bnLoop(performance.now());
+  }
+  $("bnClose").onclick=function(){ bn.active=false; clearInterval(bn.timer); cancelAnimationFrame(bn.raf); bn.items.forEach(function(el){el.remove();}); bn.items=[]; $("bnModal").style.display="none"; };
+  $("bnBtn").onclick=openBn;
+
   // ===== 행인 NPC (지나가다 동전 던져줌, 가끔 부자 등장) =====
   // 등급별 어울리는 행인 (1~6 골목/동네, 7~13 도심, 14~21 부촌, 22~26 우주, 27~30 환상)
   function walkersForStage(st){
@@ -1675,7 +1865,7 @@
             modal("😴 오프라인 보상","자리를 비운 "+Math.floor(gap/60)+"분 동안\n동료들이 ₭"+fmt(earned)+" 벌어놨어요!"); }
         }
       }
-      renderBizInit(); render(); lottoPoll();
+      renderBizInit(); render(); lottoPoll(); refreshBnLeft();
     }).catch(function(e){
       // 부팅 중 예외가 나도 화면이 죽지 않게
       S=S||newSave(); applyProfile(profile); renderBizInit(); render();
