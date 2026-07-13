@@ -280,6 +280,16 @@
   </div>
 
   <div class="page" id="page-bonus">
+    <div class="card" style="background:linear-gradient(135deg,#2a1550,#3a1a2e);border:1px solid var(--gold)">
+      <h3>🎰 주간 로또 <span class="muted">오픈 예정</span></h3>
+      <p class="muted" style="margin-bottom:6px">모든 콩달러 지출의 <b>1%</b> + 지렁이 입장료가 실시간으로 쌓이는 <b>길드 공동 당첨금</b>!</p>
+      <div style="text-align:center;padding:8px 0">
+        <div style="font-size:11px;color:#b9a8e0;letter-spacing:1px">현재 누적 당첨금</div>
+        <div id="lottoPot" style="font-size:30px;font-weight:900;color:var(--gold);letter-spacing:-.02em;line-height:1.2">₭ 0</div>
+        <div id="lottoTick" style="font-size:11px;color:#6fe07a;min-height:14px"></div>
+      </div>
+      <button class="bigBtn" id="lottoBtn" style="background:#4a3b6e;opacity:.7" disabled>🎟 응모하기 (오픈 예정 · 응모비 미정)</button>
+    </div>
     <div class="card">
       <h3>🐦 X(트위터) 참여 보너스 <span class="muted">하루 1회</span></h3>
       <p class="muted">공식 X 최신 글에 댓글을 남기면 콩달러 지급! (관리자가 댓글 확인)</p>
@@ -864,7 +874,7 @@
         var c=bizCost(i);
         if(!PLAY_OK){ needWallet(); return; }
         if(S.stage<b.stage) return;
-        if(S.money>=c){ S.money-=c; S.levels[i]++; renderFast(); }
+        if(S.money>=c){ S.money-=c; S.levels[i]++; lottoContribute(c); renderFast(); }
       };
       bizBtns.push(btn);
     });
@@ -968,6 +978,7 @@
     var cost=stageUpCost();
     if(cost===null||S.money<cost) return;
     S.money-=cost;
+    lottoContribute(cost);
     S.stage+=1;
     $("heroImg").dataset.ai="0"; // 새 등급 변신 이미지로 갱신
     $("heroImg").style.display=""; $("heroShadow").style.display=""; $("heroDeco").style.display="";
@@ -989,6 +1000,39 @@
     var v=perSec()/10; S.money+=v; S.lifetime+=v;
     renderFast();
   },100);
+
+  // ===== 주간 로또 팟 (길드 공동 적립) =====
+  var lottoPending=0;      // 아직 서버에 안 보낸 내 기여분(지출 1%)
+  var lottoShown=0;        // 화면에 보이는 팟 (부드럽게 목표치로 증가)
+  var lottoTarget=0;       // 서버가 알려준 실제 팟
+  function lottoContribute(spend){ // ₭ 지출 시 1% 적립
+    if(!PLAY_OK) return;
+    lottoPending += Math.max(0, spend*0.01);
+  }
+  function lottoFlush(){ // 쌓인 기여분을 서버로 (글로벌 팟에 합산)
+    if(lottoPending<1||!NAME||!PLAY_OK) return;
+    var amt=Math.floor(lottoPending); lottoPending-=amt;
+    var f=$("lottoTick"); if(f){ f.textContent="+₭"+fmt(amt)+" 적립!"; setTimeout(function(){ if(f)f.textContent=""; },1500); }
+    fetch(API("/api/lotto/add"),{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH,ses:SES,amount:amt})})
+      .then(function(r){return r.json();}).then(function(j){ if(j.ok&&typeof j.pot==="number") lottoTarget=j.pot; })
+      .catch(function(){ lottoPending+=amt; }); // 실패 시 되돌림
+  }
+  function lottoPoll(){ // 다른 길드원 기여까지 반영된 실제 팟 조회
+    if(!NAME) return;
+    fetch(API("/api/lotto")).then(function(r){return r.json();})
+      .then(function(j){ if(j.ok&&typeof j.pot==="number") lottoTarget=j.pot; }).catch(function(){});
+  }
+  setInterval(lottoFlush, 8000);   // 8초마다 내 적립분 전송
+  setInterval(lottoPoll, 6000);    // 6초마다 실제 팟 갱신
+  // 팟 숫자를 부드럽게 목표치로 굴려올림 (실시간 쌓이는 느낌)
+  setInterval(function(){
+    var el=$("lottoPot"); if(!el) return;
+    var goal=lottoTarget + Math.floor(lottoPending); // 아직 안 보낸 내 기여도 미리 보여줌
+    if(lottoShown<goal){ lottoShown += Math.max(1, Math.ceil((goal-lottoShown)/12)); if(lottoShown>goal) lottoShown=goal; }
+    else lottoShown=goal;
+    el.textContent="₭ "+fmt(lottoShown);
+  },120);
 
   // ===== 행인 NPC (지나가다 동전 던져줌, 가끔 부자 등장) =====
   // 등급별 어울리는 행인 (1~6 골목/동네, 7~13 도심, 14~21 부촌, 22~26 우주, 27~30 환상)
@@ -1560,7 +1604,7 @@
             modal("😴 오프라인 보상","자리를 비운 "+Math.floor(gap/60)+"분 동안\n동료들이 ₭"+fmt(earned)+" 벌어놨어요!"); }
         }
       }
-      renderBizInit(); render();
+      renderBizInit(); render(); lottoPoll();
     }).catch(function(e){
       // 부팅 중 예외가 나도 화면이 죽지 않게
       S=S||newSave(); applyProfile(profile); renderBizInit(); render();

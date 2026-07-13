@@ -1083,6 +1083,7 @@ io.on("connection", (socket) => {
       }
       if (!db.players[name]) db.players[name] = {};
       db.players[name].money = myMoney - kFee;
+      db.lottoPot = (db.lottoPot || 0) + kFee; // 지렁이 입장료 전액 → 주간 로또 팟
       markDirty();
       entry.kFee = kFee;
 
@@ -1159,6 +1160,25 @@ app.get("/api/admin/set", (req, res) => {
   if (!isNaN(money) && money >= 0) { p.money = money; out.money = money; }
   markDirty();
   res.json(out);
+});
+
+// ===== 주간 로또 팟 (길드 공동 적립) =====
+// 적립: ① 모든 ₭ 지출의 1% (클라가 보고) ② 지렁이 입장료 전액 (join에서 서버가 직접)
+if (typeof db.lottoPot !== "number") db.lottoPot = 0;
+app.get("/api/lotto", (req, res) => {
+  if (!checkToken(req, res)) return;
+  res.json({ ok: true, pot: Math.floor(db.lottoPot || 0), entryFee: null, open: false });
+});
+app.post("/api/lotto/add", (req, res) => {
+  if (!checkToken(req, res)) return;
+  const name = String((req.body && req.body.name) || "").trim();
+  if (!checkDev(name, String((req.body.key || "")), String((req.body.sig || "")), String((req.body.ph || "")), String((req.body.ses || "")))) return res.json({ ok: false, error: "locked" });
+  let amt = Math.floor(Number(req.body && req.body.amount) || 0);
+  if (amt <= 0) return res.json({ ok: true, pot: Math.floor(db.lottoPot || 0) });
+  if (amt > 1e15) amt = 1e15; // 비정상 방지 상한
+  db.lottoPot = (db.lottoPot || 0) + amt;
+  markDirty();
+  res.json({ ok: true, pot: Math.floor(db.lottoPot) });
 });
 
 // 저축 조회 (잔액 + 이력)
