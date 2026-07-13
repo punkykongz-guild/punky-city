@@ -687,7 +687,7 @@ app.get("/rooms", (req, res) => res.json(roomList()));
 // 지렁이 입장료 미리보기 (등급 비례 — join 로직과 동일 공식)
 app.get("/api/worm/fee", (req, res) => {
   if (!checkToken(req, res)) return;
-  const name = String(req.query.name || "").trim();
+  const name = String(req.query.name || "").trim().normalize("NFC");
   const sv = db.players[name] || {};
   const stage = Math.min(30, Math.max(1, sv.stage || 1));
   const money = Math.max(0, Math.floor(sv.money || 0));
@@ -700,7 +700,7 @@ app.get("/api/worm/fee", (req, res) => {
 const TEST_WALLET = process.env.TEST_WALLET || "";
 app.get("/api/profile", async (req, res) => {
   if (!checkToken(req, res)) return;
-  const name = String(req.query.name || "").trim();
+  const name = String(req.query.name || "").trim().normalize("NFC");
   if (!name) return res.json({ ok: false, error: "이름 없음" });
   if (!checkDev(name, String(req.query.key || ""), String(req.query.sig || ""), String(req.query.ph || ""), String(req.query.ses || ""))) return res.json({ ok: false, error: "locked", message: LOCK_MSG, yours: findNameByKey(String(req.query.key || (req.body&&req.body.key) || "")) });
   let profile = { ok: true, registered: false, nft: 0, point: 0, wallet: "" };
@@ -721,14 +721,14 @@ app.get("/api/profile", async (req, res) => {
 // 세이브 로드/저장
 app.get("/api/idle/load", (req, res) => {
   if (!checkToken(req, res)) return;
-  const name = String(req.query.name || "").trim();
+  const name = String(req.query.name || "").trim().normalize("NFC");
   if (!checkDev(name, String(req.query.key || ""), String(req.query.sig || ""), String(req.query.ph || ""), String(req.query.ses || ""))) return res.json({ ok: false, error: "locked", message: LOCK_MSG, yours: findNameByKey(String(req.query.key || (req.body&&req.body.key) || "")) });
   res.json({ ok: true, save: db.players[name] || null, tower: db.tower });
 });
 
 app.post("/api/idle/save", (req, res) => {
   if (!checkToken(req, res)) return;
-  const name = String((req.body.name || "")).trim();
+  const name = String((req.body.name || "")).trim().normalize("NFC");
   if (!checkDev(name, String((req.body.key || "")), String((req.body.sig || "")), String((req.body.ph || "")), String((req.body.ses || "")))) return res.json({ ok: false, error: "locked", message: LOCK_MSG, yours: findNameByKey(String(req.query.key || (req.body&&req.body.key) || "")) });
   const save = req.body.save;
   if (!name || typeof save !== "object") return res.json({ ok: false });
@@ -741,7 +741,7 @@ app.post("/api/idle/save", (req, res) => {
 // 등급 달성 보상 (서버가 누적수익 검증 후 포인트 지급)
 app.post("/api/idle/stage", async (req, res) => {
   if (!checkToken(req, res)) return;
-  const name = String((req.body.name || "")).trim();
+  const name = String((req.body.name || "")).trim().normalize("NFC");
   if (!checkDev(name, String((req.body.key || "")), String((req.body.sig || "")), String((req.body.ph || "")), String((req.body.ses || "")))) return res.json({ ok: false, error: "locked", message: LOCK_MSG, yours: findNameByKey(String(req.query.key || (req.body&&req.body.key) || "")) });
   const p = db.players[name];
   if (!p) return res.json({ ok: false, error: "세이브 없음" });
@@ -764,7 +764,7 @@ app.post("/api/idle/stage", async (req, res) => {
 // 일일 수금: 게임 자산 규모에 비례(로그 스케일), 하루 1회, 상한
 app.post("/api/idle/collect", async (req, res) => {
   if (!checkToken(req, res)) return;
-  const name = String((req.body.name || "")).trim();
+  const name = String((req.body.name || "")).trim().normalize("NFC");
   if (!checkDev(name, String((req.body.key || "")), String((req.body.sig || "")), String((req.body.ph || "")), String((req.body.ses || "")))) return res.json({ ok: false, error: "locked", message: LOCK_MSG, yours: findNameByKey(String(req.query.key || (req.body&&req.body.key) || "")) });
   const p = db.players[name];
   if (!p) return res.json({ ok: false, error: "세이브 없음" });
@@ -930,7 +930,7 @@ app.get("/api/avatar-url", (req, res) => {
 const AD_DAILY_CAP = 1; // 트윗 참여 보너스: 하루 1회
 app.post("/api/ad/watch", (req, res) => {
   if (!checkToken(req, res)) return;
-  const name = String((req.body.name || "")).trim();
+  const name = String((req.body.name || "")).trim().normalize("NFC");
   if (!checkDev(name, String((req.body.key || "")), String((req.body.sig || "")), String((req.body.ph || "")), String((req.body.ses || "")))) return res.json({ ok: false, error: "locked", message: LOCK_MSG, yours: findNameByKey(String(req.query.key || (req.body&&req.body.key) || "")) });
   const type = req.body.type === "yt" ? "yt" : "x"; // x(트위터) / yt(유튜브) 각각 하루 1회
   if (!name) return res.json({ ok: false });
@@ -948,7 +948,7 @@ app.post("/api/ad/watch", (req, res) => {
 // 봇 링크로 세션 발급 (서명 = 본인 인증)
 app.post("/api/linklogin", (req, res) => {
   const b = req.body || {};
-  const name = String(b.name || "").trim();
+  const name = String(b.name || "").trim().normalize("NFC");
   const ph = String(b.ph || "");
   if (!name || !validSig(name, ph, String(b.sig || ""))) return res.status(403).json({ ok: false, message: "링크가 유효하지 않아요. 카톡에서 [게임시작]으로 새 링크를 받아주세요." });
   const p = db.players[name] || (db.players[name] = {});
@@ -963,7 +963,7 @@ app.post("/api/linklogin", (req, res) => {
 
 // 로그인 (닉네임+비밀번호 → 세션)
 app.post("/api/login", (req, res) => {
-  const name = String((req.body && req.body.name) || "").trim();
+  const name = String((req.body && req.body.name) || "").trim().normalize("NFC");
   const pin = String((req.body && req.body.pin) || "");
   const p = db.players[name];
   if (!p || !p.pinHash) return res.json({ ok: false, error: "nopin", message: "비밀번호가 아직 없어요. 카카오톡에서 [게임시작] 링크로 접속해 먼저 비밀번호를 만들어주세요!" });
@@ -975,7 +975,7 @@ app.post("/api/login", (req, res) => {
 // 비밀번호 설정/변경 (봇 서명 링크 또는 기존 세션으로만 가능)
 app.post("/api/pin/set", (req, res) => {
   const b = req.body || {};
-  const name = String(b.name || "").trim();
+  const name = String(b.name || "").trim().normalize("NFC");
   const pin = String(b.pin || "");
   if (!name || pin.length < 4) return res.json({ ok: false, message: "비밀번호는 4자 이상이어야 해요." });
   const p = db.players[name] || (db.players[name] = {});
@@ -992,7 +992,7 @@ app.post("/api/pin/set", (req, res) => {
 // 관리자: 기기 잠금 해제 (LINK_SECRET 필요 — 링크에 노출되지 않는 비밀)
 app.get("/api/admin/unbind", (req, res) => {
   if (!LINK_SECRET || String(req.query.secret || "") !== LINK_SECRET) return res.status(403).json({ ok: false });
-  const name = String(req.query.name || "").trim();
+  const name = String(req.query.name || "").trim().normalize("NFC");
   if (name === "ALL") {
     let n = 0;
     const wipePin = String(req.query.pin || "") === "1";
@@ -1022,7 +1022,7 @@ app.get("/api/whoami", (req, res) => {
 // 게임 내 지갑 신청 → 백엔드로 전달
 app.post("/api/wallet/apply", async (req, res) => {
   if (!checkToken(req, res)) return;
-  const name = String((req.body.name || "")).trim();
+  const name = String((req.body.name || "")).trim().normalize("NFC");
   if (!checkDev(name, String((req.body.key || "")), String((req.body.sig || "")), String((req.body.ph || "")), String((req.body.ses || "")))) return res.json({ ok: false, error: "locked", message: LOCK_MSG, yours: findNameByKey(String(req.query.key || (req.body&&req.body.key) || "")) });
   const wallet = String((req.body.wallet || "")).trim();
   if (!name || !wallet) return res.json({ ok: false, message: "입력값 부족" });
@@ -1047,7 +1047,7 @@ io.on("connection", (socket) => {
 
   socket.on("join", async (payload) => {
     try {
-      const name = String((payload && payload.name) || "").trim();
+      const name = String((payload && payload.name) || "").trim().normalize("NFC");
       const wantBuffs = (payload && Array.isArray(payload.buffs)) ? payload.buffs : [];
       const roomIdReq = payload && payload.roomId;
       if (!name) { socket.emit("joinError", "이름 정보가 없어요."); return; }
@@ -1148,7 +1148,7 @@ io.on("connection", (socket) => {
 // 관리자: 등급/콩달러 강제 설정 (LINK_SECRET 필요)
 app.get("/api/admin/set", (req, res) => {
   if (!LINK_SECRET || String(req.query.secret || "") !== LINK_SECRET) return res.status(403).json({ ok: false });
-  const name = String(req.query.name || "").trim();
+  const name = String(req.query.name || "").trim().normalize("NFC");
   if (!name || !db.players[name]) return res.json({ ok: false, error: "no-player" });
   const p = db.players[name];
   const out = { ok: true, name };
@@ -1220,7 +1220,7 @@ setTimeout(checkLottoDraw, 5000); // 부팅 후 1회
 const LOTTO_DISPLAY_MS = 24 * 3600 * 1000; // 당첨자 발표 노출 시간 (월13~화13)
 app.get("/api/lotto", (req, res) => {
   if (!checkToken(req, res)) return;
-  const name = String(req.query.name || "").trim();
+  const name = String(req.query.name || "").trim().normalize("NFC");
   const p = db.players[name] || {};
   const draw = db.lottoDraw || { at: 0, winners: [] };
   const showing = draw.at > 0 && Date.now() < draw.at + LOTTO_DISPLAY_MS && (draw.winners || []).length > 0;
@@ -1252,7 +1252,7 @@ app.get("/api/admin/lotto", (req, res) => {
 });
 app.post("/api/lotto/add", (req, res) => {
   if (!checkToken(req, res)) return;
-  const name = String((req.body && req.body.name) || "").trim();
+  const name = String((req.body && req.body.name) || "").trim().normalize("NFC");
   if (!checkDev(name, String((req.body.key || "")), String((req.body.sig || "")), String((req.body.ph || "")), String((req.body.ses || "")))) return res.json({ ok: false, error: "locked" });
   let amt = Math.floor(Number(req.body && req.body.amount) || 0);
   if (amt <= 0) return res.json({ ok: true, pot: Math.floor(db.lottoPot || 0) });
@@ -1268,7 +1268,7 @@ app.post("/api/lotto/add", (req, res) => {
 // 저축 조회 (잔액 + 이력)
 app.get("/api/bank", (req, res) => {
   if (!checkToken(req, res)) return;
-  const name = String(req.query.name || "").trim();
+  const name = String(req.query.name || "").trim().normalize("NFC");
   if (!checkDev(name, String(req.query.key || ""), String(req.query.sig || ""), String(req.query.ph || ""), String(req.query.ses || ""))) {
     return res.status(403).json({ ok: false, error: "locked" });
   }
