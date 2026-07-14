@@ -583,6 +583,8 @@ async function restoreFromSheet() {
 
 // 등급 임계값(누적 수익) / 등급 달성 포인트 보상 — 클라이언트와 동일해야 함 (24단계)
 const STAGE_THRESHOLDS = [0,0,500,2500,12500,62500,312500,1562500,7812500,39062500,195312500,976562500,4882812500,24414062500,122070312500,610351562500,3051757812500,15258789062500,76293945312500,381469726562500,1907348632812500,9536743164062500,47683715820312496,238418579101562496,1192092895507812352,5960464477539061760,29802322387695308800,149011611938476556288,745058059692382748672,3725290298461913612288,18626451492309567537152];
+const CITY_DIFF = 10; // 펑키시티 난이도 배율 — 클라(index.html)와 반드시 동일해야 함
+for (let _cd = 0; _cd < STAGE_THRESHOLDS.length; _cd++) STAGE_THRESHOLDS[_cd] *= CITY_DIFF;
 const STAGE_REWARDS =    [0,0,10,18,26,34,42,50,58,66,74,82,90,98,106,114,122,130,138,146,154,162,170,178,186,194,202,210,218,226,234];
 const DAILY_COLLECT_CAP = 100; // 일일 수금 상한 (포인트)
 
@@ -1440,7 +1442,8 @@ app.get("/api/admin/reset", (req, res) => {
   // 리셋할 게임 필드만 명시 (인증 pinHash/sess/ph, 지갑 tokenIds/wallet, 저축 bank, 로또는 건드리지 않음)
   const GAME = { money: 0, lifetime: 0, stage: 1, souls: 0, rewardedStage: 1, lastCollectDate: "", avatarId: 0,
                  szMeta: {}, szBest: 0, szN: 0, szRun: null,
-                 moleN: 0, simonN: 0, skyN: 0, k2N: 0, k3N: 0, rnN: 0, tdN: 0, bnDate: "", bnCount: 0, mgDate: "" };
+                 moleN: 0, simonN: 0, skyN: 0, k2N: 0, k3N: 0, rnN: 0, tdN: 0, bnDate: "", bnCount: 0, mgDate: "",
+                 bank: null, lottoMine: 0, lottoWeek: 0 }; // 저축·로또도 초기화
   let n = 0;
   targets.forEach((name) => {
     const p = db.players[name]; if (!p) return;
@@ -1449,8 +1452,10 @@ app.get("/api/admin/reset", (req, res) => {
     if (db.fgWins && db.fgWins[name] != null) delete db.fgWins[name];
     n++;
   });
+  // 전체 초기화(all=1)면 전역 상태(로또 팟·추첨·타워)도 리셋
+  if (all) { db.lottoPot = 0; db.lottoDraw = null; db.tower = { bricks: 0 }; }
   markDirty(); backupDirty = true; backupToSheet(); // 시트 백업 즉시 갱신 (재시작 시 옛 데이터 복원 방지)
-  res.json({ ok: true, reset: n, kept: "pinHash·sess·ph·tokenIds·wallet·bank·lotto" });
+  res.json({ ok: true, reset: n, globals: all, kept: "pinHash·sess·ph·tokenIds·wallet(지갑등록)" });
 });
 app.get("/api/admin/inspect", async (req, res) => {
   if (!LINK_SECRET || String(req.query.secret || "") !== LINK_SECRET) return res.status(403).json({ ok: false });
