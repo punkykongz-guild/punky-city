@@ -1697,11 +1697,11 @@
   var bnGo0=$("bnGo"); if(bnGo0) bnGo0.onclick=function(){ startBnAgain(); };
   function bnSpawn(){
     var f=$("bnField"), w=f.clientWidth||360;
-    var bomb=Math.random()<0.25;
+    var bomb=Math.random()<0.28;
     var el=document.createElement("div");
     el.textContent=bomb?"💣":"🍌";
     el.style.cssText="position:absolute;font-size:34px;user-select:none;cursor:pointer;left:"+(Math.random()*(w-40))+"px;top:-44px;will-change:transform";
-    el.dataset.y=-44; el.dataset.v=(2.4+Math.random()*2.2+bn.score*0.01);
+    el.dataset.y=-44; el.dataset.v=(2.8+Math.random()*2.4+bn.score*0.03); // 낙하 속도↑
     el.dataset.bomb=bomb?"1":"0";
     el.addEventListener("touchstart",function(ev){ ev.preventDefault(); tapBn(el); },{passive:false});
     el.addEventListener("mousedown",function(){ tapBn(el); });
@@ -1719,7 +1719,7 @@
   function bnLoop(t){
     if(!bn.active) return;
     var f=$("bnField"), h=f.clientHeight||500;
-    bn.spawnT+=16; if(bn.spawnT>=Math.max(380,700-bn.score*6)){ bn.spawnT=0; bnSpawn(); }
+    bn.spawnT+=16; if(bn.spawnT>=Math.max(260,680-bn.score*8)){ bn.spawnT=0; bnSpawn(); } // 스폰 간격 더 짧게·가파르게
     bn.items.slice().forEach(function(el){
       var y=parseFloat(el.dataset.y)+parseFloat(el.dataset.v);
       el.dataset.y=y; el.style.transform="translateY("+(y+44)+"px)";
@@ -1896,18 +1896,29 @@
     mole.active=true; mole.score=0; mole.time=30; $("moleScore").textContent="0"; $("moleTime").textContent="30";
     Array.prototype.forEach.call($("moleGrid").children,function(h){ h.textContent=""; h.dataset.on=""; h.onmousedown=function(){ hitMole(h); }; h.ontouchstart=function(e){ e.preventDefault(); hitMole(h); }; });
     mole.timer=setInterval(function(){ mole.time--; $("moleTime").textContent=mole.time; if(mole.time<=0) endMole(); },1000);
-    mole.popT=setInterval(popMole, 620);
+    mole.popT=setTimeout(molePop, 600);
+  }
+  function molePop(){ // 점점 빨라지는 리스폰 (난이도 상승)
+    if(!mole.active) return;
+    popMole();
+    var el=30-(mole.time||0); // 경과초 0~30
+    mole.popT=setTimeout(molePop, Math.max(300, 600-el*11)); // 600→~270ms
   }
   function popMole(){
     if(!mole.active) return;
     var holes=$("moleGrid").children;
     // 켜진 것 일부 끄기
     Array.prototype.forEach.call(holes,function(h){ if(h.dataset.on && Math.random()<0.5){ h.textContent=""; h.dataset.on=""; } });
-    var idx=Math.floor(Math.random()*9), h=holes[idx];
-    if(h.dataset.on) return;
-    var r=Math.random(); var t = r<0.7?"🦍":(r<0.88?"🕵️":"💣");
-    h.textContent=t; h.dataset.on=t;
-    setTimeout(function(){ if(h.dataset.on===t){ h.textContent=""; h.dataset.on=""; } }, 800);
+    var el=30-(mole.time||0);
+    var life=Math.max(480, 820-el*12);       // 유지시간 820→~460ms (반응 빡세게)
+    var pops=(el>17 && Math.random()<0.4)?2:1; // 후반 가끔 2마리 동시
+    for(var p=0;p<pops;p++){
+      var idx=Math.floor(Math.random()*9), h=holes[idx];
+      if(h.dataset.on) continue;
+      var r=Math.random(); var t = r<0.64?"🦍":(r<0.84?"🕵️":"💣"); // 미끼 비율 살짝↑
+      h.textContent=t; h.dataset.on=t;
+      (function(hh,tt){ setTimeout(function(){ if(hh.dataset.on===tt){ hh.textContent=""; hh.dataset.on=""; } }, life); })(h,t);
+    }
   }
   function hitMole(h){
     if(!mole.active||!h.dataset.on) return;
@@ -1918,7 +1929,7 @@
     setTimeout(function(){ if(!h.dataset.on) h.textContent=""; },180);
   }
   function endMole(){
-    mole.active=false; clearInterval(mole.timer); clearInterval(mole.popT);
+    mole.active=false; clearInterval(mole.timer); clearTimeout(mole.popT);
     var reward=Math.floor(mole.score*Math.max(1,perTap()*0.9));
     win(reward);
     $("moleStart").style.display="flex";
@@ -1928,7 +1939,7 @@
     $("moleAgain").onclick=function(){ if(moleLeft()>0) startMole(); else $("moleModal").style.display="none"; };
     $("moleDone").onclick=function(){ $("moleModal").style.display="none"; };
   }
-  $("moleClose").onclick=function(){ mole.active=false; clearInterval(mole.timer); clearInterval(mole.popT); $("moleModal").style.display="none"; };
+  $("moleClose").onclick=function(){ mole.active=false; clearInterval(mole.timer); clearTimeout(mole.popT); $("moleModal").style.display="none"; };
 
   // ===== 🧠 콩즈 기억력 (사이먼) =====
   var SIMON_C=[["🟥","#e5484d"],["🟩","#4ade80"],["🟦","#3a7bd5"],["🟨","#fbbf24"]];
@@ -1943,7 +1954,7 @@
     $("simonGo").style.display=""; $("simonGo").textContent="시작! ("+simonLeft()+"판 남음)";
     $("simonGo").onclick=startSimon;
   };
-  function flashPad(i,cb){ var d=simon.pads[i]; d.style.opacity="1"; beep(300+i*140,0.16); setTimeout(function(){ d.style.opacity=".4"; if(cb)cb(); },320); }
+  function flashPad(i,cb){ var d=simon.pads[i]; d.style.opacity="1"; var dur=Math.max(150, 330-(simon.round||0)*13); beep(300+i*140,0.13); setTimeout(function(){ d.style.opacity=".4"; if(cb)cb(); },dur); } // 라운드↑ → 재생 빨라짐(암기 빡세게)
   function startSimon(){
     mgRoll(); if(simonLeft()<=0){ $("simonModal").style.display="none"; return; }
     S.simonN=(S.simonN||0)+1; refreshMgLeft();
@@ -1955,7 +1966,7 @@
     simon.seq.push(Math.floor(Math.random()*4));
     $("simonMsg").textContent="라운드 "+simon.round+" — 잘 보세요 👀";
     var k=0;
-    function play(){ if(k>=simon.seq.length){ simon.busy=false; $("simonMsg").textContent="순서대로 눌러보세요! ("+simon.seq.length+"개)"; return; } flashPad(simon.seq[k],function(){ k++; setTimeout(play,180); }); }
+    function play(){ if(k>=simon.seq.length){ simon.busy=false; $("simonMsg").textContent="순서대로 눌러보세요! ("+simon.seq.length+"개)"; return; } flashPad(simon.seq[k],function(){ k++; setTimeout(play,Math.max(80,180-(simon.round||0)*7)); }); }
     setTimeout(play,600);
   }
   function padPress(i){
@@ -2900,7 +2911,7 @@
   function rnLoop(){
     if(!rn.active) return;
     var cv=$("rnCanvas"),ctx=cv.getContext("2d"),W=cv.width,H=cv.height; rn.t++;
-    rn.spd=Math.min(11,5+rn.dist*0.006);
+    rn.spd=Math.min(16,5.5+rn.dist*0.009); // 난이도↑: 상한 11→16, 램프 가파르게(장기전 진짜 어렵게)
     rn.dist+=rn.spd*0.05;
     var grad=ctx.createLinearGradient(0,0,0,H); grad.addColorStop(0,"#241a55"); grad.addColorStop(1,"#0e1226"); ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
     ctx.fillStyle="rgba(255,255,255,.5)"; rn.stars.forEach(function(s){ s.x-=s.s; if(s.x<0){s.x=W;s.y=Math.random()*H*0.6;} ctx.fillRect(s.x,s.y,1.5,1.5); });
