@@ -582,10 +582,9 @@ async function restoreFromSheet() {
 // (복원 완료 후 서버 오픈 — 파일 하단 server.listen 참고)
 
 // 등급 임계값(누적 수익) / 등급 달성 포인트 보상 — 클라이언트와 동일해야 함 (24단계)
-const STAGE_THRESHOLDS = [0,0,500,2500,12500,62500,312500,1562500,7812500,39062500,195312500,976562500,4882812500,24414062500,122070312500,610351562500,3051757812500,15258789062500,76293945312500,381469726562500,1907348632812500,9536743164062500,47683715820312496,238418579101562496,1192092895507812352,5960464477539061760,29802322387695308800,149011611938476556288,745058059692382748672,3725290298461913612288,18626451492309567537152];
-const CITY_DIFF = 10; // 펑키시티 난이도 배율 — 클라(index.html)와 반드시 동일해야 함
-for (let _cd = 0; _cd < STAGE_THRESHOLDS.length; _cd++) STAGE_THRESHOLDS[_cd] *= CITY_DIFF;
-const STAGE_REWARDS =    [0,0,10,18,26,34,42,50,58,66,74,82,90,98,106,114,122,130,138,146,154,162,170,178,186,194,202,210,218,226,234];
+const CITY_DIFF = 10; // 펑키시티 난이도 배율 — 클라(index.html)와 동일해야 함
+const STAGE_THRESHOLDS = [0, 0]; for (let _s = 2; _s <= 50; _s++) STAGE_THRESHOLDS[_s] = Math.round(500 * Math.pow(2.9, _s - 2) * CITY_DIFF);
+const STAGE_REWARDS = [0, 0]; for (let _r = 2; _r <= 50; _r++) STAGE_REWARDS[_r] = 10 + (_r - 2) * 8;
 const DAILY_COLLECT_CAP = 100; // 일일 수금 상한 (포인트)
 
 function todayStr() {
@@ -742,7 +741,7 @@ app.post("/api/idle/save", (req, res) => {
   // 게임 세이브 필드만 갱신 (인증·저축·로또·기기 필드는 절대 클라 세이브로 덮어쓰지 않음)
   const GAME_FIELDS = ["money", "lifetime", "stage", "levels", "souls", "avatarId", "lastSeen",
                        "bnDate", "bnCount", "mgDate", "moleN", "simonN",
-                       "szMeta", "szBest", "szN", "szRun", "tapN"];
+                       "szMeta", "szBest", "szN", "szRun", "tapN", "tapLv", "bothLv"];
   const p = db.players[name] || (db.players[name] = {});
   for (const f of GAME_FIELDS) if (f in save) p[f] = save[f];
   // rewardedStage/lastCollectDate 는 서버가 관리(중복 보상·수금 방지) → 클라값 무시
@@ -1293,7 +1292,7 @@ app.get("/api/admin/set", (req, res) => {
   const p = db.players[name];
   const out = { ok: true, name };
   const st = parseInt(req.query.stage, 10);
-  if (st >= 1 && st <= 30) {
+  if (st >= 1 && st <= 50) {
     p.stage = st;
     if (p.save && Array.isArray(p.save.levels)) { /* 클라 세이브 구조 대비 */ }
     out.stage = st;
@@ -1448,7 +1447,7 @@ app.get("/api/admin/reset", (req, res) => {
   targets.forEach((name) => {
     const p = db.players[name]; if (!p) return;
     Object.assign(p, GAME);
-    p.levels = null; // 클라가 fresh 세이브로 재초기화하도록
+    p.levels = null; p.tapLv = null; p.bothLv = null; // 클라가 fresh 세이브로 재초기화
     if (db.fgWins && db.fgWins[name] != null) delete db.fgWins[name];
     n++;
   });

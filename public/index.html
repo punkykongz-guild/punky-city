@@ -249,6 +249,7 @@
   <div id="moneyWrap">
     <div id="money">₭ 0</div>
     <div id="income">초당 <b id="perSec">0</b> · 탭 <b id="perTap">1</b></div>
+    <button id="boostBtn" style="margin:4px auto;display:block;border:none;border-radius:10px;padding:7px 14px;font-weight:800;font-size:12px;background:#7a3ea8;color:#fff">⚡ 탭부스터</button>
     <button id="avatarBtn">🖼 콩즈 선택</button>
   </div>
 
@@ -904,13 +905,31 @@
     {nm:"은하 재벌 🌌", scene:"은하 본사 — \"별들이 곧 내 포트폴리오.\""},
     {nm:"차원 개척자 🌀", scene:"PKC 포털 — \"다른 차원에도 지점을 냈다.\""},
     {nm:"펑키버스 황제 🌠", scene:"펑키버스 궁정 — \"가상과 현실, 모두 내 것.\""},
-    {nm:"펑키킹 ✨", scene:"황금 펑키버스 궁전 — \"전설이 되었다.\""}
+    {nm:"펑키킹 ✨", scene:"황금 펑키버스 궁전 — \"전설이 되었다.\""},
+    {nm:"성운 군주 🌟", scene:"성운 왕좌 — \"별자리 하나가 내 사인이다.\""},
+    {nm:"블랙홀 은행장 🕳️", scene:"사건의 지평선 지점 — \"여긴 인출은 되고 반환은 안 됩니다.\""},
+    {nm:"퀘이사 재벌 💫", scene:"퀘이사 본사 — \"빛보다 빠른 배당을 드리죠.\""},
+    {nm:"초신성 대부 🌠", scene:"초신성 홀 — \"터질 땐 화끈하게 터진다.\""},
+    {nm:"은하핵 총재 🌌", scene:"은하 중심 — \"모든 별이 내 궤도를 돈다.\""},
+    {nm:"국부은하군 의장 🪐", scene:"국부은하군 의사당 — \"이웃 은하도 우리 지점이다.\""},
+    {nm:"우주끈 설계자 🧵", scene:"우주끈 공방 — \"현실은 내가 짜는 직물이다.\""},
+    {nm:"암흑물질 소유주 🌑", scene:"암흑물질 금고 — \"안 보이는 게 제일 비쌉니다.\""},
+    {nm:"다중우주 총수 🫧", scene:"멀티버스 라운지 — \"실패한 나조차 어딘가선 성공했다.\""},
+    {nm:"차원 건축왕 🏗️", scene:"차원 공사장 — \"11차원까지 분양 완료.\""},
+    {nm:"시간여행 큰손 ⏳", scene:"시간 거래소 — \"어제 주식을 오늘 샀다.\""},
+    {nm:"인과율 회장 🎴", scene:"인과 법정 — \"원인도 결과도 내가 정한다.\""},
+    {nm:"확률 지배자 🎲", scene:"확률의 방 — \"내 주사위는 항상 6이 나온다.\""},
+    {nm:"엔트로피 관리자 🌀", scene:"열역학 관제실 — \"우주의 청소는 내 담당이다.\""},
+    {nm:"진공 창조주 🕯️", scene:"무(無)의 회의실 — \"없음에서 있음을 만든다.\""},
+    {nm:"빅뱅 투자자 💥", scene:"태초의 라운지 — \"이 우주, 시드 투자자가 나야.\""},
+    {nm:"신화의 존재 🐉", scene:"신화의 전당 — \"이야기가 곧 나의 자산이다.\""},
+    {nm:"개념 그 자체 ♾️", scene:"개념의 정원 — \"'부(富)'라는 단어가 나를 가리킨다.\""},
+    {nm:"펑키 갓 🌈", scene:"무지개 옥좌 — \"콩달러는 나를 통해 존재한다.\""},
+    {nm:"펑키버스 창조신 👑✨", scene:"창세의 옥좌 — \"태초에 콩즈가 있었다. 그게 나다.\""}
   ];
   // 신분상승 비용 — 단계당 약 x3.2, 24단계 (장기 생태계용, 서버와 동일해야 함)
-  var STAGE_THRESHOLDS = [0,0,500,2500,12500,62500,312500,1562500,7812500,39062500,195312500,976562500,4882812500,24414062500,122070312500,610351562500,3051757812500,15258789062500,76293945312500,381469726562500,1907348632812500,9536743164062500,47683715820312496,238418579101562496,1192092895507812352,5960464477539061760,29802322387695308800,149011611938476556288,745058059692382748672,3725290298461913612288,18626451492309567537152];
-  var CITY_DIFF=10; // 펑키시티 난이도 배율 (사업원가·단계 임계값 ×10) — 미니게임과 무관
-  for(var _cd=0;_cd<STAGE_THRESHOLDS.length;_cd++) STAGE_THRESHOLDS[_cd]*=CITY_DIFF;
-  var TAP_LATE=2; // 후반 탭 가중치: 탭 수입 = perTap × (1 + (단계-1)×TAP_LATE) — 부지런한 탭러 보상, 미니게임 보상엔 영향 없음
+  var CITY_DIFF=10; // 펑키시티 난이도 배율
+  var STAGE_THRESHOLDS=[0,0]; for(var _st=2;_st<=50;_st++) STAGE_THRESHOLDS[_st]=Math.round(500*Math.pow(2.9,_st-2)*CITY_DIFF);
 
   // 등급별 폴백 장면 (배경 이미지 로드 실패 시): 하늘/바닥/소품/스카이라인/파티클
   var SCENES = [
@@ -1133,6 +1152,7 @@
     {ico:"🌀", nm:"차원 포털", cost:14e20, stage:28}
   ];
   var COST_MULT = 1.15;
+  BIZ.forEach(function(b,i){ b.stage=1+Math.round(i*47/(BIZ.length-1)); }); // 24사업 → 50단계 재분배
 
   // ===== 상태 =====
   var S = null; // save
@@ -1141,12 +1161,15 @@
   function newSave(){
     return { money:0, lifetime:0, stage:1, levels:BIZ.map(function(){return 0;}),
       souls:0, rewardedStage:1, lastSeen:Date.now(), lastCollectDate:"", avatarId:0,
-      szBest:0, szMeta:{}, szRun:null };
+      szBest:0, szMeta:{}, szRun:null,
+      tapLv:BIZ.map(function(){return 0;}), bothLv:BIZ.map(function(){return 0;}) };
   }
 
   // ===== 계산 =====
+  function idleLvOf(i){ return (S.levels[i]||0)+((S.bothLv&&S.bothLv[i])||0); }
+  function tapLvOf(i){ return ((S.tapLv&&S.tapLv[i])||0)+((S.bothLv&&S.bothLv[i])||0); }
   function bizIncome(i){
-    var lv=S.levels[i]; if(lv<=0) return 0;
+    var lv=idleLvOf(i); if(lv<=0) return 0;
     // 본전 회수: 첫 사업 4분 → 후반 사업 ~30분 (오래 가는 생태계)
     var payback = 240 * (1 + i*1.2); // 후반 사업 회수기간 대폭 상향 (장기 밸런스)
     var base = BIZ[i].cost/payback;
@@ -1166,7 +1189,22 @@
     var base = 1 + (S.stage-1)*0.4 + lvSum*0.015 + perSec()*0.05; // 등급·사업 레벨이 오를수록 탭도 강해짐 (완만하게)
     return base*(Date.now()<tapX2Until?2:1);
   }
-  function bizCost(i){ return BIZ[i].cost*CITY_DIFF*Math.pow(COST_MULT, S.levels[i]); }
+  function bizCostA(i){ return BIZ[i].cost*CITY_DIFF*Math.pow(COST_MULT, idleLvOf(i)); }
+  function bizCostT(i){ return BIZ[i].cost*CITY_DIFF*Math.pow(COST_MULT, tapLvOf(i))*0.8; }
+  function bizCostB(i){ return BIZ[i].cost*CITY_DIFF*Math.pow(COST_MULT, Math.max(idleLvOf(i),tapLvOf(i)))*2.2; }
+  function bizCost(i){ return bizCostA(i); } // 호환 별칭
+  var TAP_TICK=8; // 탭강화 계수 (시뮬 확정: 능동 ~10개월)
+  var tapBoostUntil=0, tapBoostMul=1; // 상점 부스터
+  function tapPool(){ var s=0; for(var i=0;i<BIZ.length;i++) s+=(BIZ[i].cost/(240*(1+i*1.2)))*tapLvOf(i); return s; }
+  function cityTapGain(){ return (1+(S.stage-1)*0.4+tapPool()*TAP_TICK)*totalMult()*(Date.now()<tapBoostUntil?tapBoostMul:1); }
+  function boosterCost(){ return Math.max(1000, Math.floor(perSec()*300)); } // ≈5분치 수입 (₭ 싱크)
+  (function(){ var bb=$("boostBtn"); if(!bb) return; bb.onclick=function(){
+    if(!PLAY_OK){ needWallet(); return; }
+    if(Date.now()<tapBoostUntil){ toast("이미 부스터 발동 중! ("+Math.ceil((tapBoostUntil-Date.now())/1000)+"초 남음)"); return; }
+    var c=boosterCost(); if(S.money<c){ toast("₭ 부족 — ₭"+fmt(c)+" 필요"); beep(180,0.1); return; }
+    S.money-=c; lottoContribute(c); tapBoostMul=2+Math.floor(Math.random()*9); tapBoostUntil=Date.now()+60000;
+    toast("⚡ 탭 ×"+tapBoostMul+" 60초! 지금 폭탭하세요!"); beep(1100,0.12); vib([20,20]); renderFast(); saveNow();
+  }; })();
   function calcStage(){
     var st=1;
     for(var i=2;i<STAGE_THRESHOLDS.length;i++) if(S.lifetime>=STAGE_THRESHOLDS[i]) st=i;
@@ -1204,18 +1242,21 @@
       $("money").style.fontSize=fs+"px";
     }
     $("perSec").textContent=fmt(perSec());
-    $("perTap").textContent=fmt(perTap());
+    $("perTap").textContent=fmt(cityTapGain());
+    var _bb=$("boostBtn"); if(_bb){ if(Date.now()<tapBoostUntil){ _bb.textContent="⚡×"+tapBoostMul+" "+Math.ceil((tapBoostUntil-Date.now())/1000)+"s"; _bb.style.background="#ffcf4a"; _bb.style.color="#201800"; } else { _bb.textContent="⚡ 탭부스터 ₭"+fmt(boosterCost()); _bb.style.background="#7a3ea8"; _bb.style.color="#fff"; } }
     for(var i=0;i<BIZ.length;i++){
-      var c=bizCost(i);
-      bizBtns[i].textContent="₭ "+fmt(c);
-      bizBtns[i].disabled=(S.stage<BIZ[i].stage)||S.money<c;
-      $("lv"+i).textContent="Lv."+S.levels[i];
-      if(S.stage>=BIZ[i].stage){
+      var locked=(S.stage<BIZ[i].stage);
+      var cA=bizCostA(i),cT=bizCostT(i),cB=bizCostB(i);
+      var eA=$("cA"+i),eT=$("cT"+i),eB=$("cB"+i); if(!eA) continue;
+      eA.textContent="₭"+fmt(cA); eT.textContent="₭"+fmt(cT); eB.textContent="₭"+fmt(cB);
+      var bA=$("buyA"+i),bT=$("buyT"+i),bB=$("buyB"+i);
+      bA.disabled=locked||S.money<cA; bT.disabled=locked||S.money<cT; bB.disabled=locked||S.money<cB;
+      bA.style.opacity=bA.disabled?0.45:1; bT.style.opacity=bT.disabled?0.45:1; bB.style.opacity=bB.disabled?0.45:1;
+      $("lvA"+i).textContent="🏭"+(S.levels[i]||0); $("lvT"+i).textContent="👆"+((S.tapLv&&S.tapLv[i])||0); $("lvB"+i).textContent="⭐"+((S.bothLv&&S.bothLv[i])||0);
+      if(!locked){
         var curInc=bizIncome(i)*totalMult();
-        S.levels[i]++; var nextInc=bizIncome(i)*totalMult(); S.levels[i]--;
-        var dSec=nextInc-curInc;
-        $("st"+i).innerHTML="초당 "+fmt(curInc)+
-          ' <span style="font-size:10px;color:#8fd18f">▲구매 시 +'+fmt(dSec)+'/초 · +'+fmt(dSec*0.05+0.015)+'/탭</span>';
+        var tapC=(BIZ[i].cost/(240*(1+i*1.2)))*tapLvOf(i)*TAP_TICK*totalMult();
+        $("st"+i).innerHTML='초당 <b>'+fmt(curInc)+'</b> · 탭기여 <b>'+fmt(tapC)+'</b>';
       }
     }
     updateStageBtn();
@@ -1234,22 +1275,33 @@
   }
 
   var bizBtns=[];
+  function bizBuy(i,kind){
+    var b=BIZ[i]; if(!PLAY_OK){ needWallet(); return; } if(S.stage<b.stage) return;
+    if(!S.tapLv) S.tapLv=BIZ.map(function(){return 0;}); if(!S.bothLv) S.bothLv=BIZ.map(function(){return 0;});
+    var c = kind==='A'?bizCostA(i):kind==='T'?bizCostT(i):bizCostB(i);
+    if(S.money<c) return;
+    S.money-=c; lottoContribute(c);
+    if(kind==='A') S.levels[i]++; else if(kind==='T') S.tapLv[i]++; else S.bothLv[i]++;
+    beep(700+Math.random()*200,0.05); renderFast();
+  }
   function renderBizInit(){
     var el=$("bizList"); el.innerHTML=""; bizBtns=[];
     BIZ.forEach(function(b,i){
       var row=document.createElement("div"); row.className="biz"; row.id="biz"+i;
-      row.innerHTML='<div class="ico">'+b.ico+'</div><div class="info"><div class="nm">'+b.nm+
-        '<span class="lvchip" id="lv'+i+'">Lv.0</span></div><div class="st" id="st'+i+'"></div></div>'+
-        '<button id="buy'+i+'"></button>';
+      row.innerHTML='<div class="ico">'+b.ico+'</div>'+
+        '<div class="info" style="flex:1;min-width:0">'+
+          '<div class="nm">'+b.nm+' <span class="lvchip" id="lvA'+i+'">🏭0</span> <span class="lvchip" id="lvT'+i+'">👆0</span> <span class="lvchip" id="lvB'+i+'">⭐0</span></div>'+
+          '<div class="st" id="st'+i+'"></div>'+
+          '<div style="display:flex;gap:5px;margin-top:6px">'+
+            '<button id="buyA'+i+'" style="flex:1;font-size:11px;padding:6px 2px;border:none;border-radius:8px;background:#2e7d46;color:#fff;line-height:1.25;font-weight:700">🏭 자동<br><span id="cA'+i+'" style="font-size:10px;font-weight:400"></span></button>'+
+            '<button id="buyT'+i+'" style="flex:1;font-size:11px;padding:6px 2px;border:none;border-radius:8px;background:#a06a2e;color:#fff;line-height:1.25;font-weight:700">👆 탭<br><span id="cT'+i+'" style="font-size:10px;font-weight:400"></span></button>'+
+            '<button id="buyB'+i+'" style="flex:1;font-size:11px;padding:6px 2px;border:none;border-radius:8px;background:#7a3ea8;color:#fff;line-height:1.25;font-weight:700">⭐ 종합<br><span id="cB'+i+'" style="font-size:10px;font-weight:400"></span></button>'+
+          '</div>'+
+        '</div>';
       el.appendChild(row);
-      var btn=row.querySelector("button");
-      btn.onclick=function(){
-        var c=bizCost(i);
-        if(!PLAY_OK){ needWallet(); return; }
-        if(S.stage<b.stage) return;
-        if(S.money>=c){ S.money-=c; S.levels[i]++; lottoContribute(c); renderFast(); }
-      };
-      bizBtns.push(btn);
+      $("buyA"+i).onclick=(function(i){return function(){ bizBuy(i,'A'); };})(i);
+      $("buyT"+i).onclick=(function(i){return function(){ bizBuy(i,'T'); };})(i);
+      $("buyB"+i).onclick=(function(i){return function(){ bizBuy(i,'B'); };})(i);
     });
   }
   function renderBiz(){
@@ -1308,7 +1360,7 @@
     _tapTs.push(_gap); if(_tapTs.length>16) _tapTs.shift();
     if(_tapTs.length>=16){ var _m=0,_i; for(_i=0;_i<_tapTs.length;_i++)_m+=_tapTs[_i]; _m/=_tapTs.length; var _vr=0; for(_i=0;_i<_tapTs.length;_i++){ var _d=_tapTs[_i]-_m; _vr+=_d*_d; } if(Math.sqrt(_vr/_tapTs.length)<3 && _m<170) return; } // ③ 완벽히 일정한 간격 = 오토클리커 무효
     S.tapN=(S.tapN||0)+1;
-    var v=perTap()*(1+(S.stage-1)*TAP_LATE); S.money+=v; S.lifetime+=v;
+    var v=cityTapGain(); S.money+=v; S.lifetime+=v;
     beep(600+Math.random()*300,0.06); vib(12);
     if(Math.random()<0.5) showBubble(); // 절반 확률로 캐릭터 대사
     var hero=$("heroImg");
@@ -1333,7 +1385,7 @@
   });
 
   // ===== 신분 상승 (돈 주고 직접 구매 — 거지키우기 방식) =====
-  var MAX_STAGE = 30;
+  var MAX_STAGE = 50;
   function stageUpCost(){ return S.stage<MAX_STAGE ? STAGE_THRESHOLDS[S.stage+1] : null; }
   function updateStageBtn(){
     var btn=$("stageUpBtn");
@@ -3669,6 +3721,8 @@
       var loaded=res[1]&&res[1].save;
       S=(loaded&&Array.isArray(loaded.levels))?loaded:newSave(); // 게임 데이터 없는 껍데기 세이브 방어
       if(S.levels.length<BIZ.length){ while(S.levels.length<BIZ.length)S.levels.push(0); }
+      if(!Array.isArray(S.tapLv)) S.tapLv=BIZ.map(function(){return 0;}); while(S.tapLv.length<BIZ.length)S.tapLv.push(0);
+      if(!Array.isArray(S.bothLv)) S.bothLv=BIZ.map(function(){return 0;}); while(S.bothLv.length<BIZ.length)S.bothLv.push(0);
       applyProfile(res[0]||profile); // S 세팅 후에 아바타 적용 (avatarId 참조)
       // 오프라인 보상 (최대 8시간)
       if(loaded&&S.lastSeen){
