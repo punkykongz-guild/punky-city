@@ -630,6 +630,7 @@ async function getOwnedTokenIds(wallet) {
 
 // 기기 잠금: 계정(이름)은 최초 접속 기기에 묶임 — 남의 링크로 플레이 방지
 const LINK_SECRET = process.env.LINK_SECRET || ""; // 카톡 봇 링크 서명 비밀키
+const ADMIN_NAMES = ["김동건"]; // 게임 내 '전체 초기화' 버튼 허용 관리자 계정 (본인 세션 검증)
 function validSig(name, ph, sig) {
   if (!LINK_SECRET) return true; // 미설정 시 기존 동작
   if (!sig) return false;
@@ -1455,6 +1456,23 @@ app.get("/api/admin/reset", (req, res) => {
   if (all) { db.lottoPot = 0; db.lottoDraw = null; db.tower = { bricks: 0 }; }
   markDirty(); backupDirty = true; backupToSheet(); // 시트 백업 즉시 갱신 (재시작 시 옛 데이터 복원 방지)
   res.json({ ok: true, reset: n, globals: all, kept: "pinHash·sess·ph·tokenIds·wallet(지갑등록)" });
+});
+// 관리자 계정 세션으로 전체 초기화 (게임 내 버튼용 — LINK_SECRET 불필요, 본인 세션 검증)
+app.post("/api/admin/selfreset", (req, res) => {
+  if (!checkToken(req, res)) return;
+  const name = String((req.body.name || "")).trim().normalize("NFC");
+  if (!checkDev(name, String(req.body.key || ""), String(req.body.sig || ""), String(req.body.ph || ""), String(req.body.ses || ""))) return res.json({ ok: false, error: "잠금(세션)" });
+  if (ADMIN_NAMES.indexOf(name) < 0) return res.json({ ok: false, error: "관리자 계정이 아닙니다" });
+  const GAME = { money: 0, lifetime: 0, stage: 1, souls: 0, rewardedStage: 1, lastCollectDate: "", avatarId: 0,
+                 szMeta: {}, szBest: 0, szN: 0, szRun: null,
+                 moleN: 0, simonN: 0, skyN: 0, k2N: 0, k3N: 0, rnN: 0, tdN: 0, tapN: 0, bnDate: "", bnCount: 0, mgDate: "",
+                 bank: null, lottoMine: 0, lottoWeek: 0 };
+  let n = 0;
+  for (const nm of Object.keys(db.players)) { const p = db.players[nm]; if (!p) continue; Object.assign(p, GAME); p.levels = null; p.tapLv = null; p.bothLv = null; if (db.fgWins && db.fgWins[nm] != null) delete db.fgWins[nm]; n++; }
+  db.lottoPot = 0; db.lottoDraw = null; db.tower = { bricks: 0 };
+  markDirty(); backupDirty = true; backupToSheet();
+  console.log(`[selfreset] ${name} 님이 전체 초기화 실행 → ${n}명`);
+  res.json({ ok: true, reset: n });
 });
 app.get("/api/admin/inspect", async (req, res) => {
   if (!LINK_SECRET || String(req.query.secret || "") !== LINK_SECRET) return res.status(403).json({ ok: false });

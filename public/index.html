@@ -290,6 +290,7 @@
       <label style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px">🔊 효과음 <input type="checkbox" id="optSfx"></label>
       <label style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px">📳 진동 <input type="checkbox" id="optVib"></label>
       <button class="bigBtn" id="acctReset" style="margin-top:12px;background:#5a5a72">🔄 계정 전환 (이 폰의 기억 지우기)</button>
+      <button class="bigBtn" id="adminResetBtn" style="margin-top:8px;background:#a02020;display:none">🛠 전체 초기화 (관리자)</button>
       <button class="bigBtn" id="setClose" style="margin-top:8px">닫기</button>
     </div>
   </div>
@@ -3596,9 +3597,19 @@
 
   // ===== 설정 =====
   $("optBgm").checked=OPT.bgm; $("optSfx").checked=OPT.sfx; $("optVib").checked=OPT.vib;
-  $("setBtn").onclick=function(){ $("setModal").style.display="flex"; };
+  $("setBtn").onclick=function(){ var ar=$("adminResetBtn"); if(ar) ar.style.display=(NAME==="김동건")?"":"none"; $("setModal").style.display="flex"; };
   $("setClose").onclick=function(){ $("setModal").style.display="none"; };
   $("acctReset").onclick=function(){ if(confirm("이 폰에 저장된 계정/로그인 정보를 지울까요? 다음 접속 때 다시 로그인합니다.")){ localStorage.removeItem("pkc_id"); localStorage.removeItem("pkc_login"); location.href=location.pathname; } };
+  $("adminResetBtn").onclick=function(){
+    if(NAME!=="김동건"){ toast("관리자 전용"); return; }
+    if(!confirm("⚠️ 전체 초기화\n모든 멤버의 ₭·단계·사업·저축·로또를 0으로 되돌립니다.\n(로그인·지갑등록·출석점수는 유지)\n\n정말 진행할까요?")) return;
+    if(!confirm("되돌릴 수 없습니다. 마지막 확인 — 정말 전체 초기화할까요?")) return;
+    fetch(API("/api/admin/selfreset"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH,ses:SES})})
+      .then(function(r){return r.json();})
+      .then(function(j){ if(j.ok){ alert("✅ 전체 초기화 완료!\n"+j.reset+"명 리셋됨. 새 경제로 새 출발!\n\n확인 누르면 새로고침합니다."); location.reload(); }
+        else alert("실패: "+(j.error||"권한 없음")); })
+      .catch(function(){ alert("서버 연결 실패 — 잠시 후 다시"); });
+  };
   $("optBgm").onchange=function(){ OPT.bgm=this.checked; saveOpt(); this.checked?startBgm():stopBgm(); };
   $("optSfx").onchange=function(){ OPT.sfx=this.checked; saveOpt(); beep(700,0.08); };
   $("optVib").onchange=function(){ OPT.vib=this.checked; saveOpt(); vib(30); };
