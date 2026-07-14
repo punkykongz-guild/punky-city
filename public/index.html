@@ -487,10 +487,39 @@
     <h2>🥊 콩즈 파이터</h2>
     <div class="muted" style="font-size:12.5px;margin-bottom:14px;max-width:300px">대전 방식을 골라요. 실시간은 다른 길드원과 붙어요!</div>
     <button class="bigBtn" id="fgMenuAi" style="max-width:300px">🤖 AI 대전 <span style="font-size:11px">(₭ 배팅 · ×2)</span></button>
-    <button class="bigBtn" id="fgMenuPvp" style="max-width:300px;margin-top:8px;background:#b91c1c">⚔️ 실시간 대전 <span style="font-size:11px">(승리 시 랭킹+P)</span></button>
+    <button class="bigBtn" id="fgMenuPvp" style="max-width:300px;margin-top:8px;background:#b91c1c">⚔️ 랜덤 매칭 <span style="font-size:11px">(접속자 자동 매칭)</span></button>
+    <button class="bigBtn" id="fgMenuLobby" style="max-width:300px;margin-top:8px;background:#7a3ea8">🏛 대기실 — 초대해서 붙기 <span style="font-size:11px;background:#ffd54a;color:#201800;border-radius:4px;padding:0 4px">NEW</span></button>
     <button class="bigBtn" id="fgMenuRank" style="max-width:300px;margin-top:8px;background:#5a5a72">🏆 파이터 랭킹</button>
     <button class="bigBtn" id="fgMenuClose" style="max-width:300px;margin-top:8px;background:#3a3a52">닫기</button>
     <div id="fgRankBox" style="display:none;margin-top:14px;max-width:300px;width:100%;background:rgba(255,255,255,.06);border-radius:10px;padding:12px 14px;font-size:13px;text-align:left"></div>
+  </div>
+
+  <!-- 🏛 대기실 (초대/호출) -->
+  <div id="fgLobby" style="position:fixed;inset:0;background:rgba(8,4,20,.96);display:none;z-index:86;flex-direction:column;padding:16px 14px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <h2 style="margin:0;flex:1">🏛 대기실</h2>
+      <button class="bigBtn" id="fgLobbyRefresh" style="width:auto;margin:0;padding:8px 12px;font-size:15px;background:#3a3a52">↻</button>
+      <button class="bigBtn" id="fgLobbyClose" style="width:auto;margin:0;padding:8px 12px;font-size:13px;background:#5a5a72">닫기</button>
+    </div>
+    <div class="muted" style="font-size:12px;margin-bottom:8px">방식을 고르고 접속 중인 길드원을 <b>초대</b>하세요. 상대가 수락하면 바로 시작! ⚔️</div>
+    <div id="fgModeSel" style="display:flex;gap:6px;margin-bottom:10px">
+      <button class="fgMode" data-mode="topdown" style="flex:1;padding:9px 3px;border-radius:9px;border:1px solid #4a3a6a;background:#7a3ea8;color:#fff;font-size:12px;font-weight:700">🎮 탑다운</button>
+      <button class="fgMode" data-mode="side" style="flex:1;padding:9px 3px;border-radius:9px;border:1px solid #4a3a6a;background:#241a3a;color:#b9a7d9;font-size:12px;font-weight:700">🥋 횡스크롤</button>
+      <button class="fgMode" data-mode="realtime" style="flex:1;padding:9px 3px;border-radius:9px;border:1px solid #4a3a6a;background:#241a3a;color:#b9a7d9;font-size:12px;font-weight:700">⚡ 실시간</button>
+    </div>
+    <div id="fgLobbyList" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
+  </div>
+
+  <!-- 걸려온 호출 -->
+  <div id="fgCall" style="position:fixed;inset:0;background:rgba(8,4,20,.93);display:none;z-index:92;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center">
+    <div style="font-size:58px;margin-bottom:6px;animation:wbob .5s ease-in-out infinite alternate">⚔️</div>
+    <h2 style="margin:0 0 6px">대결 신청!</h2>
+    <div id="fgCallBody" class="muted" style="font-size:15px;margin-bottom:6px"></div>
+    <div id="fgCallTimer" style="font-size:13px;color:#ffb24a;margin-bottom:16px"></div>
+    <div style="display:flex;gap:12px">
+      <button class="bigBtn" id="fgCallAccept" style="width:auto;padding:14px 28px;background:#22c55e">✅ 수락</button>
+      <button class="bigBtn" id="fgCallDecline" style="width:auto;padding:14px 28px;background:#7a3030">✖ 거절</button>
+    </div>
   </div>
 
   <div id="fgModal" style="position:fixed;inset:0;background:linear-gradient(180deg,#2a1230,#0e0616);display:none;z-index:84;flex-direction:column;padding:14px">
@@ -2155,6 +2184,7 @@
     fgPvpButtons(false);
   }
   function fgPvpMatched(d){
+    LB.open=false; $("fgLobby").style.display="none"; $("fgCall").style.display="none"; clearInterval(LB.callTimer); // 대기실 초대 매칭 → 파이트 진입
     fg.mode="pvp"; fg.over=false; fg.picked=false; fg.myG=0;
     fgSetImg($("fgMeImg"),fg.myImgId||1); fgSetImg($("fgAiImg"),d.oppId||1);
     $("fgMeName").textContent=NAME||"나"; $("fgAiName").textContent=d.opp;
@@ -2202,6 +2232,83 @@
       box.innerHTML=h;
     }).catch(function(){ box.innerHTML="랭킹 로드 실패"; });
   }
+
+  // ===== 🏛 대기실 (초대/호출) =====
+  var LB={ mode:"topdown", open:false, list:[], call:null, callTimer:0 };
+  var MODE_NM={ topdown:"🎮 탑다운 난투", side:"🥋 횡스크롤 격투", realtime:"⚡ 실시간 대전" };
+  function lbPng(id){ return fgKimg(id).replace(".jpg",".png"); }
+  function lbRegister(){ // fgSock 준비 후 로비 이벤트 1회 바인딩
+    if(!fgSock || fgSock._lbBound) return; fgSock._lbBound=true;
+    fgSock.on("lobby:list", function(list){ LB.list=list||[]; if(LB.open) lbRender(); });
+    fgSock.on("lobby:error", function(d){ toast((d&&d.message)||"대기실 오류"); });
+    fgSock.on("fight:invite:sent", function(d){ toast("📨 "+((d&&d.target)||"")+"님에게 초대 전송 — 수락 대기중..."); });
+    fgSock.on("fight:invite:fail", function(d){ toast("초대 실패: "+((d&&d.reason)||"불가")+((d&&d.target)?" ("+d.target+")":"")); });
+    fgSock.on("fight:declined", function(d){ toast("😢 "+((d&&d.by)||"상대")+"님이 거절했어요."); });
+    fgSock.on("fight:invited", function(d){ lbShowCall(d); });
+  }
+  function lbOpen(){
+    if(!PLAY_OK){ needWallet(); return; }
+    fgConnect(function(){
+      lbRegister();
+      var myId=(typeof currentAvatarId==="function"&&currentAvatarId())||(profile.tokenIds&&profile.tokenIds[0])||1;
+      fg.myImgId=myId; // 매칭 시 내 아바타 표시용
+      fgSock.emit("lobby:join",{name:NAME,key:DEVKEY,sig:SIG,ph:PH,ses:SES,avatarId:myId});
+      LB.open=true; $("fgLobby").style.display="flex"; lbRender();
+    });
+  }
+  function lbClose(){ LB.open=false; $("fgLobby").style.display="none"; try{ fgSock&&fgSock.emit("lobby:leave"); }catch(e){} }
+  function lbRender(){
+    var box=$("fgLobbyList"); if(!box) return;
+    var others=(LB.list||[]).filter(function(u){ return u.name!==NAME; });
+    if(!others.length){ box.innerHTML='<div class="muted" style="text-align:center;padding:34px 12px;font-size:13px;line-height:1.6">지금 대기실에 다른 길드원이 없어요.<br>친구에게 같이 접속하자고 해보세요! 🙌<br><br>나: <b>'+(NAME||"")+'</b> 접속중</div>'; return; }
+    var h="";
+    others.forEach(function(u){
+      var busy=u.busy;
+      h+='<div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.05);border-radius:12px;padding:9px 11px;margin-bottom:8px">'+
+        '<img src="'+fgKimg(u.avatarId)+'" data-png="'+lbPng(u.avatarId)+'" onerror="if(this.dataset.png){this.src=this.dataset.png;this.dataset.png=\'\';}" style="width:46px;height:46px;border-radius:10px;object-fit:cover;background:#20143a">'+
+        '<div style="flex:1;min-width:0"><div style="font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+u.name+'</div>'+
+        '<div class="muted" style="font-size:11.5px">Lv.'+(u.stage||1)+' · '+(u.wins||0)+'승'+(busy?' · <span style="color:#ff8080">대결중</span>':'')+'</div></div>'+
+        '<button class="lbInvite" data-name="'+encodeURIComponent(u.name)+'" style="border:0;border-radius:10px;padding:9px 15px;font-size:13px;font-weight:800;color:#fff;background:'+(busy?'#4a4a5e':'#22c55e')+'"'+(busy?' disabled':'')+'>'+(busy?'대결중':'초대')+'</button>'+
+      '</div>';
+    });
+    box.innerHTML=h;
+    Array.prototype.forEach.call(box.querySelectorAll('.lbInvite'),function(b){
+      if(b.disabled) return;
+      b.onclick=function(){ try{ fgSock.emit("fight:invite",{target:decodeURIComponent(b.dataset.name),mode:LB.mode}); }catch(e){} };
+    });
+  }
+  function lbShowCall(d){
+    LB.call=d;
+    $("fgCallBody").innerHTML='<b style="color:#ffd54a">'+d.from+'</b>님이<br><b>'+(MODE_NM[d.mode]||d.mode)+'</b> 대결을 신청했어요! ('+(d.fromWins||0)+'승)';
+    $("fgCall").style.display="flex";
+    var left=15; $("fgCallTimer").textContent="⏱ "+left+"초 안에 응답";
+    clearInterval(LB.callTimer);
+    LB.callTimer=setInterval(function(){ left--; if(left<=0){ clearInterval(LB.callTimer); lbDecline(); } else $("fgCallTimer").textContent="⏱ "+left+"초 안에 응답"; },1000);
+    beep(900,0.12); vib([40,40,40]);
+  }
+  function lbAccept(){
+    if(!LB.call) return; var c=LB.call;
+    clearInterval(LB.callTimer); $("fgCall").style.display="none"; LB.call=null;
+    try{ fgSock.emit("fight:accept",{from:c.from,mode:c.mode}); }catch(e){}
+    // 서버가 fight:matched 전송 → 기존 파이트 화면(fgPvpMatched)으로 진입
+  }
+  function lbDecline(){
+    if(!LB.call) return; var from=LB.call.from;
+    clearInterval(LB.callTimer); $("fgCall").style.display="none"; LB.call=null;
+    try{ fgSock.emit("fight:decline",{to:from}); }catch(e){}
+  }
+  (function(){
+    var mb=$("fgMenuLobby"); if(mb) mb.onclick=function(){ $("fgMenu").style.display="none"; lbOpen(); };
+    var lc=$("fgLobbyClose"); if(lc) lc.onclick=lbClose;
+    var lr=$("fgLobbyRefresh"); if(lr) lr.onclick=function(){ var myId=(typeof currentAvatarId==="function"&&currentAvatarId())||1; try{ fgSock&&fgSock.emit("lobby:join",{name:NAME,key:DEVKEY,sig:SIG,ph:PH,ses:SES,avatarId:myId}); }catch(e){} };
+    Array.prototype.forEach.call(document.querySelectorAll('#fgModeSel .fgMode'),function(b){
+      b.onclick=function(){ LB.mode=b.dataset.mode;
+        Array.prototype.forEach.call(document.querySelectorAll('#fgModeSel .fgMode'),function(x){ var on=(x===b); x.style.background=on?"#7a3ea8":"#241a3a"; x.style.color=on?"#fff":"#b9a7d9"; });
+      };
+    });
+    var ca=$("fgCallAccept"); if(ca) ca.onclick=lbAccept;
+    var cd=$("fgCallDecline"); if(cd) cd.onclick=lbDecline;
+  })();
 
   // ===== ✈️ 콩즈 스카이 (슈팅·스테이지·아이템·보스) =====
   var sky={active:false,score:0,lives:3,px:180,py:500,bullets:[],ebullets:[],enemies:[],items:[],stars:[],parts:[],pops:[],raf:0,lastShot:0,spawnT:0,t:0,stage:0,kills:0,quota:0,power:1,shield:0,boss:null,banner:"",bannerT:0,streak:0,mult:1,flash:0,shake:0};

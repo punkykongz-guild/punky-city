@@ -1065,6 +1065,24 @@ if (!db.fgWins) db.fgWins = {};   // name -> 누적 승수
 
 function fgDequeue(id) { const i = fgQueue.findIndex((q) => q.socket.id === id); if (i >= 0) fgQueue.splice(i, 1); }
 
+// ===== 대기실(로비) + 초대/호출 (실시간 대결 토대) =====
+const lobby = new Map();      // name -> { name, socket, avatarId, stage }
+function lobbySnapshot() {
+  return Array.from(lobby.values()).map((e) => ({
+    name: e.name, avatarId: e.avatarId || 1,
+    wins: (db.fgWins && db.fgWins[e.name]) || 0, stage: e.stage || 1,
+    busy: fgSockRoom.has(e.socket.id), // 진행 중인 매치가 있으면 대결 중
+  }));
+}
+function lobbyBroadcast() {
+  const snap = lobbySnapshot();
+  for (const e of lobby.values()) { try { e.socket.emit("lobby:list", snap); } catch (x) {} }
+}
+function lobbyRemove(socket) {
+  for (const [nm, e] of lobby) { if (e.socket.id === socket.id) { lobby.delete(nm); return nm; } }
+  return null;
+}
+
 function fgEnd(match, winnerIdx, reason) {
   if (match.over) return;
   match.over = true;
@@ -1083,6 +1101,7 @@ function fgEnd(match, winnerIdx, reason) {
     }
     try { p.socket.emit("fight:end", { win, tie: winnerIdx < 0, reward, wins, reason: reason || "" }); } catch (e) {}
   });
+  try { lobbyBroadcast(); } catch (e) {} // 매치 종료 → 대기실 대결중 표시 해제
 }
 
 function fgResolve(match) {
@@ -1261,8 +1280,50 @@ io.on("connection", (socket) => {
   });
   socket.on("fight:leave", () => fgOnLeave(socket));
 
+  // ----- 대기실(로비) + 초대/호출 -----
+  socket.on("lobby:join", (d) => {
+    const name = String((d && d.name) || "").trim().normalize("NFC");
+    if (!name) return;
+    if (!checkDev(name, String((d && d.key) || ""), String((d && d.sig) || ""), String((d && d.ph) || ""), String((d && d.ses) || ""))) { try { socket.emit("lobby:error", { message: "본인 인증 실패 — 다시 로그인해주세요." }); } catch (x) {} return; }
+    socket._lobbyName = name;
+    const p = db.players[name] || {};
+    lobby.set(name, { name, socket, avatarId: (d && d.avatarId) || p.avatarId || 1, stage: p.stage || 1, busy: false });
+    try { socket.emit("lobby:list", lobbySnapshot()); } catch (x) {}
+    lobbyBroadcast();
+  });
+  socket.on("lobby:leave", () => { if (lobbyRemove(socket)) lobbyBroadcast(); });
+  socket.on("fight:invite", (d) => {
+    const from = socket._lobbyName; if (!from) return;
+    const target = String((d && d.target) || "").trim().normalize("NFC");
+    const mode = String((d && d.mode) || "topdown");
+    if (!target || target === from) return;
+    const te = lobby.get(target);
+    if (!te) { try { socket.emit("fight:invite:fail", { target, reason: "오프라인" }); } catch (x) {} return; }
+    if (fgSockRoom.has(te.socket.id)) { try { socket.emit("fight:invite:fail", { target, reason: "다른 대결 중" }); } catch (x) {} return; }
+    const fe = lobby.get(from);
+    try { te.socket.emit("fight:invited", { from, fromAvatar: (fe && fe.avatarId) || 1, fromWins: (db.fgWins && db.fgWins[from]) || 0, mode }); } catch (x) {}
+    try { socket.emit("fight:invite:sent", { target, mode }); } catch (x) {}
+  });
+  socket.on("fight:decline", (d) => {
+    const by = socket._lobbyName; if (!by) return;
+    const to = String((d && d.to) || "").trim().normalize("NFC");
+    const e = lobby.get(to); if (e) { try { e.socket.emit("fight:declined", { by }); } catch (x) {} }
+  });
+  socket.on("fight:accept", (d) => {
+    const me = socket._lobbyName; if (!me) return;
+    const from = String((d && d.from) || "").trim().normalize("NFC");
+    const fe = lobby.get(from), meE = lobby.get(me);
+    if (!fe || !meE) { try { socket.emit("fight:invite:fail", { target: from, reason: "상대 오프라인" }); } catch (x) {} return; }
+    if (fgSockRoom.has(fe.socket.id) || fgSockRoom.has(meE.socket.id)) { try { socket.emit("fight:invite:fail", { target: from, reason: "이미 대결 중" }); } catch (x) {} return; }
+    // 초대 기반으로 기존 파이트 엔진 즉시 시작 (전투는 다음 페이즈에서 이동식으로 교체)
+    fgDequeue(fe.socket.id); fgDequeue(meE.socket.id);
+    fgStartMatch({ socket: fe.socket, name: from, avatarId: fe.avatarId }, { socket: meE.socket, name: me, avatarId: meE.avatarId });
+    lobbyBroadcast();
+  });
+
   socket.on("disconnect", async () => {
     fgOnLeave(socket);
+    lobbyRemove(socket); lobbyBroadcast();
     await finishAndLeave();
   });
 
