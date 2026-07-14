@@ -237,6 +237,8 @@
 
   <button id="setBtn" style="position:absolute;top:14px;right:16px;z-index:20;background:rgba(22,13,44,.7);
     border:1px solid var(--line);color:#fff;border-radius:10px;padding:6px 9px;cursor:pointer;font-size:14px">⚙</button>
+  <button id="fortuneBtn" style="position:absolute;top:14px;left:16px;z-index:20;background:rgba(40,20,60,.75);
+    border:1px solid var(--line);color:#fff;border-radius:10px;padding:6px 9px;cursor:pointer;font-size:14px">🔮 운세</button>
   <div id="topbar">
     <div id="avatar" class="silhouette"></div>
     <div id="topInfo">
@@ -588,6 +590,14 @@
     <button id="szClose" style="position:absolute;top:8px;right:10px;background:rgba(90,90,114,.85);border:none;color:#fff;padding:6px 12px;border-radius:8px;z-index:7;font-size:12px">나가기</button>
     <div id="szCards" style="position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(4,4,12,.85);z-index:6;padding:16px"></div>
     <div id="szOverlay" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(4,4,12,.74);z-index:5;overflow:auto;padding:18px"></div>
+  </div>
+
+  <!-- 오늘의 운세 -->
+  <div id="fortuneModal" style="position:fixed;inset:0;background:rgba(8,4,20,.74);display:none;z-index:88;align-items:center;justify-content:center;padding:14px">
+    <div style="width:100%;max-width:380px;max-height:88vh;overflow:auto;background:linear-gradient(165deg,#2a1550,#160b2e);border:1px solid var(--line);border-radius:18px;padding:18px;position:relative;box-sizing:border-box">
+      <button id="fortuneClose" style="position:absolute;top:10px;right:12px;background:none;border:none;color:#fff;font-size:20px;cursor:pointer">✕</button>
+      <div id="fortuneBody"></div>
+    </div>
   </div>
 
   <div id="tabs">
@@ -3662,6 +3672,74 @@
       $("authMsg").textContent="본인 닉네임과 비밀번호로 로그인하세요";
     };
   }
+  // ===== 🔮 오늘의 운세 =====
+  var FT_HOURS=[["자","子 23~01시"],["축","丑 01~03시"],["인","寅 03~05시"],["묘","卯 05~07시"],["진","辰 07~09시"],["사","巳 09~11시"],["오","午 11~13시"],["미","未 13~15시"],["신","申 15~17시"],["유","酉 17~19시"],["술","戌 19~21시"],["해","亥 21~23시"],["?","모름"]];
+  var FT_TOT=["오늘은 흐름을 타면 큰 것이 들어온다.","서두르지 않아도 저절로 길이 열린다.","작은 결정이 큰 행운으로 이어진다.","한 박자 쉬어가는 것이 오히려 이득.","뜻밖의 귀인이 손을 내미는 날.","묵혀둔 일이 술술 풀린다.","욕심을 내려놓는 순간 복이 온다.","오늘의 나는 어제보다 한 뼘 강하다.","기다리던 소식이 도착한다.","무리하면 탈, 여유가 정답이다.","작은 친절이 큰 보답으로 돌아온다.","고민하던 선택, 오늘 답이 보인다."];
+  var FT_LOVE=["먼저 연락하면 좋은 기류가 흐른다.","솔직함이 마음의 문을 연다.","오래 본 사람이 달리 보이는 날.","설레는 우연이 기다린다.","표현을 아끼지 마세요, 오늘은.","작은 다툼은 웃으며 넘기면 약이 된다.","혼자여도 충만한 하루, 자기애 충전.","연인·썸의 한마디에 온도가 오른다.","서프라이즈가 통하는 날.","기대보다 잔잔한 게 더 좋다."];
+  var FT_MONEY=["새는 돈부터 막으면 목돈이 보인다.","작은 지출이 큰 만족을 준다.","뜻밖의 부수입 기운이 감돈다.","오늘의 충동구매는 참는 게 승리.","커피 한 잔 값의 행운이 굴러온다.","빌려준 것을 돌려받을 조짐.","₭도 현금도 '모으는 손'이 이기는 날.","투자보다 저축이 어울리는 흐름.","공짜에 혹하면 손해, 정도를 지켜라.","티끌이 태산 되는 걸 체감하는 날."];
+  var FT_WORK=["미뤄둔 일 하나를 끝내면 연쇄로 풀린다.","협업에서 아이디어가 빛난다.","윗선의 인정을 받을 기운.","집중의 30분이 하루를 바꾼다.","실수는 빨리 인정할수록 작아진다.","새 제안을 꺼내기 좋은 타이밍.","루틴을 지키면 성과가 따라온다.","경쟁보다 협력이 이득인 날.","마감은 여유 있게, 결과는 든든하게.","배움 하나가 미래의 무기가 된다."];
+  var FT_HEALTH=["물 한 잔, 스트레칭 한 번이 보약.","일찍 자면 내일의 운이 두 배.","가벼운 산책이 기분을 살린다.","눈과 목의 휴식을 챙기세요.","과식은 금물, 소식이 복이다.","햇빛 10분이 활력을 채운다.","깊은 호흡으로 마음을 가라앉히기.","무리한 운동보다 꾸준함이 답.","달콤한 유혹은 반만 즐기기.","웃음이 최고의 면역이다."];
+  var FT_REL=["오래 연락 못 한 사람에게 안부를.","경청 한 번이 신뢰를 쌓는다.","오늘의 칭찬은 부메랑처럼 돌아온다.","오해는 대화로 눈 녹듯 풀린다.","새로운 인연의 문이 열린다.","베풀면 배로 돌아오는 날.","선 긋기도 관계의 지혜다.","가족의 한마디에 힘을 얻는다.","뒷담은 독, 앞칭찬은 약.","작은 모임이 큰 기회를 부른다."];
+  var FT_COLOR=["빨강","주황","노랑","초록","파랑","보라","금색","은색","하양","분홍","하늘","민트"];
+  var FT_ITEM=["바나나 🍌","동전 🪙","커피 ☕","우산 ☂️","열쇠 🔑","네잎클로버 🍀","향초 🕯️","작은 화분 🪴","손수건 🧻","사탕 🍬","펜 🖊️","반지 💍"];
+  var FT_DIR=["동쪽","서쪽","남쪽","북쪽","동남쪽","서남쪽","동북쪽","서북쪽"];
+  function ftHash(s){ var h=2166136261>>>0; for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619)>>>0; } return h>>>0; }
+  function ftPick(pool,seed,salt){ return pool[ftHash(seed+"|"+salt)%pool.length]; }
+  function ftStars(seed,salt){ var n=1+ftHash(seed+"|s|"+salt)%5; return "★".repeat(n)+"☆".repeat(5-n); }
+  function ftGrade(seed){ var sc=ftHash(seed+"|grade")%101, g;
+    if(sc>=85) g=["대길","🌟","#ffd54a"]; else if(sc>=65) g=["중길","✨","#8affd0"]; else if(sc>=45) g=["소길","🍀","#7affea"]; else if(sc>=25) g=["평운","☁️","#b9a8e0"]; else g=["요주의","⚠️","#ff9a6a"];
+    return {sc:sc,nm:g[0],ico:g[1],col:g[2]}; }
+  var FTDATA=null; try{ FTDATA=JSON.parse(localStorage.getItem("pkc_fortune")||"null"); }catch(e){}
+  function ftSeed(){ return FTDATA.name+"|"+FTDATA.birth+"|"+FTDATA.hour+"|"+todayKey(); }
+  function openFortune(){ $("fortuneModal").style.display="flex"; if(FTDATA&&FTDATA.name) ftResult(); else ftForm(); }
+  function ftForm(){
+    var d=FTDATA||{name:"",birth:"",hour:""};
+    var h='<h2 style="margin:0 0 4px">🔮 운세 정보 입력</h2><p class="muted" style="font-size:12px;margin:0 0 12px">한 번 입력하면 저장돼요. 언제든 수정 가능(수정하면 운세도 바뀜).</p>';
+    h+='<div style="margin-bottom:10px"><div style="font-size:12px;margin-bottom:4px">이름</div><input id="ftName" value="'+(d.name||"")+'" placeholder="홍길동" style="width:100%;box-sizing:border-box;padding:9px;border-radius:9px;border:1px solid var(--line);background:#160b2e;color:#fff"></div>';
+    h+='<div style="margin-bottom:10px"><div style="font-size:12px;margin-bottom:4px">생년월일</div><input id="ftBirth" type="date" value="'+(d.birth||"")+'" style="width:100%;box-sizing:border-box;padding:9px;border-radius:9px;border:1px solid var(--line);background:#160b2e;color:#fff"></div>';
+    h+='<div style="margin-bottom:14px"><div style="font-size:12px;margin-bottom:4px">태어난 시 (자축인묘)</div><select id="ftHour" style="width:100%;box-sizing:border-box;padding:9px;border-radius:9px;border:1px solid var(--line);background:#160b2e;color:#fff">';
+    FT_HOURS.forEach(function(o){ h+='<option value="'+o[0]+'"'+((d.hour===o[0])?" selected":"")+'>'+o[0]+' ('+o[1]+')</option>'; });
+    h+='</select></div>';
+    h+='<button class="bigBtn" id="ftSave" style="width:100%">운세 보기 🔮</button>';
+    $("fortuneBody").innerHTML=h;
+    $("ftSave").onclick=function(){
+      var nm=$("ftName").value.trim(), bd=$("ftBirth").value, hr=$("ftHour").value;
+      if(!nm){ toast("이름을 입력해주세요"); return; }
+      if(!bd){ toast("생년월일을 선택해주세요"); return; }
+      FTDATA={name:nm,birth:bd,hour:hr}; try{ localStorage.setItem("pkc_fortune",JSON.stringify(FTDATA)); }catch(e){}
+      beep(900,0.1); ftResult();
+    };
+  }
+  function ftResult(){
+    var seed=ftSeed(), g=ftGrade(seed);
+    var hh=""; for(var i=0;i<FT_HOURS.length;i++) if(FT_HOURS[i][0]===FTDATA.hour) hh=FT_HOURS[i][1];
+    var h='<div style="text-align:center"><div style="font-size:13px" class="muted">'+new Date().toLocaleDateString("ko-KR")+' · '+FTDATA.name+'님</div>';
+    h+='<div style="font-size:40px;margin:6px 0">'+g.ico+'</div>';
+    h+='<div style="font-size:22px;font-weight:800;color:'+g.col+'">오늘의 총운 · '+g.nm+'</div>';
+    h+='<div style="font-size:11px" class="muted">행운지수 '+g.sc+'/100</div>';
+    h+='<div style="background:rgba(255,255,255,.06);border-radius:12px;padding:12px;margin:12px 0;font-size:14px;line-height:1.5">"'+ftPick(FT_TOT,seed,"tot")+'"</div></div>';
+    var cats=[["love","💕 애정운"],["money","💰 금전운"],["work","💼 사업·직장운"],["health","🩺 건강운"],["rel","🤝 인간관계"],["luck","🍀 행운의 부적"]];
+    h+='<div style="font-size:12px;color:#b9a8e0;margin-bottom:6px">▼ 눌러서 상세 운세 보기</div>';
+    h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">';
+    cats.forEach(function(ct){ h+='<button class="ftChip" data-k="'+ct[0]+'" style="flex:1 1 30%;min-width:96px;font-size:12px;padding:8px 4px;border:1px solid var(--line);border-radius:10px;background:rgba(122,62,168,.25);color:#fff;font-weight:700">'+ct[1]+'</button>'; });
+    h+='</div><div id="ftDetail" style="min-height:60px;background:rgba(255,255,255,.05);border-radius:12px;padding:14px;font-size:14px;line-height:1.5"></div>';
+    h+='<button class="bigBtn" id="ftEdit" style="width:100%;margin-top:12px;background:#5a5a72">정보 수정 (다른 운세)</button>';
+    $("fortuneBody").innerHTML=h;
+    Array.prototype.forEach.call(document.querySelectorAll(".ftChip"),function(b){ b.onclick=function(){ ftShow(b.getAttribute("data-k")); Array.prototype.forEach.call(document.querySelectorAll(".ftChip"),function(x){x.style.background="rgba(122,62,168,.25)";}); b.style.background="rgba(255,213,74,.35)"; }; });
+    $("ftEdit").onclick=ftForm;
+    ftShow("love");
+  }
+  function ftShow(key){
+    var seed=ftSeed(), el=$("ftDetail");
+    if(key==="luck"){ var num=1+ftHash(seed+"|num")%45, col=ftPick(FT_COLOR,seed,"col"), dir=ftPick(FT_DIR,seed,"dir"), item=ftPick(FT_ITEM,seed,"item");
+      el.innerHTML='🍀 <b>행운의 부적</b><br>· 행운의 숫자: <b style="color:#ffd54a">'+num+'</b><br>· 행운의 색: <b>'+col+'</b><br>· 행운의 방향: <b>'+dir+'</b><br>· 행운의 아이템: <b>'+item+'</b>'; return; }
+    var map={love:["💕 애정운",FT_LOVE],money:["💰 금전운",FT_MONEY],work:["💼 사업·직장운",FT_WORK],health:["🩺 건강운",FT_HEALTH],rel:["🤝 인간관계",FT_REL]};
+    var m=map[key]; el.innerHTML='<b>'+m[0]+'</b> '+ftStars(seed,key)+'<br>'+ftPick(m[1],seed,key);
+  }
+  var _fb=$("fortuneBtn"); if(_fb) _fb.onclick=openFortune;
+  var _fc=$("fortuneClose"); if(_fc) _fc.onclick=function(){ $("fortuneModal").style.display="none"; };
+  var _fm=$("fortuneModal"); if(_fm) _fm.addEventListener("click",function(e){ if(e.target===_fm) _fm.style.display="none"; });
+
   function boot(){
     wireAuth();
     // 이미 이 폰에 로그인돼 있으면 → 어떤 링크를 열든 내 계정
