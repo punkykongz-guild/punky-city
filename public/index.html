@@ -1214,11 +1214,11 @@
   function bizCostT(i){ return BIZ[i].cost*CITY_DIFF*Math.pow(COST_MULT, tapLvOf(i))*0.8; }
   function bizCostB(i){ return BIZ[i].cost*CITY_DIFF*Math.pow(COST_MULT, Math.max(idleLvOf(i),tapLvOf(i)))*2.2; }
   function bizCost(i){ return bizCostA(i); } // 호환 별칭
-  var TAP_TICK=8; // 탭강화 계수 (시뮬 확정: 능동 ~10개월)
+  var TAP_TICK=3; // 탭강화 계수 (밸런스: 탭수입 ~방치의 1.3배로 제한, 탭올인 지배 방지)
   var tapBoostUntil=0, tapBoostMul=1; // 상점 부스터
   function tapPool(){ var s=0; for(var i=0;i<BIZ.length;i++) s+=(BIZ[i].cost/(240*(1+i*1.2)))*tapLvOf(i); return s; }
   function cityTapGain(){ return (1+(S.stage-1)*0.4+tapPool()*TAP_TICK)*totalMult()*(Date.now()<tapBoostUntil?tapBoostMul:1); }
-  function boosterCost(){ return Math.max(1000, Math.floor(perSec()*300)); } // ≈5분치 수입 (₭ 싱크)
+  function boosterCost(){ var bt=(1+(S.stage-1)*0.4+tapPool()*TAP_TICK)*totalMult(); return Math.max(1000, Math.floor(Math.max(perSec()*300, bt*5500))); } // 탭수입 기준(돈복사 방지: 부스터 순익<0 싱크)
   (function(){ var bb=$("boostBtn"); if(!bb) return; bb.onclick=function(){
     if(!PLAY_OK){ needWallet(); return; }
     if(Date.now()<tapBoostUntil){ toast("이미 부스터 발동 중! ("+Math.ceil((tapBoostUntil-Date.now())/1000)+"초 남음)"); return; }
@@ -1368,7 +1368,7 @@
     bubbleTimer=setTimeout(function(){b.style.opacity=0;},900);
   }
   function needWallet(){ toast("🔗 지갑 등록·승인 후 플레이할 수 있어요!"); $("avatarBtn").click(); }
-  var TAP_MIN_MS=70, TAP_DAILY=50000; // 매크로 예방: 최소 간격(≈14/초 상한), 하루 유효 탭 상한
+  var TAP_MIN_MS=70, TAP_DAILY=25000; // 매크로 예방: 최소 간격(≈14/초 상한), 하루 유효 탭 상한(밸런스)
   var _tapTs=[], _lastTap=0, _tapWarn=0;
   $("tapZone").addEventListener("click",function(e){
     if(e.target&&e.target.id==="stageUpBtn") return; // 승급 버튼은 별도 처리
