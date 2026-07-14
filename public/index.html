@@ -876,6 +876,7 @@
   var NAME = (qs.get("name")||"").trim();
   var TOKEN = (qs.get("token")||"").trim();
   var SAVEGEN = 0; // 서버 리셋 세대 (로드 시 수신, 저장 시 전송)
+  var IS_ADMIN = false; // 서버가 판정한 관리자 여부 (NFC 정규화)
   var DEVKEY=localStorage.getItem("pkc_key")||(function(){var k=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem("pkc_key",k);return k;})();
   var SIG=(qs.get("sig")||"").trim();
   var PH=(qs.get("ph")||"").trim();
@@ -3456,7 +3457,7 @@
       }).catch(function(){ tryGenericChar(); });
   }
   function applyProfile(p){
-    profile=p;
+    profile=p; IS_ADMIN=!!p.isAdmin;
     $("userName").textContent=NAME||"이름 없음";
     $("nameTag").textContent=(NAME||"무명 콩즈")+" 🦍";
     var cta=$("walletCta");
@@ -3598,11 +3599,11 @@
 
   // ===== 설정 =====
   $("optBgm").checked=OPT.bgm; $("optSfx").checked=OPT.sfx; $("optVib").checked=OPT.vib;
-  $("setBtn").onclick=function(){ var ar=$("adminResetBtn"); if(ar) ar.style.display=(NAME==="김동건")?"":"none"; $("setModal").style.display="flex"; };
+  $("setBtn").onclick=function(){ var ar=$("adminResetBtn"); if(ar) ar.style.display=IS_ADMIN?"":"none"; $("setModal").style.display="flex"; };
   $("setClose").onclick=function(){ $("setModal").style.display="none"; };
   $("acctReset").onclick=function(){ if(confirm("이 폰에 저장된 계정/로그인 정보를 지울까요? 다음 접속 때 다시 로그인합니다.")){ localStorage.removeItem("pkc_id"); localStorage.removeItem("pkc_login"); location.href=location.pathname; } };
   $("adminResetBtn").onclick=function(){
-    if(NAME!=="김동건"){ toast("관리자 전용"); return; }
+    if(!IS_ADMIN){ toast("관리자 전용"); return; }
     if(!confirm("⚠️ 전체 초기화\n모든 멤버의 ₭·단계·사업·저축·로또를 0으로 되돌립니다.\n(로그인·지갑등록·출석점수는 유지)\n\n정말 진행할까요?")) return;
     if(!confirm("되돌릴 수 없습니다. 마지막 확인 — 정말 전체 초기화할까요?")) return;
     fetch(API("/api/admin/selfreset"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH,ses:SES})})

@@ -722,7 +722,7 @@ app.get("/api/profile", async (req, res) => {
   const toks = tokenIds.slice(0, 1000); // 대량 홀더(300+) 대응 — 지갑 실보유 전부
   const imgMap = {};
   toks.forEach((t) => { if (t.img) imgMap[t.id] = t.img; });
-  res.json({ ...profile, tokenIds: toks.map((t) => t.id), imgMap, imageBase: "https://punkykongz.com/nft/punkykongz/image/" });
+  res.json({ ...profile, isAdmin: ADMIN_NAMES.indexOf(name) >= 0, tokenIds: toks.map((t) => t.id), imgMap, imageBase: "https://punkykongz.com/nft/punkykongz/image/" });
 });
 
 // 세이브 로드/저장
