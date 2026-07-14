@@ -671,6 +671,18 @@
     <div id="rnStart" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:3;background:rgba(8,4,20,.5)"></div>
   </div>
 
+  <!-- 콩즈 합체 (수박) -->
+  <div id="sukaModal" style="position:fixed;inset:0;background:linear-gradient(180deg,#2a1030,#140820);display:none;z-index:84;flex-direction:column">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;gap:8px">
+      <div style="font-weight:800">🍉 <span id="sukaScore">0</span></div>
+      <div style="font-weight:800;color:var(--gold);font-size:13px">최고 <span id="sukaBest">0</span></div>
+      <div style="font-size:13px;color:#c9a8f0">다음 <span id="sukaNext" style="font-size:18px">-</span></div>
+      <button id="sukaClose" style="background:#5a5a72;border:none;color:#fff;padding:6px 12px;border-radius:8px">나가기</button>
+    </div>
+    <canvas id="sukaCanvas" style="flex:1;width:100%;touch-action:none;display:block"></canvas>
+    <div id="sukaStart" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:3;background:rgba(8,4,20,.55);text-align:center;padding:20px"></div>
+  </div>
+
   <!-- 콩즈 디펜스 -->
   <div id="tdModal" style="position:fixed;inset:0;background:#0d1a12;display:none;z-index:84;flex-direction:column">
     <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;position:relative;z-index:2;gap:8px">
@@ -815,6 +827,11 @@
       <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="skyBtn">출격</button>
     </div>
     <div style="font-weight:800;font-size:14px;margin:10px 2px 2px;color:var(--gold);border-bottom:1px solid rgba(251,191,36,.25);padding-bottom:3px">🕹️ 아케이드</div>
+    <div class="card arcadeItem" style="border:1px solid var(--gold)">
+      <div class="big">🍉</div>
+      <div style="flex:1"><h3 style="margin:0">콩즈 합체 <span class="muted" id="sukaLeftT">하루 5판</span> <span style="font-size:10px;background:#ffd54a;color:#201800;border-radius:4px;padding:0 4px">NEW</span></h3><div class="muted" style="font-size:12px">같은 콩즈끼리 닿으면 합체 진화! 🥚→…→⭐ 최종진화 도전 → ₭</div></div>
+      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="sukaBtn">플레이</button>
+    </div>
     <div class="card arcadeItem">
       <div class="big">🔨</div>
       <div style="flex:1"><h3 style="margin:0">두더지 잡기 <span class="muted" id="moleLeftT">하루 5판</span></h3><div class="muted" style="font-size:12px">튀어나온 🦍 탭! 🕵️사기꾼은 감점 → ₭ 획득</div></div>
@@ -1821,6 +1838,64 @@
   $("introGo").onclick=function(){ $("introModal").style.display="none"; if(introCb){ var f=introCb; introCb=null; f(); } };
   $("introClose").onclick=function(){ $("introModal").style.display="none"; introCb=null; };
   function win(amt){ S.money+=amt; S.lifetime+=amt; renderFast(); saveNow(); }
+
+  // ===== 🍉 콩즈 합체 (수박 물리 머지) =====
+  var SUKA_T=[{ico:"🥚",r:14,c:"#fff3d0",sc:1},{ico:"🐣",r:19,c:"#ffe08a",sc:3},{ico:"🐵",r:25,c:"#caa06a",sc:6},{ico:"🦍",r:32,c:"#9a7a5a",sc:10},{ico:"😎",r:40,c:"#5ad0ff",sc:16},{ico:"🤖",r:49,c:"#9fb4c8",sc:24},{ico:"👑",r:59,c:"#ffd54a",sc:34},{ico:"🦄",r:70,c:"#ff9ad9",sc:46},{ico:"🐉",r:81,c:"#7affa0",sc:60},{ico:"🌈",r:94,c:"#c79fff",sc:78},{ico:"⭐",r:110,c:"#fff2a0",sc:100}];
+  var suka={active:false,over:false,balls:[],parts:[],W:320,H:480,raf:0,score:0,cur:null,next:0,dropX:160,overT:0,lastDrop:0,dangerY:64};
+  function sukaLeft(){ mgRoll(); return Math.max(0,5-(S.sukaN||0)); }
+  function sukaResize(){ var c=$("sukaCanvas"); if(!c) return; var r=c.getBoundingClientRect(); c.width=Math.max(1,Math.round(r.width)); c.height=Math.max(1,Math.round(r.height)); suka.W=c.width; suka.H=c.height; suka.dangerY=Math.min(96,c.height*0.14); }
+  window.addEventListener("resize",function(){ if(suka.active) sukaResize(); });
+  function sukaOpen(){ mgRoll(); var lt=$("sukaLeftT"); if(lt) lt.textContent="하루 "+sukaLeft()+"판"; if(sukaLeft()<=0){ toast("오늘 판 다 썼어요! 내일 또 🍉"); return; } $("sukaModal").style.display="flex"; sukaResize(); $("sukaBest").textContent=S.sukaBest||0;
+    $("sukaStart").style.display="flex"; $("sukaStart").innerHTML='<h2>🍉 콩즈 합체</h2><p class="muted" style="max-width:290px;font-size:13px;line-height:1.6">같은 콩즈끼리 닿으면 <b>합체 진화</b>!<br>🥚→🐣→🐵→🦍→😎→🤖→👑→🦄→🐉→🌈→⭐<br>좌우로 조준하고 <b>손 떼면</b> 떨어져요.<br>꼭대기 빨간선을 넘기면 끝!</p><button class="bigBtn" id="sukaGo" style="max-width:220px">시작! ('+sukaLeft()+'판)</button>'; $("sukaGo").onclick=sukaStart; }
+  function sukaStart(){ mgRoll(); if(sukaLeft()<=0){ $("sukaModal").style.display="none"; return; } S.sukaN=(S.sukaN||0)+1; if(typeof refreshMgLeft==="function") refreshMgLeft();
+    sukaResize(); suka.active=true; suka.over=false; suka.balls=[]; suka.parts=[]; suka.score=0; suka.overT=0; suka.dropX=suka.W/2; suka.next=Math.floor(Math.random()*5); sukaNewCur();
+    $("sukaScore").textContent="0"; $("sukaStart").style.display="none"; cancelAnimationFrame(suka.raf); suka.raf=requestAnimationFrame(sukaLoop); }
+  function sukaNewCur(){ suka.cur={tier:suka.next,x:suka.dropX}; suka.next=Math.floor(Math.random()*5); $("sukaNext").textContent=SUKA_T[suka.next].ico; suka.lastDrop=performance.now(); }
+  function sukaDrop(){ if(!suka.active||suka.over||!suka.cur) return; var tt=suka.cur.tier, r=SUKA_T[tt].r;
+    suka.balls.push({x:Math.max(r,Math.min(suka.W-r,suka.cur.x)),y:suka.dangerY-2,r:r,tier:tt,vx:0,vy:1,merged:false}); suka.cur=null; beep(360,0.05);
+    setTimeout(function(){ if(suka.active&&!suka.over&&!suka.cur) sukaNewCur(); },380); }
+  function sukaBurst(x,y,col){ for(var i=0;i<9;i++) suka.parts.push({x:x,y:y,vx:(Math.random()-0.5)*7,vy:(Math.random()-0.5)*7-2,life:22,col:col}); }
+  function sukaStep(){ var g=0.55,damp=0.995,rest=0.18,B=suka.balls,W=suka.W,H=suka.H;
+    for(var i=0;i<B.length;i++){ var b=B[i]; b.vy+=g; b.x+=b.vx; b.y+=b.vy; b.vx*=damp;
+      if(b.x-b.r<0){ b.x=b.r; b.vx=-b.vx*rest; } if(b.x+b.r>W){ b.x=W-b.r; b.vx=-b.vx*rest; }
+      if(b.y+b.r>H){ b.y=H-b.r; b.vy=-b.vy*rest; b.vx*=0.92; } }
+    for(var it=0;it<4;it++){ for(var i=0;i<B.length;i++){ for(var j=i+1;j<B.length;j++){ var a=B[i],c=B[j]; if(a.merged||c.merged) continue;
+      var dx=c.x-a.x, dy=c.y-a.y, d=Math.sqrt(dx*dx+dy*dy)||0.01, mn=a.r+c.r;
+      if(d<mn){ if(a.tier===c.tier && a.tier<SUKA_T.length-1){ var nt=a.tier+1, nx=(a.x+c.x)/2, ny=(a.y+c.y)/2; a.merged=c.merged=true;
+          B.push({x:nx,y:ny,r:SUKA_T[nt].r,tier:nt,vx:(a.vx+c.vx)/2,vy:(a.vy+c.vy)/2-1.5,merged:false}); suka.score+=SUKA_T[nt].sc; $("sukaScore").textContent=suka.score; sukaBurst(nx,ny,SUKA_T[nt].c); beep(480+nt*55,0.06); vib(12); if(nt===SUKA_T.length-1){ suka.score+=200; $("sukaScore").textContent=suka.score; toast("⭐ 최종 진화! +200"); }
+        } else { var ov=mn-d, nx=dx/d, ny=dy/d, ph=ov*0.5; a.x-=nx*ph; a.y-=ny*ph; c.x+=nx*ph; c.y+=ny*ph; var rp=(a.vx-c.vx)*nx+(a.vy-c.vy)*ny; if(rp>0){ a.vx-=nx*rp*0.5; a.vy-=ny*rp*0.5; c.vx+=nx*rp*0.5; c.vy+=ny*rp*0.5; } }
+      } } } }
+    for(var i=B.length-1;i>=0;i--) if(B[i].merged) B.splice(i,1);
+    var danger=false; for(var i=0;i<B.length;i++){ if(B[i].y-B[i].r<suka.dangerY && Math.abs(B[i].vy)<0.7){ danger=true; break; } }
+    if(danger){ suka.overT++; if(suka.overT>78) sukaEnd(); } else suka.overT=Math.max(0,suka.overT-2);
+  }
+  function sukaLoop(t){ if(!suka.active) return; if(!suka.over) sukaStep();
+    for(var i=suka.parts.length-1;i>=0;i--){ var p=suka.parts[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=0.3; if(--p.life<=0) suka.parts.splice(i,1); }
+    sukaDraw(t); suka.raf=requestAnimationFrame(sukaLoop); }
+  function sukaBall(ctx,x,y,r,tier){ ctx.beginPath(); ctx.arc(x,y,r,0,6.29); ctx.fillStyle=SUKA_T[tier].c; ctx.fill(); ctx.strokeStyle="rgba(0,0,0,.28)"; ctx.lineWidth=2; ctx.stroke(); ctx.font=Math.floor(r*1.25)+"px sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(SUKA_T[tier].ico,x,y+1); }
+  function sukaDraw(t){ var c=$("sukaCanvas"); if(!c) return; var ctx=c.getContext("2d"),W=c.width,H=c.height; ctx.clearRect(0,0,W,H);
+    ctx.strokeStyle="rgba(255,90,90,"+(0.35+0.25*Math.sin(t/200))+")"; ctx.setLineDash([9,7]); ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(0,suka.dangerY); ctx.lineTo(W,suka.dangerY); ctx.stroke(); ctx.setLineDash([]);
+    for(var i=0;i<suka.balls.length;i++){ var b=suka.balls[i]; sukaBall(ctx,b.x,b.y,b.r,b.tier); }
+    if(suka.cur){ var r=SUKA_T[suka.cur.tier].r, x=Math.max(r,Math.min(W-r,suka.cur.x)); ctx.strokeStyle="rgba(255,255,255,.22)"; ctx.setLineDash([4,7]); ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(x,suka.dangerY); ctx.lineTo(x,H); ctx.stroke(); ctx.setLineDash([]); sukaBall(ctx,x,suka.dangerY-2,r,suka.cur.tier); }
+    for(var i=0;i<suka.parts.length;i++){ var p=suka.parts[i]; ctx.globalAlpha=Math.max(0,p.life/22); ctx.fillStyle=p.col; ctx.beginPath(); ctx.arc(p.x,p.y,3,0,6.29); ctx.fill(); } ctx.globalAlpha=1;
+  }
+  function sukaEnd(){ suka.over=true; suka.active=false; cancelAnimationFrame(suka.raf);
+    if(suka.score>(S.sukaBest||0)) S.sukaBest=suka.score;
+    var reward=Math.floor(suka.score*Math.max(1,perTap()*0.4)); win(reward);
+    $("sukaStart").style.display="flex"; $("sukaStart").innerHTML='<h2>💥 게임 오버!</h2><p class="muted" style="font-size:15px">점수 <b style="color:var(--gold)">'+suka.score+'</b> · 최고 '+(S.sukaBest||0)+'</p><p style="font-size:14px">₭'+fmt(reward)+' 획득!</p><button class="bigBtn" id="sukaAgain" style="max-width:220px">'+(sukaLeft()>0?"다시 ("+sukaLeft()+"판)":"오늘 끝!")+'</button><button class="bigBtn" id="sukaDone" style="max-width:220px;background:#5a5a72;margin-top:8px">나가기</button>';
+    var ag=$("sukaAgain"); if(ag) ag.onclick=function(){ if(sukaLeft()>0) sukaStart(); else toast("오늘 판 다 썼어요!"); };
+    var dn=$("sukaDone"); if(dn) dn.onclick=function(){ $("sukaModal").style.display="none"; }; }
+  (function(){
+    var b=$("sukaBtn"); if(b) b.onclick=function(){ if(!PLAY_OK){ needWallet(); return; } sukaOpen(); };
+    var cl=$("sukaClose"); if(cl) cl.onclick=function(){ suka.active=false; cancelAnimationFrame(suka.raf); $("sukaModal").style.display="none"; };
+    var cv=$("sukaCanvas"); if(!cv) return; function px(clientX){ var r=cv.getBoundingClientRect(); return Math.max(0,Math.min(suka.W,clientX-r.left)); }
+    cv.addEventListener("touchstart",function(e){ if(suka.cur&&e.touches[0]){ suka.cur.x=px(e.touches[0].clientX); suka.dropX=suka.cur.x; } e.preventDefault(); },{passive:false});
+    cv.addEventListener("touchmove",function(e){ if(suka.cur&&e.touches[0]){ suka.cur.x=px(e.touches[0].clientX); suka.dropX=suka.cur.x; } e.preventDefault(); },{passive:false});
+    cv.addEventListener("touchend",function(e){ sukaDrop(); e.preventDefault(); },{passive:false});
+    cv.addEventListener("mousedown",function(e){ if(suka.cur){ suka.cur.x=px(e.clientX); suka.dropX=suka.cur.x; } });
+    cv.addEventListener("mousemove",function(e){ if(suka.cur&&e.buttons){ suka.cur.x=px(e.clientX); suka.dropX=suka.cur.x; } });
+    cv.addEventListener("mouseup",function(e){ sukaDrop(); });
+  })();
   // ===== 🔥 연승 콤보 (도박 미니게임 공용) =====
   var gStreak=0, gStreakBest=0;
   function comboWin(){
@@ -1905,7 +1980,7 @@
   $("rpsClose").onclick=function(){ $("rpsModal").style.display="none"; };
 
   // ===== 미니게임 일일제한 (두더지/기억력) =====
-  function mgRoll(){ if(S.mgDate!==todayKey()){ S.mgDate=todayKey(); S.moleN=0; S.simonN=0; S.skyN=0; S.k2N=0; S.k3N=0; S.rnN=0; S.tdN=0; S.szN=0; S.tapN=0; S.pjN=0; S.arAiN=0; S.sfAiN=0; } }
+  function mgRoll(){ if(S.mgDate!==todayKey()){ S.mgDate=todayKey(); S.moleN=0; S.simonN=0; S.skyN=0; S.k2N=0; S.k3N=0; S.rnN=0; S.tdN=0; S.szN=0; S.tapN=0; S.pjN=0; S.arAiN=0; S.sfAiN=0; S.sukaN=0; } }
   function moleLeft(){ mgRoll(); return Math.max(0,5-(S.moleN||0)); }
   function simonLeft(){ mgRoll(); return Math.max(0,5-(S.simonN||0)); }
   function refreshMgLeft(){ var a=$("moleLeftT"),b=$("simonLeftT"); if(a)a.textContent="오늘 "+moleLeft()+"판"; if(b)b.textContent="오늘 "+simonLeft()+"판"; }
