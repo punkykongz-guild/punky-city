@@ -2391,7 +2391,7 @@
     me:{x:180,y:130,dir:1,hp:100,atk:0,cd:0,dcd:0,flash:0,name:"",img:null},
     opp:{x:180,y:410,tx:180,ty:410,dir:-1,hp:100,flash:0,name:"",img:null,_cd:0,_dcd:0,_strafe:1},
     joy:{id:null,ox:0,oy:0,vx:0,vy:0} };
-  var AR_SPEED=170, AR_RANGE=66, AR_CD=420, AR_DASHCD=1150, AR_DMG=6, AR_DASH_DMG=11, arShake=0;
+  var AR_SPEED=240, AR_RANGE=66, AR_CD=420, AR_DASHCD=1150, AR_DMG=6, AR_DASH_DMG=11, arShake=0; // 이동 속도↑(반응 빠릿하게)
   function arImg(id){ var im=new Image(); im.src=fgKimg(id); im.onerror=function(){ im.onerror=null; im.src=fgKimg(id).replace(".jpg",".png"); }; return im; }
   function arResize(){ var c=$("arCanvas"); if(!c) return; var r=c.getBoundingClientRect(); c.width=Math.max(1,Math.round(r.width)); c.height=Math.max(1,Math.round(r.height));
     arn.scale=Math.min(c.width/arn.W, c.height/arn.H); arn.ox=(c.width-arn.W*arn.scale)/2; arn.oy=(c.height-arn.H*arn.scale)/2; }
@@ -2413,7 +2413,7 @@
   function arAttack(dash){ if(!arn.active||arn.over) return; var now=performance.now();
     var _ox=arn.opp.x-arn.me.x; if(Math.abs(_ox)>2) arn.me.dir=_ox>0?1:-1; // 공격 시 상대를 즉시 바라봄
     if(dash){ if(now<arn.me.dcd) return; arn.me.dcd=now+AR_DASHCD; arn.me.atk=now+220;
-      arn.me.x=Math.max(0,Math.min(arn.W, arn.me.x+arn.me.dir*46)); if(!arn.ai) arSend();
+      arn.me.x=Math.max(0,Math.min(arn.W, arn.me.x+arn.me.dir*66)); if(!arn.ai) arSend();
     } else { if(now<arn.me.cd) return; arn.me.cd=now+AR_CD; arn.me.atk=now+160; }
     if(arn.ai){ // AI전: 로컬 히트판정
       var o=arn.opp, dist=Math.hypot(o.x-arn.me.x,o.y-arn.me.y), range=dash?AR_RANGE*1.35:AR_RANGE;
@@ -2541,7 +2541,7 @@
     me:{x:100,y:432,vy:0,onG:true,dir:1,hp:100,atk:0,type:0,cd:0,kcd:0,flash:0,name:"",img:null},
     opp:{x:260,y:432,tx:260,ty:432,vy:0,onG:true,dir:-1,hp:100,atk:0,type:0,flash:0,name:"",img:null,_cd:0,_kcd:0,_jcd:0,_retreat:0},
     hold:{l:false,r:false} };
-  var SF_SPEED=155, SF_GRAV=1400, SF_JUMP=560, SF_PUNCH_R=64, SF_KICK_R=96, SF_PUNCH_CD=340, SF_KICK_CD=620, SF_PUNCH_DMG=3, SF_KICK_DMG=6, sfShake=0;
+  var SF_SPEED=225, SF_GRAV=1650, SF_JUMP=640, SF_PUNCH_R=64, SF_KICK_R=96, SF_PUNCH_CD=340, SF_KICK_CD=620, SF_PUNCH_DMG=3, SF_KICK_DMG=6, sfShake=0; // 이동·점프 속도↑
   function sfResize(){ var c=$("sfCanvas"); if(!c) return; var r=c.getBoundingClientRect(); c.width=Math.max(1,Math.round(r.width)); c.height=Math.max(1,Math.round(r.height)); sf.scale=Math.min(c.width/sf.W,c.height/sf.H); sf.ox=(c.width-sf.W*sf.scale)/2; sf.oy=(c.height-sf.H*sf.scale)/2; }
   window.addEventListener("resize",function(){ if(sf.active) sfResize(); });
   function sfInit(d,ai){
