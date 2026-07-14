@@ -1219,7 +1219,7 @@
   var TAP_TICK=3; // 탭강화 계수 (밸런스: 탭수입 ~방치의 1.3배로 제한, 탭올인 지배 방지)
   var tapBoostUntil=0, tapBoostMul=1; // 상점 부스터
   function tapPool(){ var s=0; for(var i=0;i<BIZ.length;i++) s+=(BIZ[i].cost/(240*(1+i*1.2)))*tapLvOf(i); return s; }
-  function cityTapGain(){ return (1+(S.stage-1)*0.4+tapPool()*TAP_TICK)*totalMult()*(Date.now()<tapBoostUntil?tapBoostMul:1); }
+  function cityTapGain(){ return (1+(S.stage-1)*0.4+tapPool()*TAP_TICK)*totalMult()*(Date.now()<tapBoostUntil?tapBoostMul:1)*(Date.now()<tapX2Until?2:1)*(Date.now()<incomeX2Until?2:1); } // 행인버프(🍀탭2배·⚡전수입2배)도 실제 탭에 반영
   function boosterCost(){ var bt=(1+(S.stage-1)*0.4+tapPool()*TAP_TICK)*totalMult(); return Math.max(1000, Math.floor(Math.max(perSec()*300, bt*5500))); } // 탭수입 기준(돈복사 방지: 부스터 순익<0 싱크)
   (function(){ var bb=$("boostBtn"); if(!bb) return; bb.onclick=function(){
     if(!PLAY_OK){ needWallet(); return; }
