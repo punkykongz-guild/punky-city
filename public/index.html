@@ -910,6 +910,7 @@
   var STAGE_THRESHOLDS = [0,0,500,2500,12500,62500,312500,1562500,7812500,39062500,195312500,976562500,4882812500,24414062500,122070312500,610351562500,3051757812500,15258789062500,76293945312500,381469726562500,1907348632812500,9536743164062500,47683715820312496,238418579101562496,1192092895507812352,5960464477539061760,29802322387695308800,149011611938476556288,745058059692382748672,3725290298461913612288,18626451492309567537152];
   var CITY_DIFF=10; // 펑키시티 난이도 배율 (사업원가·단계 임계값 ×10) — 미니게임과 무관
   for(var _cd=0;_cd<STAGE_THRESHOLDS.length;_cd++) STAGE_THRESHOLDS[_cd]*=CITY_DIFF;
+  var TAP_LATE=2; // 후반 탭 가중치: 탭 수입 = perTap × (1 + (단계-1)×TAP_LATE) — 부지런한 탭러 보상, 미니게임 보상엔 영향 없음
 
   // 등급별 폴백 장면 (배경 이미지 로드 실패 시): 하늘/바닥/소품/스카이라인/파티클
   var SCENES = [
@@ -1297,7 +1298,7 @@
   $("tapZone").addEventListener("click",function(e){
     if(e.target&&e.target.id==="stageUpBtn") return; // 승급 버튼은 별도 처리
     if(!PLAY_OK){ needWallet(); return; }
-    var v=perTap(); S.money+=v; S.lifetime+=v;
+    var v=perTap()*(1+(S.stage-1)*TAP_LATE); S.money+=v; S.lifetime+=v;
     beep(600+Math.random()*300,0.06); vib(12);
     if(Math.random()<0.5) showBubble(); // 절반 확률로 캐릭터 대사
     var hero=$("heroImg");
