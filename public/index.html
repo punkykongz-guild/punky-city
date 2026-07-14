@@ -504,9 +504,8 @@
     </div>
     <div class="muted" style="font-size:12px;margin-bottom:8px">방식을 고르고 접속 중인 길드원을 <b>초대</b>하세요. 상대가 수락하면 바로 시작! ⚔️</div>
     <div id="fgModeSel" style="display:flex;gap:6px;margin-bottom:10px">
-      <button class="fgMode" data-mode="topdown" style="flex:1;padding:9px 3px;border-radius:9px;border:1px solid #4a3a6a;background:#7a3ea8;color:#fff;font-size:12px;font-weight:700">🎮 탑다운</button>
-      <button class="fgMode" data-mode="side" style="flex:1;padding:9px 3px;border-radius:9px;border:1px solid #4a3a6a;background:#241a3a;color:#b9a7d9;font-size:12px;font-weight:700">🥋 횡스크롤</button>
-      <button class="fgMode" data-mode="realtime" style="flex:1;padding:9px 3px;border-radius:9px;border:1px solid #4a3a6a;background:#241a3a;color:#b9a7d9;font-size:12px;font-weight:700">⚡ 실시간</button>
+      <button class="fgMode" data-mode="topdown" style="flex:1;padding:9px 4px;border-radius:9px;border:1px solid #4a3a6a;background:#7a3ea8;color:#fff;font-size:13px;font-weight:700">🎮 탑다운 난투</button>
+      <button class="fgMode" data-mode="side" style="flex:1;padding:9px 4px;border-radius:9px;border:1px solid #4a3a6a;background:#241a3a;color:#b9a7d9;font-size:13px;font-weight:700">🥋 횡스크롤 격투</button>
     </div>
     <div id="fgLobbyList" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
   </div>
@@ -2393,7 +2392,7 @@
     fgSock.on("fight:declined", function(d){ toast("😢 "+((d&&d.by)||"상대")+"님이 거절했어요."); });
     fgSock.on("fight:invited", function(d){ lbShowCall(d); });
     fgSock.on("ar:start", function(d){ if(d&&d.mode==="side") sfStart(d); else arStart(d); });
-    fgSock.on("ar:opp", function(d){ if(sf.active) sfOnOpp(d); else if(arn.active){ arn.opp.tx=d.x; arn.opp.ty=d.y; arn.opp.dir=d.dir; } });
+    fgSock.on("ar:opp", function(d){ if(sf.active) sfOnOpp(d); else if(arn.active){ (arn.oppBuf=arn.oppBuf||[]).push({t:performance.now(),x:d.x,y:d.y,dir:d.dir}); } });
     fgSock.on("ar:hit", function(d){ if(sf.active) sfOnHit(d); else arOnHit(d); });
     fgSock.on("ar:end", function(d){ if(sf.active) sfOnEnd(d); else arOnEnd(d); });
   }
@@ -2475,7 +2474,7 @@
     LB.open=false; $("fgLobby").style.display="none"; $("fgCall").style.display="none"; clearInterval(LB.callTimer);
     arn.active=true; arn.over=false; arn.ai=false; arn.room=d.room; arn.W=d.W||360; arn.H=d.H||540;
     arn.me.x=d.you.x; arn.me.y=d.you.y; arn.me.dir=d.you.dir||1; arn.me.hp=d.hp; arn.me.name=d.you.name; arn.me.img=arImg(d.you.avatarId); arn.me.atk=0; arn.me.cd=0; arn.me.dcd=0; arn.me.flash=0;
-    arn.opp.x=arn.opp.tx=d.opp.x; arn.opp.y=arn.opp.ty=d.opp.y; arn.opp.dir=d.opp.dir||-1; arn.opp.hp=d.hp; arn.opp.name=d.opp.name; arn.opp.img=arImg(d.opp.avatarId); arn.opp.flash=0;
+    arn.opp.x=arn.opp.tx=d.opp.x; arn.opp.y=arn.opp.ty=d.opp.y; arn.opp.dir=d.opp.dir||-1; arn.opp.hp=d.hp; arn.opp.name=d.opp.name; arn.opp.img=arImg(d.opp.avatarId); arn.opp.flash=0; arn.oppBuf=[];
     $("arMeName").textContent=d.you.name||"나"; $("arOpName").textContent=d.opp.name||"상대";
     $("arMeHP").style.width="100%"; $("arOpHP").style.width="100%";
     $("arResult").style.display="none"; $("arModal").style.display="flex";
@@ -2553,6 +2552,14 @@
     $("arResultSub").textContent=didWin?("₭"+fmt(reward)+" 획득"+(arAiLeft()<=0?" · 오늘 보상 끝":" · 남은 보상 "+arAiLeft()+"판")):"다시 도전!";
     $("arResult").style.display="flex"; vib(didWin?[40,40,90]:[90,40,90]);
   }
+  var NET_DELAY=100; // 상대 렌더 지연(ms) — 타임스탬프 버퍼 보간으로 렉에도 부드럽게
+  function interpOpp(buf, o, now){
+    if(!buf||!buf.length) return; var rt=now-NET_DELAY;
+    while(buf.length>16) buf.shift();
+    if(buf.length===1 || rt>=buf[buf.length-1].t){ var L=buf[buf.length-1]; o.x=L.x; o.y=L.y; o.dir=L.dir; return; }
+    if(rt<=buf[0].t){ o.x=buf[0].x; o.y=buf[0].y; o.dir=buf[0].dir; return; }
+    for(var i=0;i<buf.length-1;i++){ var a=buf[i], b=buf[i+1]; if(rt>=a.t && rt<=b.t){ var f=(b.t-a.t)>0?(rt-a.t)/(b.t-a.t):1; o.x=a.x+(b.x-a.x)*f; o.y=a.y+(b.y-a.y)*f; o.dir=f<0.5?a.dir:b.dir; return; } }
+  }
   function arLoop(t){
     if(!arn.active){ return; }
     var dt=Math.min(0.05,(t-arn.last)/1000); arn.last=t;
@@ -2565,8 +2572,7 @@
     if(arn.ai){ arBotThink(t,dt); }
     else {
       if(t-arn.sendT>50){ arn.sendT=t; arSend(); }
-      arn.opp.x+=(arn.opp.tx-arn.opp.x)*Math.min(1,dt*14);
-      arn.opp.y+=(arn.opp.ty-arn.opp.y)*Math.min(1,dt*14);
+      interpOpp(arn.oppBuf, arn.opp, t); // 넷코드: 버퍼 보간(부드럽게)
     }
     arDraw(t);
     if(arn.active) arn.raf=requestAnimationFrame(arLoop);
@@ -2623,7 +2629,7 @@
     LB.open=false; $("fgLobby").style.display="none"; $("fgCall").style.display="none"; clearInterval(LB.callTimer);
     sf.active=true; sf.over=false; sf.ai=!!ai; sf.room=d.room||null; sf.W=d.W||360; sf.H=d.H||540; sf.ground=sf.H*0.8;
     sf.me.x=d.you.x; sf.me.y=sf.ground; sf.me.vy=0; sf.me.onG=true; sf.me.dir=d.you.dir||1; sf.me.hp=d.hp||100; sf.me.name=d.you.name; sf.me.img=arImg(d.you.avatarId); sf.me.atk=0; sf.me.cd=0; sf.me.kcd=0; sf.me.flash=0;
-    sf.opp.x=sf.opp.tx=d.opp.x; sf.opp.y=sf.opp.ty=sf.ground; sf.opp.vy=0; sf.opp.onG=true; sf.opp.dir=d.opp.dir||-1; sf.opp.hp=d.hp||100; sf.opp.name=d.opp.name; sf.opp.img=arImg(d.opp.avatarId); sf.opp.atk=0; sf.opp.flash=0; sf.opp._cd=0; sf.opp._kcd=0; sf.opp._jcd=0; sf.opp._retreat=0;
+    sf.opp.x=sf.opp.tx=d.opp.x; sf.opp.y=sf.opp.ty=sf.ground; sf.opp.vy=0; sf.opp.onG=true; sf.oppBuf=[]; sf.opp.dir=d.opp.dir||-1; sf.opp.hp=d.hp||100; sf.opp.name=d.opp.name; sf.opp.img=arImg(d.opp.avatarId); sf.opp.atk=0; sf.opp.flash=0; sf.opp._cd=0; sf.opp._kcd=0; sf.opp._jcd=0; sf.opp._retreat=0;
     $("sfMeName").textContent=d.you.name||"나"; $("sfOpName").textContent=d.opp.name||"상대";
     $("sfMeHP").style.width="100%"; $("sfOpHP").style.width="100%";
     $("sfResult").style.display="none"; $("sfModal").style.display="flex";
@@ -2649,7 +2655,7 @@
     } else { try{ fgSock.emit("ar:attack",{dash:!!kick}); }catch(e){} }
     beep(kick?300:520,0.06); vib(kick?[30,20]:18);
   }
-  function sfOnOpp(d){ if(!sf.active) return; sf.opp.tx=d.x; sf.opp.ty=d.y; sf.opp.dir=d.dir; }
+  function sfOnOpp(d){ if(!sf.active) return; (sf.oppBuf=sf.oppBuf||[]).push({t:performance.now(),x:d.x,y:d.y,dir:d.dir}); }
   function sfOnHit(d){ if(!sf.active) return; var now=performance.now(); sf.me.hp=d.youHp; sf.opp.hp=d.oppHp; $("sfMeHP").style.width=Math.max(0,d.youHp)+"%"; $("sfOpHP").style.width=Math.max(0,d.oppHp)+"%"; if(d.dmg>0){ if(d.by==="opp"){ sf.me.flash=now+220; sfShake=9; vib([50,30,60]); beep(170,0.09); } else { sf.opp.flash=now+220; beep(880,0.07); } } }
   function sfOnEnd(d){ sf.over=true; cancelAnimationFrame(sf.raf); $("sfResultBig").textContent=d.win?"🏆 승리!":"💀 패배"; $("sfResultBig").style.color=d.win?"#ffd54a":"#ff7a7a"; $("sfResultSub").textContent=d.win?("누적 "+(d.wins||0)+"승"+(d.reward>0?" · +"+d.reward+"P":"")):(d.reason||"다음엔 이기자!"); $("sfResult").style.display="flex"; vib(d.win?[40,40,90]:[90,40,90]); }
   function sfAiLeft(){ return Math.max(0,6-(S.sfAiN||0)); }
@@ -2671,7 +2677,7 @@
     m.vy+=SF_GRAV*dt; m.y+=m.vy*dt; if(m.y>=sf.ground){ m.y=sf.ground; m.vy=0; m.onG=true; }
     var ox=sf.opp.x-m.x; if(Math.abs(ox)>2) m.dir=ox>0?1:-1;
     if(sf.ai){ var o=sf.opp; o.vy=(o.vy||0)+SF_GRAV*dt; o.y+=o.vy*dt; if(o.y>=sf.ground){ o.y=sf.ground; o.vy=0; o.onG=true; } sfBot(t,dt); }
-    else { if(t-sf.sendT>50){ sf.sendT=t; sfSend(); } sf.opp.x+=(sf.opp.tx-sf.opp.x)*Math.min(1,dt*14); sf.opp.y+=(sf.opp.ty-sf.opp.y)*Math.min(1,dt*14); }
+    else { if(t-sf.sendT>50){ sf.sendT=t; sfSend(); } interpOpp(sf.oppBuf, sf.opp, t); } // 넷코드: 버퍼 보간
     sfDraw(t); if(sf.active) sf.raf=requestAnimationFrame(sfLoop);
   }
   function sfDraw(t){ var c=$("sfCanvas"); if(!c) return; var ctx=c.getContext("2d"), W=c.width, H=c.height; ctx.clearRect(0,0,W,H);
