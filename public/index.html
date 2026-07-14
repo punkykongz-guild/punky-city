@@ -291,6 +291,14 @@
       <label style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px">📳 진동 <input type="checkbox" id="optVib"></label>
       <button class="bigBtn" id="acctReset" style="margin-top:12px;background:#5a5a72">🔄 계정 전환 (이 폰의 기억 지우기)</button>
       <button class="bigBtn" id="adminResetBtn" style="margin-top:8px;background:#a02020;display:none">🛠 전체 초기화 (관리자)</button>
+      <div id="adminTools" style="display:none;margin-top:8px;border-top:1px solid #4a3a6a;padding-top:8px;text-align:left">
+        <div style="font-size:12px;color:#ff9a9a;margin-bottom:6px">🛠 유저 ₭/단계 조정 (관리자)</div>
+        <input id="admTarget" placeholder="닉네임 (예: 김진영)" style="width:100%;box-sizing:border-box;padding:7px;margin-bottom:5px;border-radius:8px;border:1px solid var(--line);background:#160b2e;color:#fff">
+        <input id="admMoney" type="number" placeholder="₭ 설정값 (비우면 유지)" style="width:100%;box-sizing:border-box;padding:7px;margin-bottom:5px;border-radius:8px;border:1px solid var(--line);background:#160b2e;color:#fff">
+        <input id="admStage" type="number" placeholder="단계 1~50 (비우면 유지)" style="width:100%;box-sizing:border-box;padding:7px;margin-bottom:6px;border-radius:8px;border:1px solid var(--line);background:#160b2e;color:#fff">
+        <button class="bigBtn" id="admApply" style="margin:0 0 5px;background:#2e7d46">적용 (₭·단계 설정)</button>
+        <button class="bigBtn" id="admWipe" style="margin:0;background:#7a3030">이 유저만 초기화</button>
+      </div>
       <button class="bigBtn" id="setClose" style="margin-top:8px">닫기</button>
     </div>
   </div>
@@ -3601,7 +3609,22 @@
 
   // ===== 설정 =====
   $("optBgm").checked=OPT.bgm; $("optSfx").checked=OPT.sfx; $("optVib").checked=OPT.vib;
-  $("setBtn").onclick=function(){ var ar=$("adminResetBtn"); if(ar) ar.style.display=IS_ADMIN?"":"none"; $("setModal").style.display="flex"; };
+  $("setBtn").onclick=function(){ var ar=$("adminResetBtn"); if(ar) ar.style.display=IS_ADMIN?"":"none"; var at=$("adminTools"); if(at) at.style.display=IS_ADMIN?"":"none"; $("setModal").style.display="flex"; };
+  function admPost(body,okmsg){
+    fetch(API("/api/admin/setplayer"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.assign({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH,ses:SES},body))})
+      .then(function(r){return r.json();})
+      .then(function(j){ if(j.ok) alert(okmsg+"\n대상: "+j.target+"\n₭ "+fmt(j.money)+" · 단계 "+j.stage+"\n\n(대상 유저는 새로고침해야 반영됩니다)"); else alert("실패: "+(j.error||"?")); })
+      .catch(function(){ alert("서버 연결 실패"); });
+  }
+  (function(){
+    var ap=$("admApply"), aw=$("admWipe"); if(!ap) return;
+    ap.onclick=function(){ if(!IS_ADMIN) return; var t=$("admTarget").value.trim(); if(!t){ toast("닉네임 입력"); return; }
+      var m=$("admMoney").value, s=$("admStage").value;
+      admPost({target:t, money:m===""?null:m, stage:s===""?null:s}, "✅ 적용 완료!"); };
+    aw.onclick=function(){ if(!IS_ADMIN) return; var t=$("admTarget").value.trim(); if(!t){ toast("닉네임 입력"); return; }
+      if(!confirm("["+t+"] 님을 초기화할까요? (₭·단계·사업 0으로, 로그인·지갑은 유지)")) return;
+      admPost({target:t, reset:true}, "✅ ["+t+"] 초기화 완료!"); };
+  })();
   $("setClose").onclick=function(){ $("setModal").style.display="none"; };
   $("acctReset").onclick=function(){ if(confirm("이 폰에 저장된 계정/로그인 정보를 지울까요? 다음 접속 때 다시 로그인합니다.")){ localStorage.removeItem("pkc_id"); localStorage.removeItem("pkc_login"); location.href=location.pathname; } };
   $("adminResetBtn").onclick=function(){

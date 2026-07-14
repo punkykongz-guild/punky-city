@@ -1479,6 +1479,29 @@ app.post("/api/admin/selfreset", (req, res) => {
   console.log(`[selfreset] ${name} 님이 전체 초기화 실행 → ${n}명 (saveGen=${db.saveGen})`);
   res.json({ ok: true, reset: n });
 });
+// 관리자: 특정 유저 ₭/단계 조정 또는 개별 초기화 (본인 세션 검증)
+app.post("/api/admin/setplayer", (req, res) => {
+  if (!checkToken(req, res)) return;
+  const name = String((req.body.name || "")).trim().normalize("NFC");
+  if (!checkDev(name, String(req.body.key || ""), String(req.body.sig || ""), String(req.body.ph || ""), String(req.body.ses || ""))) return res.json({ ok: false, error: "잠금(세션)" });
+  if (ADMIN_NAMES.indexOf(name) < 0) return res.json({ ok: false, error: "관리자 계정이 아닙니다" });
+  const target = String((req.body.target || "")).trim().normalize("NFC");
+  const p = db.players[target];
+  if (!p) return res.json({ ok: false, error: "대상 없음: " + target });
+  if (req.body.reset) {
+    Object.assign(p, { money: 0, lifetime: 0, stage: 1, souls: 0, rewardedStage: 1, lastCollectDate: "", avatarId: 0,
+      szMeta: {}, szBest: 0, szN: 0, szRun: null, moleN: 0, simonN: 0, skyN: 0, k2N: 0, k3N: 0, rnN: 0, tdN: 0, tapN: 0, pjN: 0,
+      bnDate: "", bnCount: 0, mgDate: "", bank: null, lottoMine: 0, lottoWeek: 0 });
+    p.levels = null; p.tapLv = null; p.bothLv = null;
+  } else {
+    if (req.body.money != null && req.body.money !== "" && !isNaN(Number(req.body.money))) p.money = Math.max(0, Number(req.body.money));
+    if (req.body.stage != null && req.body.stage !== "" && !isNaN(Number(req.body.stage))) p.stage = Math.max(1, Math.min(50, Math.floor(Number(req.body.stage))));
+  }
+  db.saveGen = (db.saveGen || 0) + 1; // 대상 클라의 옛 저장 무효화 (대상은 새로고침 필요)
+  markDirty(); backupDirty = true; backupToSheet();
+  console.log(`[setplayer] ${name} → ${target}: money=${p.money} stage=${p.stage} reset=${!!req.body.reset}`);
+  res.json({ ok: true, target: target, money: p.money, stage: p.stage });
+});
 app.get("/api/admin/inspect", async (req, res) => {
   if (!LINK_SECRET || String(req.query.secret || "") !== LINK_SECRET) return res.status(403).json({ ok: false });
   const name = String(req.query.name || "").trim().normalize("NFC");
