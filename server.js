@@ -730,7 +730,7 @@ app.get("/api/idle/load", (req, res) => {
   if (!checkToken(req, res)) return;
   const name = String(req.query.name || "").trim().normalize("NFC");
   if (!checkDev(name, String(req.query.key || ""), String(req.query.sig || ""), String(req.query.ph || ""), String(req.query.ses || ""))) return res.json({ ok: false, error: "locked", message: LOCK_MSG, yours: findNameByKey(String(req.query.key || (req.body&&req.body.key) || "")) });
-  res.json({ ok: true, save: db.players[name] || null, tower: db.tower });
+  res.json({ ok: true, save: db.players[name] || null, tower: db.tower, gen: (db.saveGen || 0) });
 });
 
 app.post("/api/idle/save", (req, res) => {
@@ -739,6 +739,8 @@ app.post("/api/idle/save", (req, res) => {
   if (!checkDev(name, String((req.body.key || "")), String((req.body.sig || "")), String((req.body.ph || "")), String((req.body.ses || "")))) return res.json({ ok: false, error: "locked", message: LOCK_MSG, yours: findNameByKey(String(req.query.key || (req.body&&req.body.key) || "")) });
   const save = req.body.save;
   if (!name || typeof save !== "object" || save === null) return res.json({ ok: false });
+  // 리셋 이후 아직 새로고침 안 한 옛 클라의 저장은 무효화 (초기화 되돌림 방지)
+  if (Number(req.body.gen || 0) < (db.saveGen || 0)) return res.json({ ok: false, error: "stale", gen: db.saveGen });
   // 게임 세이브 필드만 갱신 (인증·저축·로또·기기 필드는 절대 클라 세이브로 덮어쓰지 않음)
   const GAME_FIELDS = ["money", "lifetime", "stage", "levels", "souls", "avatarId", "lastSeen",
                        "bnDate", "bnCount", "mgDate", "moleN", "simonN",
@@ -1307,6 +1309,7 @@ app.get("/api/admin/set", (req, res) => {
 // ===== 주간 로또 (매주 월 13:00 KST 자동 추첨) =====
 // 적립: ① 모든 ₭ 지출의 1% ② 지렁이 입장료 전액 → 기여 비례 가중추첨 3명
 if (typeof db.lottoPot !== "number") db.lottoPot = 0;
+if (typeof db.saveGen !== "number") db.saveGen = 0; // 리셋 세대 — 리셋 후 옛 클라 저장 무효화
 
 // 가장 최근에 지난 '월요일 13:00 KST' 의 실제 UTC 타임스탬프
 function lastMonday13KST(nowMs) {
@@ -1454,6 +1457,7 @@ app.get("/api/admin/reset", (req, res) => {
   });
   // 전체 초기화(all=1)면 전역 상태(로또 팟·추첨·타워)도 리셋
   if (all) { db.lottoPot = 0; db.lottoDraw = null; db.tower = { bricks: 0 }; }
+  db.saveGen = (db.saveGen || 0) + 1; // 접속 중 클라의 옛 저장 무효화
   markDirty(); backupDirty = true; backupToSheet(); // 시트 백업 즉시 갱신 (재시작 시 옛 데이터 복원 방지)
   res.json({ ok: true, reset: n, globals: all, kept: "pinHash·sess·ph·tokenIds·wallet(지갑등록)" });
 });
@@ -1470,8 +1474,9 @@ app.post("/api/admin/selfreset", (req, res) => {
   let n = 0;
   for (const nm of Object.keys(db.players)) { const p = db.players[nm]; if (!p) continue; Object.assign(p, GAME); p.levels = null; p.tapLv = null; p.bothLv = null; if (db.fgWins && db.fgWins[nm] != null) delete db.fgWins[nm]; n++; }
   db.lottoPot = 0; db.lottoDraw = null; db.tower = { bricks: 0 };
+  db.saveGen = (db.saveGen || 0) + 1; // 접속 중 클라의 옛 저장 무효화
   markDirty(); backupDirty = true; backupToSheet();
-  console.log(`[selfreset] ${name} 님이 전체 초기화 실행 → ${n}명`);
+  console.log(`[selfreset] ${name} 님이 전체 초기화 실행 → ${n}명 (saveGen=${db.saveGen})`);
   res.json({ ok: true, reset: n });
 });
 app.get("/api/admin/inspect", async (req, res) => {

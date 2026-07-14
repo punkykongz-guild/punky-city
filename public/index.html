@@ -875,6 +875,7 @@
   var qs = new URLSearchParams(location.search);
   var NAME = (qs.get("name")||"").trim();
   var TOKEN = (qs.get("token")||"").trim();
+  var SAVEGEN = 0; // 서버 리셋 세대 (로드 시 수신, 저장 시 전송)
   var DEVKEY=localStorage.getItem("pkc_key")||(function(){var k=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem("pkc_key",k);return k;})();
   var SIG=(qs.get("sig")||"").trim();
   var PH=(qs.get("ph")||"").trim();
@@ -3301,7 +3302,7 @@
   function saveNow(){
     if(!S||!NAME) return;
     S.lastSeen=Date.now();
-    var body=JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH,ses:SES,save:S});
+    var body=JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH,ses:SES,gen:SAVEGEN,save:S});
     try{ navigator.sendBeacon("/api/idle/save?token="+encodeURIComponent(TOKEN), new Blob([body],{type:"application/json"})); }
     catch(e){ fetch(API("/api/idle/save"),{method:"POST",headers:{"Content-Type":"application/json"},body:body,keepalive:true}).catch(function(){}); }
   }
@@ -3845,6 +3846,7 @@
         return;
       }
       var loaded=res[1]&&res[1].save;
+      SAVEGEN=(res[1]&&res[1].gen)||0; // 서버 리셋 세대 수신
       S=(loaded&&Array.isArray(loaded.levels))?loaded:newSave(); // 게임 데이터 없는 껍데기 세이브 방어
       if(S.levels.length<BIZ.length){ while(S.levels.length<BIZ.length)S.levels.push(0); }
       if(!Array.isArray(S.tapLv)) S.tapLv=BIZ.map(function(){return 0;}); while(S.tapLv.length<BIZ.length)S.tapLv.push(0);
