@@ -3705,13 +3705,19 @@
     var p=(birth||"").split("-"), Y=+p[0],M=+p[1],D=+p[2]; if(!Y||!M||!D) return null;
     var dg=sjGZ(Y,M,D), dayStem=dg%10, dayBranch=dg%12, dm=SJ_STEM_OH[dayStem];
     var oh=[0,0,0,0,0];
-    var ys=((Y-4)%10+10)%10, yb=((Y-4)%12+12)%12;
-    oh[SJ_STEM_OH[ys]]++; oh[SJ_BR_OH[yb]]++; oh[SJ_STEM_OH[dayStem]]++; oh[SJ_BR_OH[dayBranch]]++;
+    var sy=Y; if(M<2||(M===2&&D<4)) sy=Y-1;                       // 년주: 입춘 경계
+    var ys=((sy-4)%10+10)%10, yb=((sy-4)%12+12)%12;
+    var bdays=[0,6,4,6,5,6,6,7,8,8,8,7,7];                        // 월별 절기 근사일
+    var afterSm=(M===1?12:M-1), sm=(D>=bdays[M])?afterSm:afterSm-1; if(sm<1)sm+=12; if(sm>12)sm-=12;
+    var mb=(sm+1)%12, ms=(((ys%5)*2+2)+(sm-1))%10;                // 월지·월간(五虎遁)
+    oh[SJ_STEM_OH[ys]]++; oh[SJ_BR_OH[yb]]++;
+    oh[SJ_STEM_OH[ms]]++; oh[SJ_BR_OH[mb]]++;
+    oh[SJ_STEM_OH[dayStem]]++; oh[SJ_BR_OH[dayBranch]]++;
     var hb=(hour&&SJ_HIDX[hour]!=null)?SJ_HIDX[hour]:null, hs=null;
     if(hb!=null){ hs=((dayStem%5)*2+hb)%10; oh[SJ_STEM_OH[hs]]++; oh[SJ_BR_OH[hb]]++; }
     var support=oh[dm]+oh[(dm+4)%5], total=oh[0]+oh[1]+oh[2]+oh[3]+oh[4], strong=support>=total/2;
     var fav = strong? [sjKe(dm),(dm+3)%5,sjGen(dm)] : [(dm+4)%5, dm];
-    return {Y:Y,M:M,D:D,dg:dg,dayStem:dayStem,dayBranch:dayBranch,dm:dm,oh:oh,strong:strong,fav:fav};
+    return {Y:Y,M:M,D:D,dg:dg,dayStem:dayStem,dayBranch:dayBranch,dm:dm,oh:oh,strong:strong,fav:fav,ys:ys,yb:yb,ms:ms,mb:mb};
   }
   function sjToday(){ var t=new Date(); return sjGZ(t.getFullYear(),t.getMonth()+1,t.getDate()); }
   var FTDATA=null; try{ FTDATA=JSON.parse(localStorage.getItem("pkc_fortune")||"null"); }catch(e){}
@@ -3739,11 +3745,11 @@
     var seed=ch.dg+"|"+tg;
     var score=50+(todGood?22:-16)+(sjHash(seed+"|j")%21-10); score=Math.max(6,Math.min(97,score));
     var g = score>=85?["대길","🌟","#ffd54a"]:score>=68?["중길","✨","#8affd0"]:score>=50?["소길","🍀","#7affea"]:score>=32?["평운","☁️","#b9a8e0"]:["요주의","⚠️","#ff9a6a"];
-    var dp=SJ_STEMNM[ch.dayStem]+SJ_BRNM[ch.dayBranch], tp=SJ_STEMNM[tg%10]+SJ_BRNM[tg%12];
+    var yp=SJ_STEMNM[ch.ys]+SJ_BRNM[ch.yb], mp=SJ_STEMNM[ch.ms]+SJ_BRNM[ch.mb], dp=SJ_STEMNM[ch.dayStem]+SJ_BRNM[ch.dayBranch], tp=SJ_STEMNM[tg%10]+SJ_BRNM[tg%12];
     var h='<div style="text-align:center"><div style="font-size:13px" class="muted">'+new Date().toLocaleDateString("ko-KR")+' · '+FTDATA.name+'님</div>';
     h+='<div style="font-size:40px;margin:6px 0">'+g[1]+'</div><div style="font-size:22px;font-weight:800;color:'+g[2]+'">오늘의 총운 · '+g[0]+'</div>';
     h+='<div style="font-size:11px" class="muted">행운지수 '+score+'/100</div>';
-    h+='<div style="font-size:11px;color:#9a8ac0;margin:6px 0">일주 <b>'+dp+'</b> (일간 '+SJ_OHNM[ch.dm]+'·'+(ch.strong?"신강":"신약")+') · 오늘 <b>'+tp+'</b> → '+SJ_SIPNM[sip]+'</div>';
+    h+='<div style="font-size:11px;color:#9a8ac0;margin:6px 0">사주 <b>'+yp+'年 '+mp+'月 '+dp+'日</b> · 일간 '+SJ_OHNM[ch.dm]+'('+(ch.strong?"신강":"신약")+')<br>오늘 <b>'+tp+'日</b> → '+SJ_SIPNM[sip]+'</div>';
     h+='<div style="background:rgba(255,255,255,.06);border-radius:12px;padding:12px;margin:10px 0;font-size:14px;line-height:1.5">"'+sjPick(todGood?SJ_TXT.tot_g:SJ_TXT.tot_b,seed+"|tot")+'"</div></div>';
     var cats=[["love","💕 애정운"],["money","💰 금전운"],["work","💼 사업·직장운"],["health","🩺 건강운"],["rel","🤝 인간관계"],["luck","🍀 행운의 부적"]];
     h+='<div style="font-size:12px;color:#b9a8e0;margin-bottom:6px">▼ 눌러서 상세 운세 보기</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">';
