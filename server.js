@@ -1502,6 +1502,20 @@ app.post("/api/admin/setplayer", (req, res) => {
   console.log(`[setplayer] ${name} → ${target}: money=${p.money} stage=${p.stage} reset=${!!req.body.reset}`);
   res.json({ ok: true, target: target, money: p.money, stage: p.stage });
 });
+// 관리자(세션 인증): 누적 로또 팟 현재 기준 초기화 — 팟 0, 이번주 응모 전원 소멸, 발표 초기화
+app.post("/api/admin/lottoreset", (req, res) => {
+  if (!checkToken(req, res)) return;
+  const name = String((req.body.name || "")).trim().normalize("NFC");
+  if (!checkDev(name, String(req.body.key || ""), String(req.body.sig || ""), String(req.body.ph || ""), String(req.body.ses || ""))) return res.json({ ok: false, error: "잠금(세션)" });
+  if (ADMIN_NAMES.indexOf(name) < 0) return res.json({ ok: false, error: "관리자 계정이 아닙니다" });
+  const before = Math.floor(db.lottoPot || 0);
+  db.lottoPot = 0;
+  for (const pl of Object.values(db.players || {})) { if (pl) { pl.lottoWeek = 0; pl.lottoMine = 0; } }
+  db.lottoDraw = { drawnFor: lastMonday13KST(), at: 0, pot: 0, winners: [] };
+  markDirty(); backupDirty = true; backupToSheet().catch(() => {});
+  console.log(`[lottoreset] ${name} → 로또 팟 ${before} → 0 (전원 응모 초기화)`);
+  res.json({ ok: true, before, pot: 0 });
+});
 app.get("/api/admin/inspect", async (req, res) => {
   if (!LINK_SECRET || String(req.query.secret || "") !== LINK_SECRET) return res.status(403).json({ ok: false });
   const name = String(req.query.name || "").trim().normalize("NFC");
