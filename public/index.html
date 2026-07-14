@@ -673,7 +673,7 @@
     </div>
     <div class="card">
       <h3>✨ 환생 — 펑키소울</h3>
-      <p class="muted" id="soulInfo">펑키킹(30등급) 도달 시 환생 가능. 모든 재산을 잃지만 영구 수입 배수를 얻는다.</p>
+      <p class="muted" id="soulInfo">최고 신분(50등급 · 펑키버스 창조신) 도달 시 환생 가능. 모든 재산을 잃지만 영구 수입 배수를 얻는다.</p>
       <button class="bigBtn purple" id="prestigeBtn" disabled>환생하기</button>
     </div>
     <div class="card">
@@ -2009,7 +2009,7 @@
     var shake=setInterval(function(){ ic.style.transform="rotate("+(Math.random()*30-15)+"deg)"; },80);
     setTimeout(function(){
       clearInterval(shake); ic.style.transform="";
-      // 가중 결과 (EV~0.95): 꽝60% ×1(환불)25% ×2 10% ×5 4% 잭팟×30 1%
+      // 가중 결과 (실제 EV≈0.55, 강한 ₭싱크): 꽝70% ×1환불20% ×2 6.5% ×4 3% 잭팟×20 0.5%
       var r=Math.random(), mult, icon;
       if(r<0.70){ mult=0; icon="💨"; }
       else if(r<0.90){ mult=1; icon="🪙"; }
@@ -3337,7 +3337,7 @@
 
   // ===== 환생 =====
   $("prestigeBtn").onclick=function(){
-    if(S.stage<12) return;
+    if(S.stage<MAX_STAGE) return; // 게이트: 최고 신분(50) 도달 시에만 (12는 옛 상수 잔재 → 소울 조기파밍 방지)
     modal("✨ 환생","모든 재산과 사업을 잃고 펑키소울 1개를 얻습니다.\n(영구 수입 +10%)\n정말 환생할까요?",function(){});
     $("mOk").onclick=function(){
       $("modal").classList.remove("on");
