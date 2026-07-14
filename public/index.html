@@ -3672,35 +3672,58 @@
       $("authMsg").textContent="본인 닉네임과 비밀번호로 로그인하세요";
     };
   }
-  // ===== 🔮 오늘의 운세 =====
+  // ===== 🔮 오늘의 운세 (간이 사주/명리 기반) =====
   var FT_HOURS=[["자","子 23~01시"],["축","丑 01~03시"],["인","寅 03~05시"],["묘","卯 05~07시"],["진","辰 07~09시"],["사","巳 09~11시"],["오","午 11~13시"],["미","未 13~15시"],["신","申 15~17시"],["유","酉 17~19시"],["술","戌 19~21시"],["해","亥 21~23시"],["?","모름"]];
-  var FT_TOT=["오늘은 흐름을 타면 큰 것이 들어온다.","서두르지 않아도 저절로 길이 열린다.","작은 결정이 큰 행운으로 이어진다.","한 박자 쉬어가는 것이 오히려 이득.","뜻밖의 귀인이 손을 내미는 날.","묵혀둔 일이 술술 풀린다.","욕심을 내려놓는 순간 복이 온다.","오늘의 나는 어제보다 한 뼘 강하다.","기다리던 소식이 도착한다.","무리하면 탈, 여유가 정답이다.","작은 친절이 큰 보답으로 돌아온다.","고민하던 선택, 오늘 답이 보인다."];
-  var FT_LOVE=["먼저 연락하면 좋은 기류가 흐른다.","솔직함이 마음의 문을 연다.","오래 본 사람이 달리 보이는 날.","설레는 우연이 기다린다.","표현을 아끼지 마세요, 오늘은.","작은 다툼은 웃으며 넘기면 약이 된다.","혼자여도 충만한 하루, 자기애 충전.","연인·썸의 한마디에 온도가 오른다.","서프라이즈가 통하는 날.","기대보다 잔잔한 게 더 좋다."];
-  var FT_MONEY=["새는 돈부터 막으면 목돈이 보인다.","작은 지출이 큰 만족을 준다.","뜻밖의 부수입 기운이 감돈다.","오늘의 충동구매는 참는 게 승리.","커피 한 잔 값의 행운이 굴러온다.","빌려준 것을 돌려받을 조짐.","₭도 현금도 '모으는 손'이 이기는 날.","투자보다 저축이 어울리는 흐름.","공짜에 혹하면 손해, 정도를 지켜라.","티끌이 태산 되는 걸 체감하는 날."];
-  var FT_WORK=["미뤄둔 일 하나를 끝내면 연쇄로 풀린다.","협업에서 아이디어가 빛난다.","윗선의 인정을 받을 기운.","집중의 30분이 하루를 바꾼다.","실수는 빨리 인정할수록 작아진다.","새 제안을 꺼내기 좋은 타이밍.","루틴을 지키면 성과가 따라온다.","경쟁보다 협력이 이득인 날.","마감은 여유 있게, 결과는 든든하게.","배움 하나가 미래의 무기가 된다."];
-  var FT_HEALTH=["물 한 잔, 스트레칭 한 번이 보약.","일찍 자면 내일의 운이 두 배.","가벼운 산책이 기분을 살린다.","눈과 목의 휴식을 챙기세요.","과식은 금물, 소식이 복이다.","햇빛 10분이 활력을 채운다.","깊은 호흡으로 마음을 가라앉히기.","무리한 운동보다 꾸준함이 답.","달콤한 유혹은 반만 즐기기.","웃음이 최고의 면역이다."];
-  var FT_REL=["오래 연락 못 한 사람에게 안부를.","경청 한 번이 신뢰를 쌓는다.","오늘의 칭찬은 부메랑처럼 돌아온다.","오해는 대화로 눈 녹듯 풀린다.","새로운 인연의 문이 열린다.","베풀면 배로 돌아오는 날.","선 긋기도 관계의 지혜다.","가족의 한마디에 힘을 얻는다.","뒷담은 독, 앞칭찬은 약.","작은 모임이 큰 기회를 부른다."];
-  var FT_COLOR=["빨강","주황","노랑","초록","파랑","보라","금색","은색","하양","분홍","하늘","민트"];
-  var FT_ITEM=["바나나 🍌","동전 🪙","커피 ☕","우산 ☂️","열쇠 🔑","네잎클로버 🍀","향초 🕯️","작은 화분 🪴","손수건 🧻","사탕 🍬","펜 🖊️","반지 💍"];
-  var FT_DIR=["동쪽","서쪽","남쪽","북쪽","동남쪽","서남쪽","동북쪽","서북쪽"];
-  function ftHash(s){ var h=2166136261>>>0; for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619)>>>0; } return h>>>0; }
-  function ftPick(pool,seed,salt){ return pool[ftHash(seed+"|"+salt)%pool.length]; }
-  function ftStars(seed,salt){ var n=1+ftHash(seed+"|s|"+salt)%5; return "★".repeat(n)+"☆".repeat(5-n); }
-  function ftGrade(seed){ var sc=ftHash(seed+"|grade")%101, g;
-    if(sc>=85) g=["대길","🌟","#ffd54a"]; else if(sc>=65) g=["중길","✨","#8affd0"]; else if(sc>=45) g=["소길","🍀","#7affea"]; else if(sc>=25) g=["평운","☁️","#b9a8e0"]; else g=["요주의","⚠️","#ff9a6a"];
-    return {sc:sc,nm:g[0],ico:g[1],col:g[2]}; }
+  var SJ_STEM_OH=[0,0,1,1,2,2,3,3,4,4]; // 갑을=목 병정=화 무기=토 경신=금 임계=수
+  var SJ_BR_OH=[4,2,0,0,2,1,1,2,3,3,2,4]; // 자축인묘진사오미신유술해
+  var SJ_OHNM=["목(木)","화(火)","토(土)","금(金)","수(水)"];
+  var SJ_STEMNM="갑을병정무기경신임계", SJ_BRNM="자축인묘진사오미신유술해";
+  var SJ_HIDX={"자":0,"축":1,"인":2,"묘":3,"진":4,"사":5,"오":6,"미":7,"신":8,"유":9,"술":10,"해":11};
+  var SJ_COLOR=["청록색","붉은색","노란색","흰색","검은색"], SJ_DIR=["동쪽","남쪽","중앙","서쪽","북쪽"], SJ_NUM=[["3","8"],["2","7"],["5","0"],["4","9"],["1","6"]];
+  var SJ_SIPNM={"비겁":"비겁(比劫)","식상":"식상(食傷)","인성":"인성(印星)","재성":"재성(財星)","관성":"관성(官星)"};
+  var SJ_TXT={
+    tot_g:["기운이 순조롭게 흐른다. 무리 없이 뜻을 이루는 날.","막혔던 일이 풀리며 귀인의 도움이 따른다.","때가 무르익었다. 미뤄둔 일을 밀어붙여도 좋다.","오행이 어우러져 마음이 편안하고 판단이 밝다.","작은 노력이 큰 결실로 이어지는 흐름."],
+    tot_b:["한 박자 물러서는 것이 상책. 큰 결정은 미뤄라.","기운이 엇갈린다. 과욕을 버리면 화를 면한다.","오늘은 지키는 날. 새 일보다 마무리에 힘써라.","마찰이 생기기 쉬우니 말과 지출을 아껴라.","조급함이 독. 천천히 가야 탈이 없다."],
+    love_g:["배우자궁에 따뜻한 기운이 든다. 먼저 다가서면 좋다.","인연의 기류가 순하다. 진심이 통하는 날.","오늘의 기운이 관계를 부드럽게 한다."],
+    love_b:["감정이 어긋나기 쉽다. 한 발 양보가 약이다.","서두르면 엇갈린다. 오늘은 지켜보는 게 낫다.","말보다 침묵이 관계를 지킨다."],
+    money_g:["재성이 살아난다. 재물의 문이 열리는 날.","뜻밖의 수입·회수의 기운. 흐름을 놓치지 마라.","오늘의 기운이 돈을 부른다. 다만 절제와 함께."],
+    money_b:["재물이 새기 쉽다. 큰 지출·투자는 삼가라.","욕심이 손해를 부른다. 지키는 것이 버는 것.","공짜·유혹에 혹하면 탈. 정도를 지켜라."],
+    work_g:["관성이 힘을 얻는다. 인정과 승진의 기운.","윗선의 신뢰가 두터워지는 날. 책임을 맡아도 좋다.","문서·계약운이 순조롭다. 배움도 결실로."],
+    work_b:["압박과 잔무가 겹친다. 무리한 확장은 금물.","평가에 예민한 날. 실수는 빨리 인정하라.","새 일보다 지금 것을 단단히 하는 게 이득."],
+    health_g:["기운이 안정돼 몸이 가볍다. 활동에 좋은 날.","식상이 순해 소화·컨디션이 좋다.","가벼운 운동과 햇빛이 복을 더한다."],
+    health_b:["기가 빠지기 쉽다. 과로·과식을 피하라.","오늘은 충전의 날. 일찍 쉬는 게 보약.","무리하면 탈. 물과 휴식을 챙겨라."],
+    rel_g:["비겁이 왕성해 동료·친구의 기운이 좋다.","협력이 잘 통하는 날. 사람에서 기회가 온다.","베풀면 배로 돌아오는 흐름."],
+    rel_b:["경쟁·구설이 생기기 쉽다. 앞칭찬 뒤조심.","사람 사이 마찰 주의. 선을 지켜라.","오지랖보다 내 자리를 지키는 게 낫다."]
+  };
+  function sjGen(e){return (e+1)%5;} function sjKe(e){return (e+2)%5;}
+  function sjJDN(y,m,d){ var a=Math.floor((14-m)/12), yy=y+4800-a, mm=m+12*a-3; return d+Math.floor((153*mm+2)/5)+365*yy+Math.floor(yy/4)-Math.floor(yy/100)+Math.floor(yy/400)-32045; }
+  function sjGZ(y,m,d){ return ((sjJDN(y,m,d)+49)%60+60)%60; }
+  function sjSip(dm,t){ if(t===dm)return "비겁"; if(sjGen(dm)===t)return "식상"; if(sjGen(t)===dm)return "인성"; if(sjKe(dm)===t)return "재성"; return "관성"; }
+  function sjHash(s){ var h=2166136261>>>0; for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619)>>>0; } return h>>>0; }
+  function sjPick(pool,seed){ return pool[sjHash(seed)%pool.length]; }
+  function sjChart(birth,hour){
+    var p=(birth||"").split("-"), Y=+p[0],M=+p[1],D=+p[2]; if(!Y||!M||!D) return null;
+    var dg=sjGZ(Y,M,D), dayStem=dg%10, dayBranch=dg%12, dm=SJ_STEM_OH[dayStem];
+    var oh=[0,0,0,0,0];
+    var ys=((Y-4)%10+10)%10, yb=((Y-4)%12+12)%12;
+    oh[SJ_STEM_OH[ys]]++; oh[SJ_BR_OH[yb]]++; oh[SJ_STEM_OH[dayStem]]++; oh[SJ_BR_OH[dayBranch]]++;
+    var hb=(hour&&SJ_HIDX[hour]!=null)?SJ_HIDX[hour]:null, hs=null;
+    if(hb!=null){ hs=((dayStem%5)*2+hb)%10; oh[SJ_STEM_OH[hs]]++; oh[SJ_BR_OH[hb]]++; }
+    var support=oh[dm]+oh[(dm+4)%5], total=oh[0]+oh[1]+oh[2]+oh[3]+oh[4], strong=support>=total/2;
+    var fav = strong? [sjKe(dm),(dm+3)%5,sjGen(dm)] : [(dm+4)%5, dm];
+    return {Y:Y,M:M,D:D,dg:dg,dayStem:dayStem,dayBranch:dayBranch,dm:dm,oh:oh,strong:strong,fav:fav};
+  }
+  function sjToday(){ var t=new Date(); return sjGZ(t.getFullYear(),t.getMonth()+1,t.getDate()); }
   var FTDATA=null; try{ FTDATA=JSON.parse(localStorage.getItem("pkc_fortune")||"null"); }catch(e){}
-  function ftSeed(){ return FTDATA.name+"|"+FTDATA.birth+"|"+FTDATA.hour+"|"+todayKey(); }
-  function openFortune(){ $("fortuneModal").style.display="flex"; if(FTDATA&&FTDATA.name) ftResult(); else ftForm(); }
+  function openFortune(){ $("fortuneModal").style.display="flex"; if(FTDATA&&FTDATA.name&&FTDATA.birth) ftResult(); else ftForm(); }
   function ftForm(){
     var d=FTDATA||{name:"",birth:"",hour:""};
-    var h='<h2 style="margin:0 0 4px">🔮 운세 정보 입력</h2><p class="muted" style="font-size:12px;margin:0 0 12px">한 번 입력하면 저장돼요. 언제든 수정 가능(수정하면 운세도 바뀜).</p>';
+    var h='<h2 style="margin:0 0 4px">🔮 사주 운세 입력</h2><p class="muted" style="font-size:12px;margin:0 0 12px">생년월일·시로 <b>사주(일주·오행)</b>를 계산해 오늘의 <b>일진</b> 운을 봅니다. 1회 입력 저장·언제든 수정.</p>';
     h+='<div style="margin-bottom:10px"><div style="font-size:12px;margin-bottom:4px">이름</div><input id="ftName" value="'+(d.name||"")+'" placeholder="홍길동" style="width:100%;box-sizing:border-box;padding:9px;border-radius:9px;border:1px solid var(--line);background:#160b2e;color:#fff"></div>';
-    h+='<div style="margin-bottom:10px"><div style="font-size:12px;margin-bottom:4px">생년월일</div><input id="ftBirth" type="date" value="'+(d.birth||"")+'" style="width:100%;box-sizing:border-box;padding:9px;border-radius:9px;border:1px solid var(--line);background:#160b2e;color:#fff"></div>';
-    h+='<div style="margin-bottom:14px"><div style="font-size:12px;margin-bottom:4px">태어난 시 (자축인묘)</div><select id="ftHour" style="width:100%;box-sizing:border-box;padding:9px;border-radius:9px;border:1px solid var(--line);background:#160b2e;color:#fff">';
+    h+='<div style="margin-bottom:10px"><div style="font-size:12px;margin-bottom:4px">생년월일 (양력)</div><input id="ftBirth" type="date" value="'+(d.birth||"")+'" style="width:100%;box-sizing:border-box;padding:9px;border-radius:9px;border:1px solid var(--line);background:#160b2e;color:#fff"></div>';
+    h+='<div style="margin-bottom:14px"><div style="font-size:12px;margin-bottom:4px">태어난 시 (모르면 "모름")</div><select id="ftHour" style="width:100%;box-sizing:border-box;padding:9px;border-radius:9px;border:1px solid var(--line);background:#160b2e;color:#fff">';
     FT_HOURS.forEach(function(o){ h+='<option value="'+o[0]+'"'+((d.hour===o[0])?" selected":"")+'>'+o[0]+' ('+o[1]+')</option>'; });
-    h+='</select></div>';
-    h+='<button class="bigBtn" id="ftSave" style="width:100%">운세 보기 🔮</button>';
+    h+='</select></div><button class="bigBtn" id="ftSave" style="width:100%">사주 운세 보기 🔮</button>';
     $("fortuneBody").innerHTML=h;
     $("ftSave").onclick=function(){
       var nm=$("ftName").value.trim(), bd=$("ftBirth").value, hr=$("ftHour").value;
@@ -3711,30 +3734,38 @@
     };
   }
   function ftResult(){
-    var seed=ftSeed(), g=ftGrade(seed);
-    var hh=""; for(var i=0;i<FT_HOURS.length;i++) if(FT_HOURS[i][0]===FTDATA.hour) hh=FT_HOURS[i][1];
+    var ch=sjChart(FTDATA.birth,FTDATA.hour); if(!ch){ ftForm(); return; }
+    var tg=sjToday(), T=SJ_STEM_OH[tg%10], sip=sjSip(ch.dm,T), todGood=ch.fav.indexOf(T)>=0;
+    var seed=ch.dg+"|"+tg;
+    var score=50+(todGood?22:-16)+(sjHash(seed+"|j")%21-10); score=Math.max(6,Math.min(97,score));
+    var g = score>=85?["대길","🌟","#ffd54a"]:score>=68?["중길","✨","#8affd0"]:score>=50?["소길","🍀","#7affea"]:score>=32?["평운","☁️","#b9a8e0"]:["요주의","⚠️","#ff9a6a"];
+    var dp=SJ_STEMNM[ch.dayStem]+SJ_BRNM[ch.dayBranch], tp=SJ_STEMNM[tg%10]+SJ_BRNM[tg%12];
     var h='<div style="text-align:center"><div style="font-size:13px" class="muted">'+new Date().toLocaleDateString("ko-KR")+' · '+FTDATA.name+'님</div>';
-    h+='<div style="font-size:40px;margin:6px 0">'+g.ico+'</div>';
-    h+='<div style="font-size:22px;font-weight:800;color:'+g.col+'">오늘의 총운 · '+g.nm+'</div>';
-    h+='<div style="font-size:11px" class="muted">행운지수 '+g.sc+'/100</div>';
-    h+='<div style="background:rgba(255,255,255,.06);border-radius:12px;padding:12px;margin:12px 0;font-size:14px;line-height:1.5">"'+ftPick(FT_TOT,seed,"tot")+'"</div></div>';
+    h+='<div style="font-size:40px;margin:6px 0">'+g[1]+'</div><div style="font-size:22px;font-weight:800;color:'+g[2]+'">오늘의 총운 · '+g[0]+'</div>';
+    h+='<div style="font-size:11px" class="muted">행운지수 '+score+'/100</div>';
+    h+='<div style="font-size:11px;color:#9a8ac0;margin:6px 0">일주 <b>'+dp+'</b> (일간 '+SJ_OHNM[ch.dm]+'·'+(ch.strong?"신강":"신약")+') · 오늘 <b>'+tp+'</b> → '+SJ_SIPNM[sip]+'</div>';
+    h+='<div style="background:rgba(255,255,255,.06);border-radius:12px;padding:12px;margin:10px 0;font-size:14px;line-height:1.5">"'+sjPick(todGood?SJ_TXT.tot_g:SJ_TXT.tot_b,seed+"|tot")+'"</div></div>';
     var cats=[["love","💕 애정운"],["money","💰 금전운"],["work","💼 사업·직장운"],["health","🩺 건강운"],["rel","🤝 인간관계"],["luck","🍀 행운의 부적"]];
-    h+='<div style="font-size:12px;color:#b9a8e0;margin-bottom:6px">▼ 눌러서 상세 운세 보기</div>';
-    h+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">';
+    h+='<div style="font-size:12px;color:#b9a8e0;margin-bottom:6px">▼ 눌러서 상세 운세 보기</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">';
     cats.forEach(function(ct){ h+='<button class="ftChip" data-k="'+ct[0]+'" style="flex:1 1 30%;min-width:96px;font-size:12px;padding:8px 4px;border:1px solid var(--line);border-radius:10px;background:rgba(122,62,168,.25);color:#fff;font-weight:700">'+ct[1]+'</button>'; });
-    h+='</div><div id="ftDetail" style="min-height:60px;background:rgba(255,255,255,.05);border-radius:12px;padding:14px;font-size:14px;line-height:1.5"></div>';
-    h+='<button class="bigBtn" id="ftEdit" style="width:100%;margin-top:12px;background:#5a5a72">정보 수정 (다른 운세)</button>';
+    h+='</div><div id="ftDetail" style="min-height:70px;background:rgba(255,255,255,.05);border-radius:12px;padding:14px;font-size:14px;line-height:1.5"></div>';
+    h+='<button class="bigBtn" id="ftEdit" style="width:100%;margin-top:12px;background:#5a5a72">정보 수정 (사주 재계산)</button>';
     $("fortuneBody").innerHTML=h;
     Array.prototype.forEach.call(document.querySelectorAll(".ftChip"),function(b){ b.onclick=function(){ ftShow(b.getAttribute("data-k")); Array.prototype.forEach.call(document.querySelectorAll(".ftChip"),function(x){x.style.background="rgba(122,62,168,.25)";}); b.style.background="rgba(255,213,74,.35)"; }; });
-    $("ftEdit").onclick=ftForm;
-    ftShow("love");
+    $("ftEdit").onclick=ftForm; ftShow("love");
   }
   function ftShow(key){
-    var seed=ftSeed(), el=$("ftDetail");
-    if(key==="luck"){ var num=1+ftHash(seed+"|num")%45, col=ftPick(FT_COLOR,seed,"col"), dir=ftPick(FT_DIR,seed,"dir"), item=ftPick(FT_ITEM,seed,"item");
-      el.innerHTML='🍀 <b>행운의 부적</b><br>· 행운의 숫자: <b style="color:#ffd54a">'+num+'</b><br>· 행운의 색: <b>'+col+'</b><br>· 행운의 방향: <b>'+dir+'</b><br>· 행운의 아이템: <b>'+item+'</b>'; return; }
-    var map={love:["💕 애정운",FT_LOVE],money:["💰 금전운",FT_MONEY],work:["💼 사업·직장운",FT_WORK],health:["🩺 건강운",FT_HEALTH],rel:["🤝 인간관계",FT_REL]};
-    var m=map[key]; el.innerHTML='<b>'+m[0]+'</b> '+ftStars(seed,key)+'<br>'+ftPick(m[1],seed,key);
+    var ch=sjChart(FTDATA.birth,FTDATA.hour); if(!ch) return;
+    var tg=sjToday(), T=SJ_STEM_OH[tg%10], sip=sjSip(ch.dm,T), seed=ch.dg+"|"+tg+"|"+key, el=$("ftDetail");
+    if(key==="luck"){ var fe=ch.fav[0]; el.innerHTML='🍀 <b>행운의 기운 — 용신 '+SJ_OHNM[fe]+'</b><br>· 행운의 색: <b>'+SJ_COLOR[fe]+'</b><br>· 행운의 방향: <b>'+SJ_DIR[fe]+'</b><br>· 행운의 숫자: <b>'+SJ_NUM[fe].join(", ")+'</b><br><span style="font-size:11px;color:#9a8ac0">오늘은 '+SJ_OHNM[T]+' 기운의 날('+SJ_SIPNM[sip]+')</span>'; return; }
+    var good, gp, bp, label;
+    if(key==="money"){ good=(sip==="재성")||(ch.fav.indexOf(sjKe(ch.dm))>=0&&sip!=="비겁"); label="💰 금전운"; gp=SJ_TXT.money_g; bp=SJ_TXT.money_b; }
+    else if(key==="work"){ good=(sip==="관성")||(sip==="인성"); label="💼 사업·직장운"; gp=SJ_TXT.work_g; bp=SJ_TXT.work_b; }
+    else if(key==="love"){ var le=SJ_BR_OH[ch.dayBranch]; good=(sjGen(T)===le||T===le); label="💕 애정운"; gp=SJ_TXT.love_g; bp=SJ_TXT.love_b; }
+    else if(key==="health"){ good=!((!ch.strong)&&(sip==="재성"||sip==="관성"||sip==="식상")); label="🩺 건강운"; gp=SJ_TXT.health_g; bp=SJ_TXT.health_b; }
+    else { good=(sip==="비겁"||sip==="인성"); label="🤝 인간관계"; gp=SJ_TXT.rel_g; bp=SJ_TXT.rel_b; }
+    var star=good?(3+sjHash(seed+"|s")%3):(1+sjHash(seed+"|s")%3), stars="★".repeat(star)+"☆".repeat(5-star);
+    el.innerHTML='<b>'+label+'</b> <span style="color:#ffd54a">'+stars+'</span><br>'+sjPick(good?gp:bp,seed+"|t")+'<div style="font-size:11px;color:#9a8ac0;margin-top:6px">오늘 '+SJ_OHNM[T]+'('+SJ_SIPNM[sip]+') 기운 기준</div>';
   }
   var _fb=$("fortuneBtn"); if(_fb) _fb.onclick=openFortune;
   var _fc=$("fortuneClose"); if(_fc) _fc.onclick=function(){ $("fortuneModal").style.display="none"; };
