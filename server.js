@@ -1430,6 +1430,28 @@ app.get("/api/admin/delplayer", (req, res) => {
   markDirty();
   res.json({ ok: true, deleted: del });
 });
+// 게임 진행만 초기화 (인증·지갑·저축·로또는 보존 → 재로그인/재등록 불필요)
+// 사용: /api/admin/reset?secret=시크릿&all=1   또는   ...&names=이름1,이름2
+app.get("/api/admin/reset", (req, res) => {
+  if (!LINK_SECRET || String(req.query.secret || "") !== LINK_SECRET) return res.status(403).json({ ok: false });
+  const all = String(req.query.all || "") === "1";
+  const names = String(req.query.names || "").split(",").map((x) => x.trim().normalize("NFC")).filter(Boolean);
+  const targets = all ? Object.keys(db.players) : names;
+  // 리셋할 게임 필드만 명시 (인증 pinHash/sess/ph, 지갑 tokenIds/wallet, 저축 bank, 로또는 건드리지 않음)
+  const GAME = { money: 0, lifetime: 0, stage: 1, souls: 0, rewardedStage: 1, lastCollectDate: "", avatarId: 0,
+                 szMeta: {}, szBest: 0, szN: 0, szRun: null,
+                 moleN: 0, simonN: 0, skyN: 0, k2N: 0, k3N: 0, rnN: 0, tdN: 0, bnDate: "", bnCount: 0, mgDate: "" };
+  let n = 0;
+  targets.forEach((name) => {
+    const p = db.players[name]; if (!p) return;
+    Object.assign(p, GAME);
+    p.levels = null; // 클라가 fresh 세이브로 재초기화하도록
+    if (db.fgWins && db.fgWins[name] != null) delete db.fgWins[name];
+    n++;
+  });
+  markDirty(); backupDirty = true; backupToSheet(); // 시트 백업 즉시 갱신 (재시작 시 옛 데이터 복원 방지)
+  res.json({ ok: true, reset: n, kept: "pinHash·sess·ph·tokenIds·wallet·bank·lotto" });
+});
 app.get("/api/admin/inspect", async (req, res) => {
   if (!LINK_SECRET || String(req.query.secret || "") !== LINK_SECRET) return res.status(403).json({ ok: false });
   const name = String(req.query.name || "").trim().normalize("NFC");

@@ -2716,6 +2716,8 @@
     else if(bt==="orb"){ w.expl=52+i*2; w.rate=w.rate+6; w.dmg=Math.round(w.dmg*1.4); w.sz=6+Math.floor(i/12); }
     else if(bt==="cross"||bt==="spiral"){ w.pierce=w.pierce+1; }
     a.push(w); } return a; })();
+  var SZ_DIFF=10; // 난이도 배율 (10배) — 값만 바꾸면 전체 난이도 조절
+  function szDiff(s){ return SZ_DIFF*Math.min(1,0.6+s*0.2)*(1+(s-1)*0.03); } // 스테이지1은 살짝 완만, 뒤로갈수록 미세 상승
   var SZ_META=[
     {k:"squad",ico:"🦍",nm:"초기 부대",ds:"시작 콩즈 +1",mx:8,base:400},
     {k:"dmg",ico:"💥",nm:"강화 탄두",ds:"화력 +8%",mx:12,base:400},
@@ -2797,7 +2799,7 @@
   function szZType(s){ var p=[["walker",5]]; if(s>=1)p.push(["runner",1.5+s*0.15]); if(s>=2)p.push(["crawler",1.2+s*0.2]); if(s>=3)p.push(["brute",0.7+s*0.14]); if(s>=4)p.push(["spitter",0.8+s*0.12]); if(s>=5)p.push(["armored",0.6+s*0.12]); if(s>=7)p.push(["hulk",0.3+s*0.08]); return szPick(p); }
   function szSpawnZ(cnt){
     var s=sz.stage, W=sz.W, n=cnt||(3+Math.floor(Math.random()*3)+Math.floor(s*0.6)); n=Math.min(n,10);
-    var baseX=30+Math.random()*(W-60), hpb=16+s*11+Math.floor(s*s*0.35);
+    var baseX=30+Math.random()*(W-60), hpb=Math.round((16+s*11+Math.floor(s*s*0.35))*szDiff(s));
     for(var i=0;i<n;i++){ if(sz.zoms.length>140) break;
       var ty=szZType(s), z={x:Math.max(18,Math.min(W-18,baseX+(Math.random()-0.5)*90)),y:-30-Math.random()*60,hit:0,ph:Math.random()*6.3,ty:ty};
       if(ty==="crawler"){ z.hp=hpb*0.35; z.r=8; z.spd=2.3; z.bite=1; z.col="#ff7ad0"; }
@@ -2824,7 +2826,7 @@
   function szSpawnBrick(){
     var W=sz.W, full=Math.random()<0.22, s=sz.stage;
     var x0=full?6:(20+Math.random()*(W*0.45)), x1=full?W-6:(x0+W*0.3+Math.random()*W*0.24); x1=Math.min(W-6,x1);
-    var rows=1+(s>=3?1:0)+(s>=6?1:0)+(s>=10?1:0), bw=30, hp=12+s*7;
+    var rows=1+(s>=3?1:0)+(s>=6?1:0)+(s>=10?1:0), bw=30, hp=Math.round((12+s*7)*Math.min(4,szDiff(s)*0.4));
     for(var r=0;r<rows;r++){ for(var x=x0;x<x1-4;x+=bw+3){ var w=Math.min(bw,x1-x); sz.bricks.push({x:x+w/2,y:-46-r*20,w:w,h:16,hp:hp,mx:hp}); } }
   }
   function szSpawnBarrel(){ sz.barrels.push({x:30+Math.random()*(sz.W-60),y:-30,hp:18+sz.stage*4,mx:18+sz.stage*4,hit:0}); }
@@ -2836,7 +2838,7 @@
     {nm:"포격 타이탄",face:"💣",col:"#5a3a10",atk:"arty"},
     {nm:"광폭 나이트",face:"👺",col:"#5a1030",atk:"berserk"}
   ];
-  function szSpawnBoss(){ var s=sz.stage, bd=SZ_BOSS[(s-1)%SZ_BOSS.length], hp=460+s*260+Math.floor(s*s*6);
+  function szSpawnBoss(){ var s=sz.stage, bd=SZ_BOSS[(s-1)%SZ_BOSS.length], hp=Math.round((460+s*260+Math.floor(s*s*6))*szDiff(s));
     sz.boss={x:sz.W/2,y:-90,hp:hp,mx:hp,spd:0.5+s*0.02,dir:1,fireT:70,holdY:sz.H*0.22,arrived:false,_hit:0,ph:0,atk:bd.atk,nm:bd.nm,face:bd.face,col:bd.col};
     sz.banner="⚠ 보스: "+bd.nm; sz.bannerT=sz.t+120; beep(200,0.2); sz.shake=10;
   }
@@ -2993,7 +2995,7 @@
       else { bo.x+=bo.spd*bo.dir*(bo.atk==="berserk"?3.2:2.0); if(bo.x<52||bo.x>W-52) bo.dir*=-1; bo.fireT--;
         if(bo.atk==="rush"){ if(bo.fireT<=0){ bo.fireT=120; bo.dashUntil=sz.t+28; beep(220,0.1); } if(sz.t<(bo.dashUntil||0)) bo.y=Math.min(sz.sqy-64,bo.y+2.4); else if(bo.y>bo.holdY) bo.y-=1.2; if(sz.t%140===0) szSpawnZ(2+Math.floor(s/3)); }
         else if(bo.atk==="gun"){ if(bo.fireT<=0){ bo.fireT=Math.max(26,58-s*2); var an=Math.atan2(sz.sqy-bo.y,sz.sqx-bo.x); for(var e=-1;e<=1;e++) sz.ezz.push({x:bo.x,y:bo.y+30,vx:Math.cos(an+e*0.22)*3.4,vy:Math.sin(an+e*0.22)*3.4,dmg:1}); beep(300,0.03); } }
-        else if(bo.atk==="swarm"){ if(bo.fireT<=0){ bo.fireT=Math.max(56,108-s*2); var hb=16+s*11; for(var q=0;q<3+Math.floor(s/2);q++){ if(sz.zoms.length<140) sz.zoms.push({x:bo.x+(Math.random()-0.5)*72,y:bo.y+24,hp:hb*0.5,mx:hb*0.5,r:9,spd:2.0,bite:1,col:"#b6d63a",hit:0,ph:Math.random()*6}); } beep(260,0.05); } }
+        else if(bo.atk==="swarm"){ if(bo.fireT<=0){ bo.fireT=Math.max(56,108-s*2); var hb=Math.round((16+s*11)*szDiff(s)); for(var q=0;q<3+Math.floor(s/2);q++){ if(sz.zoms.length<140) sz.zoms.push({x:bo.x+(Math.random()-0.5)*72,y:bo.y+24,hp:hb*0.5,mx:hb*0.5,r:9,spd:2.0,bite:1,col:"#b6d63a",hit:0,ph:Math.random()*6}); } beep(260,0.05); } }
         else if(bo.atk==="arty"){ if(bo.fireT<=0){ bo.fireT=Math.max(48,88-s*2); var tx=sz.sqx+(Math.random()-0.5)*90, a2=Math.atan2(sz.sqy-bo.y,tx-bo.x); sz.ezz.push({x:bo.x,y:bo.y+30,vx:Math.cos(a2)*2.2,vy:Math.sin(a2)*2.2,dmg:2,big:1}); beep(200,0.06); } }
         else { if(bo.fireT<=0){ bo.fireT=Math.max(66,124-s*3); var nn=10+Math.min(10,s); for(var e2=0;e2<nn;e2++){ var ba=(e2/nn)*6.283; sz.ezz.push({x:bo.x,y:bo.y+6,vx:Math.cos(ba)*2.8,vy:Math.abs(Math.sin(ba))*1.6+1.8,dmg:1}); } beep(240,0.06); } }
       }
