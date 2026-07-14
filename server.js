@@ -1071,7 +1071,7 @@ function lobbySnapshot() {
   return Array.from(lobby.values()).map((e) => ({
     name: e.name, avatarId: e.avatarId || 1,
     wins: (db.fgWins && db.fgWins[e.name]) || 0, stage: e.stage || 1,
-    busy: fgSockRoom.has(e.socket.id), // 진행 중인 매치가 있으면 대결 중
+    busy: fgSockRoom.has(e.socket.id) || arenaSockRoom.has(e.socket.id), // 진행 중인 매치가 있으면 대결 중
   }));
 }
 function lobbyBroadcast() {
@@ -1081,6 +1081,56 @@ function lobbyBroadcast() {
 function lobbyRemove(socket) {
   for (const [nm, e] of lobby) { if (e.socket.id === socket.id) { lobby.delete(nm); return nm; } }
   return null;
+}
+
+// ===== 탑다운 아레나 실시간 전투 (Phase 2) — 권위적 HP + 히트판정, 이동은 클라 릴레이 =====
+const arenas = new Map();          // roomId -> arena
+const arenaSockRoom = new Map();   // socket.id -> arena
+let arenaSeq = 1;
+const AR = { HP: 100, W: 360, H: 540, RANGE: 66, DMG: 9, DASH_DMG: 16, CD: 420, DASH_CD: 1150 };
+function arSide(arena, id) { return arena.a.socket.id === id ? arena.a : (arena.b.socket.id === id ? arena.b : null); }
+function arStart(fromName, meName, feSock, meSock, feAv, meAv) {
+  const rid = "ar" + (arenaSeq++);
+  const mk = (name, socket, avatarId, x, y, dir) => ({ name, socket, avatarId, x, y, dir, hp: AR.HP, cd: 0, dashCd: 0 });
+  const a = mk(fromName, feSock, feAv, AR.W * 0.5, AR.H * 0.24, 1);
+  const b = mk(meName, meSock, meAv, AR.W * 0.5, AR.H * 0.76, -1);
+  const arena = { id: rid, over: false, a, b };
+  arenas.set(rid, arena);
+  arenaSockRoom.set(feSock.id, arena); arenaSockRoom.set(meSock.id, arena);
+  const pay = (self, opp) => ({ room: rid, W: AR.W, H: AR.H, hp: AR.HP,
+    you: { x: self.x, y: self.y, dir: self.dir, name: self.name, avatarId: self.avatarId },
+    opp: { x: opp.x, y: opp.y, dir: opp.dir, name: opp.name, avatarId: opp.avatarId } });
+  try { feSock.emit("ar:start", pay(a, b)); } catch (x) {}
+  try { meSock.emit("ar:start", pay(b, a)); } catch (x) {}
+}
+function arEnd(arena, winnerSide, reason) {
+  if (arena.over) return;
+  arena.over = true;
+  [arena.a, arena.b].forEach((side) => {
+    arenaSockRoom.delete(side.socket.id);
+    const win = side === winnerSide;
+    let reward = 0, wins = (db.fgWins && db.fgWins[side.name]) || 0;
+    if (win && winnerSide) {
+      if (!db.fgWins) db.fgWins = {};
+      wins = db.fgWins[side.name] = wins + 1;
+      const pl = db.players[side.name] || (db.players[side.name] = {});
+      const today = todayStr();
+      if (pl.fgDay !== today) { pl.fgDay = today; pl.fgRewarded = 0; }
+      if ((pl.fgRewarded || 0) < 5) { pl.fgRewarded = (pl.fgRewarded || 0) + 1; reward = 3; submitScore(side.name, reward, "파이터승리").catch(() => {}); }
+      markDirty();
+    }
+    try { side.socket.emit("ar:end", { win, wins, reward, reason: reason || "" }); } catch (x) {}
+  });
+  arenas.delete(arena.id);
+  try { lobbyBroadcast(); } catch (x) {}
+}
+function arCleanup(socket) {
+  const arena = arenaSockRoom.get(socket.id);
+  if (arena && !arena.over) {
+    const me = arSide(arena, socket.id);
+    const opp = me === arena.a ? arena.b : arena.a;
+    arEnd(arena, opp, "상대가 나갔어요");
+  }
 }
 
 function fgEnd(match, winnerIdx, reason) {
@@ -1312,17 +1362,52 @@ io.on("connection", (socket) => {
   socket.on("fight:accept", (d) => {
     const me = socket._lobbyName; if (!me) return;
     const from = String((d && d.from) || "").trim().normalize("NFC");
+    const mode = String((d && d.mode) || "topdown");
     const fe = lobby.get(from), meE = lobby.get(me);
     if (!fe || !meE) { try { socket.emit("fight:invite:fail", { target: from, reason: "상대 오프라인" }); } catch (x) {} return; }
-    if (fgSockRoom.has(fe.socket.id) || fgSockRoom.has(meE.socket.id)) { try { socket.emit("fight:invite:fail", { target: from, reason: "이미 대결 중" }); } catch (x) {} return; }
-    // 초대 기반으로 기존 파이트 엔진 즉시 시작 (전투는 다음 페이즈에서 이동식으로 교체)
-    fgDequeue(fe.socket.id); fgDequeue(meE.socket.id);
-    fgStartMatch({ socket: fe.socket, name: from, avatarId: fe.avatarId }, { socket: meE.socket, name: me, avatarId: meE.avatarId });
+    const busy = (id) => fgSockRoom.has(id) || arenaSockRoom.has(id);
+    if (busy(fe.socket.id) || busy(meE.socket.id)) { try { socket.emit("fight:invite:fail", { target: from, reason: "이미 대결 중" }); } catch (x) {} return; }
+    if (mode === "topdown") {
+      arStart(from, me, fe.socket, meE.socket, fe.avatarId, meE.avatarId); // Phase 2: 탑다운 실시간 이동전투
+    } else {
+      // 횡스크롤·실시간은 아직 기존 엔진 (Phase 3~4에서 교체)
+      fgDequeue(fe.socket.id); fgDequeue(meE.socket.id);
+      fgStartMatch({ socket: fe.socket, name: from, avatarId: fe.avatarId }, { socket: meE.socket, name: me, avatarId: meE.avatarId });
+    }
     lobbyBroadcast();
   });
+  // ----- 탑다운 아레나 실시간 전투 -----
+  socket.on("ar:move", (d) => {
+    const arena = arenaSockRoom.get(socket.id); if (!arena || arena.over) return;
+    const me = arSide(arena, socket.id); if (!me) return;
+    const opp = me === arena.a ? arena.b : arena.a;
+    me.x = Math.max(0, Math.min(AR.W, Number(d && d.x) || me.x));
+    me.y = Math.max(0, Math.min(AR.H, Number(d && d.y) || me.y));
+    me.dir = (d && d.dir === -1) ? -1 : 1;
+    try { opp.socket.emit("ar:opp", { x: me.x, y: me.y, dir: me.dir }); } catch (x) {}
+  });
+  socket.on("ar:attack", (d) => {
+    const arena = arenaSockRoom.get(socket.id); if (!arena || arena.over) return;
+    const me = arSide(arena, socket.id); if (!me) return;
+    const opp = me === arena.a ? arena.b : arena.a;
+    const now = Date.now(), dash = !!(d && d.dash);
+    if (dash) { if (now < me.dashCd) return; me.dashCd = now + AR.DASH_CD; }
+    else { if (now < me.cd) return; me.cd = now + AR.CD; }
+    const dist = Math.hypot(opp.x - me.x, opp.y - me.y);
+    const range = dash ? AR.RANGE * 1.35 : AR.RANGE;
+    let dmg = 0;
+    if (dist <= range) { dmg = dash ? AR.DASH_DMG : AR.DMG; opp.hp = Math.max(0, opp.hp - dmg); }
+    [arena.a, arena.b].forEach((side) => {
+      const iAtk = side === me, sopp = side === arena.a ? arena.b : arena.a;
+      try { side.socket.emit("ar:hit", { by: iAtk ? "me" : "opp", dmg, dash, youHp: side.hp, oppHp: sopp.hp, ax: me.x, ay: me.y, adir: me.dir }); } catch (x) {}
+    });
+    if (opp.hp <= 0) arEnd(arena, me, "");
+  });
+  socket.on("ar:leave", () => arCleanup(socket));
 
   socket.on("disconnect", async () => {
     fgOnLeave(socket);
+    arCleanup(socket);
     lobbyRemove(socket); lobbyBroadcast();
     await finishAndLeave();
   });

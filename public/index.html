@@ -522,6 +522,33 @@
     </div>
   </div>
 
+  <!-- 🎮 탑다운 아레나 실시간 전투 -->
+  <div id="arModal" style="position:fixed;inset:0;background:#0a0614;display:none;z-index:89;flex-direction:column;overflow:hidden;touch-action:none">
+    <div style="display:flex;gap:10px;padding:9px 12px;align-items:center">
+      <div style="flex:1;min-width:0">
+        <div id="arMeName" style="font-size:12px;font-weight:800;color:#4ade80;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">나</div>
+        <div style="height:13px;background:#2a1a2a;border-radius:7px;overflow:hidden;margin-top:2px"><div id="arMeHP" style="height:100%;width:100%;background:linear-gradient(90deg,#4ade80,#22c55e);transition:width .12s"></div></div>
+      </div>
+      <div style="font-size:12px;color:#8a7aa8;font-weight:800">VS</div>
+      <div style="flex:1;min-width:0">
+        <div id="arOpName" style="font-size:12px;font-weight:800;color:#f87171;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">상대</div>
+        <div style="height:13px;background:#2a1a2a;border-radius:7px;overflow:hidden;margin-top:2px"><div id="arOpHP" style="height:100%;width:100%;background:linear-gradient(90deg,#ef4444,#f87171);margin-left:auto;transition:width .12s"></div></div>
+      </div>
+    </div>
+    <canvas id="arCanvas" style="flex:1;width:100%;display:block"></canvas>
+    <div id="arCtrlHint" style="position:absolute;left:0;right:0;top:50%;text-align:center;color:#9b8cc0;font-size:13px;pointer-events:none">왼쪽을 끌어 이동 · 오른쪽 버튼으로 공격</div>
+    <div style="position:absolute;right:16px;bottom:26px;display:flex;flex-direction:column;gap:14px;align-items:center;user-select:none">
+      <button id="arDash" style="width:64px;height:64px;border-radius:50%;border:2px solid #7a5ad0;background:rgba(122,90,208,.35);color:#fff;font-size:13px;font-weight:800">💨<br>대시</button>
+      <button id="arAtk" style="width:86px;height:86px;border-radius:50%;border:2px solid #ff6a6a;background:rgba(255,80,80,.35);color:#fff;font-size:15px;font-weight:900">👊<br>공격</button>
+    </div>
+    <div id="arResult" style="position:absolute;inset:0;background:rgba(8,4,20,.82);display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px">
+      <div id="arResultBig" style="font-size:40px;font-weight:900;margin-bottom:8px"></div>
+      <div id="arResultSub" class="muted" style="font-size:15px;margin-bottom:20px"></div>
+      <button class="bigBtn" id="arResultClose" style="max-width:240px">대기실로</button>
+    </div>
+    <button id="arExit" style="position:absolute;left:12px;bottom:26px;width:auto;padding:9px 14px;border-radius:10px;border:0;background:rgba(90,90,114,.6);color:#fff;font-size:13px;font-weight:700">기권</button>
+  </div>
+
   <div id="fgModal" style="position:fixed;inset:0;background:linear-gradient(180deg,#2a1230,#0e0616);display:none;z-index:84;flex-direction:column;padding:14px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
       <div style="flex:1">
@@ -2245,6 +2272,10 @@
     fgSock.on("fight:invite:fail", function(d){ toast("초대 실패: "+((d&&d.reason)||"불가")+((d&&d.target)?" ("+d.target+")":"")); });
     fgSock.on("fight:declined", function(d){ toast("😢 "+((d&&d.by)||"상대")+"님이 거절했어요."); });
     fgSock.on("fight:invited", function(d){ lbShowCall(d); });
+    fgSock.on("ar:start", function(d){ arStart(d); });
+    fgSock.on("ar:opp", function(d){ if(arn.active){ arn.opp.tx=d.x; arn.opp.ty=d.y; arn.opp.dir=d.dir; } });
+    fgSock.on("ar:hit", function(d){ arOnHit(d); });
+    fgSock.on("ar:end", function(d){ arOnEnd(d); });
   }
   function lbOpen(){
     if(!PLAY_OK){ needWallet(); return; }
@@ -2308,6 +2339,104 @@
     });
     var ca=$("fgCallAccept"); if(ca) ca.onclick=lbAccept;
     var cd=$("fgCallDecline"); if(cd) cd.onclick=lbDecline;
+  })();
+
+  // ===== 🎮 탑다운 아레나 실시간 전투 (Phase 2) =====
+  var arn={ active:false, over:false, room:null, W:360, H:540, scale:1, ox:0, oy:0, raf:0, last:0, sendT:0,
+    me:{x:180,y:130,dir:1,hp:100,atk:0,cd:0,dcd:0,flash:0,name:"",img:null},
+    opp:{x:180,y:410,tx:180,ty:410,dir:-1,hp:100,flash:0,name:"",img:null},
+    joy:{id:null,ox:0,oy:0,vx:0,vy:0} };
+  var AR_SPEED=170, AR_RANGE=66, AR_CD=420, AR_DASHCD=1150, arShake=0;
+  function arImg(id){ var im=new Image(); im.src=fgKimg(id); im.onerror=function(){ im.onerror=null; im.src=fgKimg(id).replace(".jpg",".png"); }; return im; }
+  function arResize(){ var c=$("arCanvas"); if(!c) return; var r=c.getBoundingClientRect(); c.width=Math.max(1,Math.round(r.width)); c.height=Math.max(1,Math.round(r.height));
+    arn.scale=Math.min(c.width/arn.W, c.height/arn.H); arn.ox=(c.width-arn.W*arn.scale)/2; arn.oy=(c.height-arn.H*arn.scale)/2; }
+  window.addEventListener("resize",function(){ if(arn.active) arResize(); });
+  function arStart(d){
+    LB.open=false; $("fgLobby").style.display="none"; $("fgCall").style.display="none"; clearInterval(LB.callTimer);
+    arn.active=true; arn.over=false; arn.room=d.room; arn.W=d.W||360; arn.H=d.H||540;
+    arn.me.x=d.you.x; arn.me.y=d.you.y; arn.me.dir=d.you.dir||1; arn.me.hp=d.hp; arn.me.name=d.you.name; arn.me.img=arImg(d.you.avatarId); arn.me.atk=0; arn.me.cd=0; arn.me.dcd=0; arn.me.flash=0;
+    arn.opp.x=arn.opp.tx=d.opp.x; arn.opp.y=arn.opp.ty=d.opp.y; arn.opp.dir=d.opp.dir||-1; arn.opp.hp=d.hp; arn.opp.name=d.opp.name; arn.opp.img=arImg(d.opp.avatarId); arn.opp.flash=0;
+    $("arMeName").textContent=d.you.name||"나"; $("arOpName").textContent=d.opp.name||"상대";
+    $("arMeHP").style.width="100%"; $("arOpHP").style.width="100%";
+    $("arResult").style.display="none"; $("arModal").style.display="flex";
+    var hint=$("arCtrlHint"); if(hint){ hint.style.display="block"; hint.style.opacity="1"; hint.style.transition="opacity .8s"; setTimeout(function(){ if(hint) hint.style.opacity="0"; },3200); }
+    arResize(); arn.last=performance.now(); arn.sendT=0;
+    cancelAnimationFrame(arn.raf); arn.raf=requestAnimationFrame(arLoop);
+    beep(760,0.1); vib([30,20,40]);
+  }
+  function arSend(){ try{ fgSock.emit("ar:move",{x:Math.round(arn.me.x),y:Math.round(arn.me.y),dir:arn.me.dir}); }catch(e){} }
+  function arAttack(dash){ if(!arn.active||arn.over) return; var now=performance.now();
+    if(dash){ if(now<arn.me.dcd) return; arn.me.dcd=now+AR_DASHCD; arn.me.atk=now+220;
+      arn.me.x=Math.max(0,Math.min(arn.W, arn.me.x+arn.me.dir*46)); arSend();
+    } else { if(now<arn.me.cd) return; arn.me.cd=now+AR_CD; arn.me.atk=now+160; }
+    try{ fgSock.emit("ar:attack",{dash:!!dash}); }catch(e){}
+    beep(dash?300:520,0.06); vib(dash?[30,20]:20);
+  }
+  function arOnHit(d){ if(!arn.active) return; var now=performance.now();
+    arn.me.hp=d.youHp; arn.opp.hp=d.oppHp;
+    $("arMeHP").style.width=Math.max(0,d.youHp)+"%"; $("arOpHP").style.width=Math.max(0,d.oppHp)+"%";
+    if(d.dmg>0){ if(d.by==="opp"){ arn.me.flash=now+220; arShake=9; vib([50,30,60]); beep(170,0.09); } else { arn.opp.flash=now+220; beep(880,0.07); } }
+  }
+  function arOnEnd(d){ arn.over=true; cancelAnimationFrame(arn.raf);
+    $("arResultBig").textContent=d.win?"🏆 승리!":"💀 패배";
+    $("arResultBig").style.color=d.win?"#ffd54a":"#ff7a7a";
+    $("arResultSub").textContent=d.win?("누적 "+(d.wins||0)+"승"+(d.reward>0?" · +"+d.reward+"P 획득":"")):((d.reason||"다음엔 이기자!"));
+    $("arResult").style.display="flex"; vib(d.win?[40,40,90]:[90,40,90]);
+  }
+  function arQuit(){ arn.active=false; arn.over=true; cancelAnimationFrame(arn.raf); $("arModal").style.display="none"; }
+  function arLoop(t){
+    if(!arn.active){ return; }
+    var dt=Math.min(0.05,(t-arn.last)/1000); arn.last=t;
+    var j=arn.joy;
+    if(j.id!==null && (j.vx||j.vy)){ var mag=Math.hypot(j.vx,j.vy)||1; var nx=j.vx/mag, ny=j.vy/mag, sp=Math.min(1,mag/42);
+      arn.me.x=Math.max(0,Math.min(arn.W, arn.me.x+nx*AR_SPEED*sp*dt));
+      arn.me.y=Math.max(0,Math.min(arn.H, arn.me.y+ny*AR_SPEED*sp*dt));
+      if(Math.abs(nx)>0.2) arn.me.dir=nx>0?1:-1;
+    }
+    if(t-arn.sendT>50){ arn.sendT=t; arSend(); }
+    arn.opp.x+=(arn.opp.tx-arn.opp.x)*Math.min(1,dt*14);
+    arn.opp.y+=(arn.opp.ty-arn.opp.y)*Math.min(1,dt*14);
+    arDraw(t);
+    if(arn.active) arn.raf=requestAnimationFrame(arLoop);
+  }
+  function arDraw(t){
+    var c=$("arCanvas"); if(!c) return; var ctx=c.getContext("2d"), W=c.width, H=c.height;
+    ctx.clearRect(0,0,W,H);
+    var sx=0,sy=0; if(arShake>0){ sx=(Math.random()-0.5)*arShake; sy=(Math.random()-0.5)*arShake; arShake*=0.85; if(arShake<0.5)arShake=0; }
+    ctx.save(); ctx.translate(arn.ox+sx, arn.oy+sy); ctx.scale(arn.scale, arn.scale);
+    ctx.fillStyle="#160c2c"; ctx.fillRect(0,0,arn.W,arn.H);
+    ctx.strokeStyle="rgba(150,110,220,.16)"; ctx.lineWidth=1;
+    for(var gx=0;gx<=arn.W;gx+=40){ ctx.beginPath(); ctx.moveTo(gx,0); ctx.lineTo(gx,arn.H); ctx.stroke(); }
+    for(var gy=0;gy<=arn.H;gy+=40){ ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(arn.W,gy); ctx.stroke(); }
+    ctx.strokeStyle="rgba(255,90,90,.22)"; ctx.lineWidth=3; ctx.strokeRect(6,6,arn.W-12,arn.H-12);
+    arDrawFighter(ctx, arn.opp, t, "#ef4444", false);
+    arDrawFighter(ctx, arn.me, t, "#4ade80", true);
+    ctx.restore();
+  }
+  function arDrawFighter(ctx, f, t, ring, isMe){
+    var R=22;
+    if(isMe && f.atk>t){ ctx.fillStyle="rgba(255,220,90,.5)"; ctx.beginPath(); ctx.moveTo(f.x,f.y); ctx.arc(f.x,f.y,AR_RANGE,(f.dir>0?-0.6:Math.PI-0.6),(f.dir>0?0.6:Math.PI+0.6)); ctx.closePath(); ctx.fill(); }
+    var flashing=f.flash>t;
+    ctx.save(); ctx.beginPath(); ctx.arc(f.x,f.y,R,0,6.29); ctx.closePath(); ctx.fillStyle="#241340"; ctx.fill();
+    if(f.img && f.img.complete && f.img.naturalWidth){ ctx.clip(); ctx.drawImage(f.img,f.x-R,f.y-R,R*2,R*2); }
+    ctx.restore();
+    ctx.lineWidth=flashing?5:3; ctx.strokeStyle=flashing?"#fff":ring; ctx.beginPath(); ctx.arc(f.x,f.y,R,0,6.29); ctx.stroke();
+    ctx.fillStyle=ring; ctx.beginPath(); ctx.arc(f.x+f.dir*(R+5),f.y,4,0,6.29); ctx.fill();
+  }
+  (function(){
+    var c=$("arCanvas"); if(!c) return;
+    function startJoy(x,y,id){ arn.joy.id=id; arn.joy.ox=x; arn.joy.oy=y; arn.joy.vx=0; arn.joy.vy=0; var h=$("arCtrlHint"); if(h) h.style.display="none"; }
+    c.addEventListener("touchstart",function(e){ for(var i=0;i<e.changedTouches.length;i++){ var tt=e.changedTouches[i]; if(tt.clientX<window.innerWidth*0.5 && arn.joy.id===null) startJoy(tt.clientX,tt.clientY,tt.identifier); } e.preventDefault(); },{passive:false});
+    c.addEventListener("touchmove",function(e){ for(var i=0;i<e.changedTouches.length;i++){ var tt=e.changedTouches[i]; if(tt.identifier===arn.joy.id){ arn.joy.vx=tt.clientX-arn.joy.ox; arn.joy.vy=tt.clientY-arn.joy.oy; } } e.preventDefault(); },{passive:false});
+    function endJoy(e){ for(var i=0;i<e.changedTouches.length;i++){ if(e.changedTouches[i].identifier===arn.joy.id){ arn.joy.id=null; arn.joy.vx=0; arn.joy.vy=0; } } }
+    c.addEventListener("touchend",endJoy); c.addEventListener("touchcancel",endJoy);
+    c.addEventListener("mousedown",function(e){ if(e.clientX<window.innerWidth*0.5) startJoy(e.clientX,e.clientY,"m"); });
+    window.addEventListener("mousemove",function(e){ if(arn.joy.id==="m"){ arn.joy.vx=e.clientX-arn.joy.ox; arn.joy.vy=e.clientY-arn.joy.oy; } });
+    window.addEventListener("mouseup",function(){ if(arn.joy.id==="m"){ arn.joy.id=null; arn.joy.vx=0; arn.joy.vy=0; } });
+    function bind(btn,fn){ if(!btn) return; btn.addEventListener("touchstart",function(e){ e.preventDefault(); fn(); },{passive:false}); btn.addEventListener("mousedown",function(e){ e.preventDefault(); fn(); }); }
+    bind($("arAtk"),function(){ arAttack(false); }); bind($("arDash"),function(){ arAttack(true); });
+    var ex=$("arExit"); if(ex) ex.onclick=function(){ if(confirm("기권할까요? 패배 처리됩니다.")){ try{ fgSock.emit("ar:leave"); }catch(e){} arQuit(); } };
+    var rc=$("arResultClose"); if(rc) rc.onclick=function(){ arQuit(); lbOpen(); };
   })();
 
   // ===== ✈️ 콩즈 스카이 (슈팅·스테이지·아이템·보스) =====
