@@ -744,7 +744,7 @@ app.post("/api/idle/save", (req, res) => {
   // 게임 세이브 필드만 갱신 (인증·저축·로또·기기 필드는 절대 클라 세이브로 덮어쓰지 않음)
   const GAME_FIELDS = ["money", "lifetime", "stage", "levels", "souls", "avatarId", "lastSeen",
                        "bnDate", "bnCount", "mgDate", "moleN", "simonN",
-                       "szMeta", "szBest", "szN", "szRun", "tapN", "tapLv", "bothLv", "pjN", "arAiN"];
+                       "szMeta", "szBest", "szN", "szRun", "tapN", "tapLv", "bothLv", "pjN", "arAiN", "sfAiN"];
   const p = db.players[name] || (db.players[name] = {});
   for (const f of GAME_FIELDS) if (f in save) p[f] = save[f];
   // rewardedStage/lastCollectDate 는 서버가 관리(중복 보상·수금 방지) → 클라값 무시
@@ -1089,15 +1089,17 @@ const arenaSockRoom = new Map();   // socket.id -> arena
 let arenaSeq = 1;
 const AR = { HP: 100, W: 360, H: 540, RANGE: 66, DMG: 9, DASH_DMG: 16, CD: 420, DASH_CD: 1150 };
 function arSide(arena, id) { return arena.a.socket.id === id ? arena.a : (arena.b.socket.id === id ? arena.b : null); }
-function arStart(fromName, meName, feSock, meSock, feAv, meAv) {
+function arStart(fromName, meName, feSock, meSock, feAv, meAv, mode) {
+  mode = mode || "topdown";
   const rid = "ar" + (arenaSeq++);
   const mk = (name, socket, avatarId, x, y, dir) => ({ name, socket, avatarId, x, y, dir, hp: AR.HP, cd: 0, dashCd: 0 });
-  const a = mk(fromName, feSock, feAv, AR.W * 0.5, AR.H * 0.24, 1);
-  const b = mk(meName, meSock, meAv, AR.W * 0.5, AR.H * 0.76, -1);
-  const arena = { id: rid, over: false, a, b };
+  // 배치: 탑다운은 세로 대치, 횡스크롤은 좌우 대치
+  const a = mode === "side" ? mk(fromName, feSock, feAv, AR.W * 0.28, AR.H * 0.8, 1)  : mk(fromName, feSock, feAv, AR.W * 0.5, AR.H * 0.24, 1);
+  const b = mode === "side" ? mk(meName, meSock, meAv, AR.W * 0.72, AR.H * 0.8, -1) : mk(meName, meSock, meAv, AR.W * 0.5, AR.H * 0.76, -1);
+  const arena = { id: rid, over: false, a, b, mode };
   arenas.set(rid, arena);
   arenaSockRoom.set(feSock.id, arena); arenaSockRoom.set(meSock.id, arena);
-  const pay = (self, opp) => ({ room: rid, W: AR.W, H: AR.H, hp: AR.HP,
+  const pay = (self, opp) => ({ room: rid, mode, W: AR.W, H: AR.H, hp: AR.HP,
     you: { x: self.x, y: self.y, dir: self.dir, name: self.name, avatarId: self.avatarId },
     opp: { x: opp.x, y: opp.y, dir: opp.dir, name: opp.name, avatarId: opp.avatarId } });
   try { feSock.emit("ar:start", pay(a, b)); } catch (x) {}
@@ -1367,10 +1369,10 @@ io.on("connection", (socket) => {
     if (!fe || !meE) { try { socket.emit("fight:invite:fail", { target: from, reason: "상대 오프라인" }); } catch (x) {} return; }
     const busy = (id) => fgSockRoom.has(id) || arenaSockRoom.has(id);
     if (busy(fe.socket.id) || busy(meE.socket.id)) { try { socket.emit("fight:invite:fail", { target: from, reason: "이미 대결 중" }); } catch (x) {} return; }
-    if (mode === "topdown") {
-      arStart(from, me, fe.socket, meE.socket, fe.avatarId, meE.avatarId); // Phase 2: 탑다운 실시간 이동전투
+    if (mode === "topdown" || mode === "side") {
+      arStart(from, me, fe.socket, meE.socket, fe.avatarId, meE.avatarId, mode); // Phase 2: 탑다운 / Phase 3: 횡스크롤
     } else {
-      // 횡스크롤·실시간은 아직 기존 엔진 (Phase 3~4에서 교체)
+      // 실시간(정밀) 모드는 아직 기존 엔진 (Phase 4에서 교체)
       fgDequeue(fe.socket.id); fgDequeue(meE.socket.id);
       fgStartMatch({ socket: fe.socket, name: from, avatarId: fe.avatarId }, { socket: meE.socket, name: me, avatarId: meE.avatarId });
     }
