@@ -742,7 +742,7 @@ app.post("/api/idle/save", (req, res) => {
   // 게임 세이브 필드만 갱신 (인증·저축·로또·기기 필드는 절대 클라 세이브로 덮어쓰지 않음)
   const GAME_FIELDS = ["money", "lifetime", "stage", "levels", "souls", "avatarId", "lastSeen",
                        "bnDate", "bnCount", "mgDate", "moleN", "simonN",
-                       "szMeta", "szBest", "szN", "szRun"];
+                       "szMeta", "szBest", "szN", "szRun", "tapN"];
   const p = db.players[name] || (db.players[name] = {});
   for (const f of GAME_FIELDS) if (f in save) p[f] = save[f];
   // rewardedStage/lastCollectDate 는 서버가 관리(중복 보상·수금 방지) → 클라값 무시
@@ -1442,7 +1442,7 @@ app.get("/api/admin/reset", (req, res) => {
   // 리셋할 게임 필드만 명시 (인증 pinHash/sess/ph, 지갑 tokenIds/wallet, 저축 bank, 로또는 건드리지 않음)
   const GAME = { money: 0, lifetime: 0, stage: 1, souls: 0, rewardedStage: 1, lastCollectDate: "", avatarId: 0,
                  szMeta: {}, szBest: 0, szN: 0, szRun: null,
-                 moleN: 0, simonN: 0, skyN: 0, k2N: 0, k3N: 0, rnN: 0, tdN: 0, bnDate: "", bnCount: 0, mgDate: "",
+                 moleN: 0, simonN: 0, skyN: 0, k2N: 0, k3N: 0, rnN: 0, tdN: 0, tapN: 0, bnDate: "", bnCount: 0, mgDate: "",
                  bank: null, lottoMine: 0, lottoWeek: 0 }; // 저축·로또도 초기화
   let n = 0;
   targets.forEach((name) => {

@@ -1295,9 +1295,19 @@
     bubbleTimer=setTimeout(function(){b.style.opacity=0;},900);
   }
   function needWallet(){ toast("🔗 지갑 등록·승인 후 플레이할 수 있어요!"); $("avatarBtn").click(); }
+  var TAP_MIN_MS=70, TAP_DAILY=50000; // 매크로 예방: 최소 간격(≈14/초 상한), 하루 유효 탭 상한
+  var _tapTs=[], _lastTap=0, _tapWarn=0;
   $("tapZone").addEventListener("click",function(e){
     if(e.target&&e.target.id==="stageUpBtn") return; // 승급 버튼은 별도 처리
     if(!PLAY_OK){ needWallet(); return; }
+    if(e.isTrusted===false) return; // ① 합성 클릭(JS 매크로) 무시
+    var _now=(window.performance&&performance.now)?performance.now():Date.now(), _gap=_now-_lastTap; _lastTap=_now;
+    if(_gap<TAP_MIN_MS) return; // ② 초당 상한 초과(초인적 연타) 무효
+    mgRoll();
+    if((S.tapN||0)>=TAP_DAILY){ if(_now-_tapWarn>4000){ _tapWarn=_now; toast("오늘 탭 보너스 최대치! 이제 사업·방치·미니게임으로 벌어요 💰"); } return; } // ④ 일일 탭 상한
+    _tapTs.push(_gap); if(_tapTs.length>16) _tapTs.shift();
+    if(_tapTs.length>=16){ var _m=0,_i; for(_i=0;_i<_tapTs.length;_i++)_m+=_tapTs[_i]; _m/=_tapTs.length; var _vr=0; for(_i=0;_i<_tapTs.length;_i++){ var _d=_tapTs[_i]-_m; _vr+=_d*_d; } if(Math.sqrt(_vr/_tapTs.length)<3 && _m<170) return; } // ③ 완벽히 일정한 간격 = 오토클리커 무효
+    S.tapN=(S.tapN||0)+1;
     var v=perTap()*(1+(S.stage-1)*TAP_LATE); S.money+=v; S.lifetime+=v;
     beep(600+Math.random()*300,0.06); vib(12);
     if(Math.random()<0.5) showBubble(); // 절반 확률로 캐릭터 대사
@@ -1729,7 +1739,7 @@
   $("rpsClose").onclick=function(){ $("rpsModal").style.display="none"; };
 
   // ===== 미니게임 일일제한 (두더지/기억력) =====
-  function mgRoll(){ if(S.mgDate!==todayKey()){ S.mgDate=todayKey(); S.moleN=0; S.simonN=0; S.skyN=0; S.k2N=0; S.k3N=0; S.rnN=0; S.tdN=0; S.szN=0; } }
+  function mgRoll(){ if(S.mgDate!==todayKey()){ S.mgDate=todayKey(); S.moleN=0; S.simonN=0; S.skyN=0; S.k2N=0; S.k3N=0; S.rnN=0; S.tdN=0; S.szN=0; S.tapN=0; } }
   function moleLeft(){ mgRoll(); return Math.max(0,5-(S.moleN||0)); }
   function simonLeft(){ mgRoll(); return Math.max(0,5-(S.simonN||0)); }
   function refreshMgLeft(){ var a=$("moleLeftT"),b=$("simonLeftT"); if(a)a.textContent="오늘 "+moleLeft()+"판"; if(b)b.textContent="오늘 "+simonLeft()+"판"; }
