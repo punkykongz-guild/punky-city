@@ -938,7 +938,7 @@ app.get("/api/avatar-url", (req, res) => {
   if (!id || !GEMINI_API_KEY) return res.json({ ok: false });
   const file = avatarFile(id, stage);
   if (fs.existsSync(file)) return res.json({ ok: true, ready: true, url: `/gen/avatar_${id}_${stage}.png` });
-  generateAvatar(id, stage, String(req.query.img || "")); // 비동기 시작
+  // 신규 유료 AI 합성 중단 — 없으면 클라(폰)에서 본인 NFT 합성으로 폴백 (비용 0). 기존 합성본은 그대로 서빙.
   res.json({ ok: true, ready: false });
 });
 

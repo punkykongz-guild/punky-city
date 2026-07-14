@@ -3941,6 +3941,22 @@
     p.onerror=function(){ CHAR_OK[st]=false; };
     p.src=url;
   }
+  function clientHeroNFT(){ // 서버 AI 합성 없을 때: 본인 NFT 배경제거해 씬 캐릭터로 (무료·클라 합성)
+    if(!S) return; var id=currentAvatarId(); if(id===null){ tryGenericChar(); return; }
+    var h=$("heroImg"); if(!h || h.dataset.ai==="1") return; var tried=false;
+    function go(){ var img=this;
+      try{
+        var s=Math.min(512,img.naturalWidth||512), cv=document.createElement("canvas"); cv.width=s; cv.height=s; var ctx=cv.getContext("2d");
+        ctx.drawImage(img,0,0,s,s);
+        var d=ctx.getImageData(0,0,s,s), a=d.data, br=a[0],bg=a[1],bb=a[2]; // 좌상단=배경색
+        for(var i=0;i<a.length;i+=4){ var dr=a[i]-br,dg=a[i+1]-bg,db=a[i+2]-bb, dist=Math.sqrt(dr*dr+dg*dg+db*db); if(dist<58) a[i+3]=0; else if(dist<96) a[i+3]=Math.round(255*(dist-58)/38); }
+        ctx.putImageData(d,0,0);
+        h.style.backgroundImage="url("+cv.toDataURL("image/png")+")"; h.dataset.ai="c"; h.style.filter="none"; h.style.backgroundSize="contain"; h.style.backgroundPosition="center bottom"; h.style.backgroundRepeat="no-repeat";
+      }catch(e){ tryGenericChar(); } // CORS 등 픽셀접근 실패 → 공용 마스코트
+    }
+    function fail(){ if(!tried){ tried=true; var im2=new Image(); im2.crossOrigin="anonymous"; im2.onload=go; im2.onerror=function(){ tryGenericChar(); }; im2.src=kimgOld(id,512); return; } tryGenericChar(); }
+    var img=new Image(); img.crossOrigin="anonymous"; img.onload=go; img.onerror=fail; img.src=kimg(id,512);
+  }
   function checkAiAvatar(){
     var id=currentAvatarId();
     if(!S) return;
@@ -3960,14 +3976,12 @@
           $("heroImg").dataset.ai="1";
           $("aiBadge").style.display="none";
         } else if(j.ok&&!j.ready){
-          $("aiBadge").style.display="block"; // 내 콩즈 변신 생성 중 표시
-          tryGenericChar(); // 그동안 공용 등급 캐릭터로
-          clearTimeout(aiRetryTimer);
-          aiRetryTimer=setTimeout(checkAiAvatar,45000);
+          $("aiBadge").textContent="🎨 이미지 개선중"; $("aiBadge").style.display="block";
+          clientHeroNFT(); // 서버 AI 합성 중단 → 본인 NFT 클라 합성(무료)으로 폴백
         } else {
-          tryGenericChar();
+          clientHeroNFT();
         }
-      }).catch(function(){ tryGenericChar(); });
+      }).catch(function(){ clientHeroNFT(); });
   }
   function applyProfile(p){
     profile=p; IS_ADMIN=!!p.isAdmin;
