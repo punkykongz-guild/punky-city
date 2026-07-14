@@ -1543,17 +1543,19 @@
 
   // ===== 폐지 타이밍 (₭ 더블업) =====
   var pj={active:false,pot:0,round:0,zL:0,zW:40,pos:0,dir:1,spd:1,bet:0,raf:0};
+  function pjLeft(){ mgRoll(); return Math.max(0,8-(S.pjN||0)); }
   function openPj(){
     if(!PLAY_OK){ needWallet(); return; }
+    if(pjLeft()<=0){ toast("오늘 폐지 타이밍은 끝! 내일 또 📦"); return; }
     pj.active=false; cancelAnimationFrame(pj.raf);
     $("pjModal").style.display="flex";
     $("pjBet").style.display="flex";   // 배팅 선택 다시 표시 (재진입 버그 수정)
     $("pjPlay").style.display="none";
     $("pjStop").style.display="";
     $("pjCash").style.display="none";
-    $("pjSub").textContent="배팅액을 고르세요 (보유 ₭"+fmt(S.money)+")";
+    $("pjSub").textContent="배팅액을 고르세요 (오늘 "+pjLeft()+"판 · 보유 ₭"+fmt(S.money)+")";
     var box=$("pjBet"); box.innerHTML="";
-    var opts=[["소액",Math.max(100,Math.floor(S.money*0.05))],["중박",Math.max(500,Math.floor(S.money*0.2))],["한방",Math.max(2000,Math.floor(S.money*0.5))]];
+    var opts=[["소액",Math.max(100,Math.floor(S.money*0.05))],["중박",Math.max(500,Math.floor(S.money*0.15))],["한방",Math.max(2000,Math.floor(S.money*0.25))]];
     opts.forEach(function(o){
       var b=document.createElement("button"); b.className="bigBtn"; b.style.cssText="width:auto;padding:10px 16px;margin:0";
       b.innerHTML=o[0]+"<br><span style='font-size:12px'>₭"+fmt(o[1])+"</span>";
@@ -1563,7 +1565,7 @@
     });
   }
   function startPj(bet){
-    S.money-=bet; lottoContribute(bet); renderFast();
+    S.money-=bet; lottoContribute(bet); S.pjN=(S.pjN||0)+1; renderFast();
     pj.bet=bet; pj.pot=bet; pj.round=0; pj.active=true;
     $("pjBet").style.display="none"; $("pjPlay").style.display="block"; $("pjCash").style.display="none";
     $("pjSub").textContent="움직이는 막대를 초록존에서 STOP!";
@@ -1572,9 +1574,9 @@
   }
   function nextPjRound(){
     pj.round++;
-    pj.zW=Math.max(5, 26*Math.pow(0.66,pj.round-1));
+    pj.zW=Math.max(4, 13*Math.pow(0.62,pj.round-1)); // 초록존 좁게 (타이밍 어렵게 → EV<1)
     pj.zL=Math.random()*(100-pj.zW-8)+4;
-    pj.spd=0.9+pj.round*0.35;
+    pj.spd=2.4+pj.round*0.6; // 막대 빠르게
     pj.pos=0; pj.dir=1;
     $("pjZone").style.left=pj.zL+"%"; $("pjZone").style.width=pj.zW+"%";
     $("pjPot").textContent="₭ "+fmt(pj.pot);
@@ -1788,7 +1790,7 @@
   var RPS=["✌️","✊","✋"], RPS_NM=["가위","바위","보"];
   var rpsBet=0, rpsDone=false;
   function rpsPickEnabled(on){ Array.prototype.forEach.call(document.querySelectorAll('#rpsPick [data-rps]'),function(b){ b.disabled=!on; b.style.opacity=on?1:.4; }); }
-  $("rpsBtn").onclick=function(){ showIntro("✊ 가위바위보", "딜러와 가위바위보 한 판! ✊✌️✋<br>이기면 <b>×2</b>, 비기면 환불, 지면 꽝.<br>[대결]을 다시 누르면 새 판이에요.", function(){ pickBet("✊ 가위바위보", function(bet){ rpsBet=bet; rpsDone=false; rpsPickEnabled(true); $("rpsModal").style.display="flex"; $("rpsMsg").textContent="가위·바위·보 중 하나! (배팅 ₭"+fmt(bet)+")"; $("rpsFight").textContent="🤛 vs 🤜"; }); }); };
+  $("rpsBtn").onclick=function(){ showIntro("✊ 가위바위보", "딜러와 가위바위보 한 판! ✊✌️✋<br>이기면 <b>×1.8</b>, 비기면 환불, 지면 꽝.<br>[대결]을 다시 누르면 새 판이에요.", function(){ pickBet("✊ 가위바위보", function(bet){ rpsBet=bet; rpsDone=false; rpsPickEnabled(true); $("rpsModal").style.display="flex"; $("rpsMsg").textContent="가위·바위·보 중 하나! (배팅 ₭"+fmt(bet)+")"; $("rpsFight").textContent="🤛 vs 🤜"; }); }); };
   Array.prototype.forEach.call(document.querySelectorAll('#rpsPick [data-rps]'),function(btn){
     btn.onclick=function(){
       if(rpsDone) return; rpsDone=true; rpsPickEnabled(false); // 한 배팅당 1판만 (중복 획득 방지)
@@ -1804,7 +1806,7 @@
   $("rpsClose").onclick=function(){ $("rpsModal").style.display="none"; };
 
   // ===== 미니게임 일일제한 (두더지/기억력) =====
-  function mgRoll(){ if(S.mgDate!==todayKey()){ S.mgDate=todayKey(); S.moleN=0; S.simonN=0; S.skyN=0; S.k2N=0; S.k3N=0; S.rnN=0; S.tdN=0; S.szN=0; S.tapN=0; } }
+  function mgRoll(){ if(S.mgDate!==todayKey()){ S.mgDate=todayKey(); S.moleN=0; S.simonN=0; S.skyN=0; S.k2N=0; S.k3N=0; S.rnN=0; S.tdN=0; S.szN=0; S.tapN=0; S.pjN=0; } }
   function moleLeft(){ mgRoll(); return Math.max(0,5-(S.moleN||0)); }
   function simonLeft(){ mgRoll(); return Math.max(0,5-(S.simonN||0)); }
   function refreshMgLeft(){ var a=$("moleLeftT"),b=$("simonLeftT"); if(a)a.textContent="오늘 "+moleLeft()+"판"; if(b)b.textContent="오늘 "+simonLeft()+"판"; }
