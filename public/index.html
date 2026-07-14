@@ -1872,7 +1872,7 @@
   $("rpsClose").onclick=function(){ $("rpsModal").style.display="none"; };
 
   // ===== 미니게임 일일제한 (두더지/기억력) =====
-  function mgRoll(){ if(S.mgDate!==todayKey()){ S.mgDate=todayKey(); S.moleN=0; S.simonN=0; S.skyN=0; S.k2N=0; S.k3N=0; S.rnN=0; S.tdN=0; S.szN=0; S.tapN=0; S.pjN=0; } }
+  function mgRoll(){ if(S.mgDate!==todayKey()){ S.mgDate=todayKey(); S.moleN=0; S.simonN=0; S.skyN=0; S.k2N=0; S.k3N=0; S.rnN=0; S.tdN=0; S.szN=0; S.tapN=0; S.pjN=0; S.arAiN=0; } }
   function moleLeft(){ mgRoll(); return Math.max(0,5-(S.moleN||0)); }
   function simonLeft(){ mgRoll(); return Math.max(0,5-(S.simonN||0)); }
   function refreshMgLeft(){ var a=$("moleLeftT"),b=$("simonLeftT"); if(a)a.textContent="오늘 "+moleLeft()+"판"; if(b)b.textContent="오늘 "+simonLeft()+"판"; }
@@ -2087,7 +2087,7 @@
   var FG_RULES="👊공격 > 🤏잡기 > 🛡가드 > 👊공격 (상성)<br>🛡가드로 막으면 <b>기 게이지</b>가 차고, 3칸 모으면 <b style='color:#ff8080'>🔥필살기(-35)</b>!<br>상대 HP를 0으로 만들면 승리!";
   $("fgBtn").onclick=function(){ if(!PLAY_OK){ needWallet(); return; } $("fgRankBox").style.display="none"; $("fgMenu").style.display="flex"; };
   $("fgMenuClose").onclick=function(){ $("fgMenu").style.display="none"; };
-  $("fgMenuAi").onclick=function(){ $("fgMenu").style.display="none"; showIntro("🤖 AI 대전", "내 콩즈 vs 도전자 콩즈! 🥊<br>"+FG_RULES+"<br>이기면 <b>×2</b> 획득!", function(){ pickBet("🥊 콩즈 파이터", startFight); }); };
+  $("fgMenuAi").onclick=function(){ $("fgMenu").style.display="none"; showIntro("🤖 AI 대전 (실시간)", "조이스틱으로 <b>움직이며</b> 실시간 전투! 🥊<br>왼쪽 드래그로 이동 · <b>👊공격 · 💨대시</b>로 상대를 쓰러뜨려라!<br>승리 시 ₭ 획득 (하루 6판)", arStartAI); };
   $("fgMenuPvp").onclick=function(){ $("fgMenu").style.display="none"; showIntro("⚔️ 실시간 대전", "다른 길드원과 진검승부! 🥊<br>"+FG_RULES+"<br>이기면 <b>랭킹 승수 +1</b> & 포인트!<br><span style='color:#9b8cc0'>상대를 찾는 중이면 잠깐 기다려요.</span>", function(){ fgQueuePvp(""); }); };
   $("fgMenuRank").onclick=function(){ fgLoadRank(); };
   function fgKimg(id){ return "https://cdn.helius-rpc.com/cdn-cgi/image/width=200/https://punkykongz.com/nft/punkykongz/image/"+id+".jpg"; }
@@ -2342,18 +2342,18 @@
   })();
 
   // ===== 🎮 탑다운 아레나 실시간 전투 (Phase 2) =====
-  var arn={ active:false, over:false, room:null, W:360, H:540, scale:1, ox:0, oy:0, raf:0, last:0, sendT:0,
+  var arn={ active:false, over:false, ai:false, room:null, W:360, H:540, scale:1, ox:0, oy:0, raf:0, last:0, sendT:0,
     me:{x:180,y:130,dir:1,hp:100,atk:0,cd:0,dcd:0,flash:0,name:"",img:null},
-    opp:{x:180,y:410,tx:180,ty:410,dir:-1,hp:100,flash:0,name:"",img:null},
+    opp:{x:180,y:410,tx:180,ty:410,dir:-1,hp:100,flash:0,name:"",img:null,_cd:0,_dcd:0,_strafe:1},
     joy:{id:null,ox:0,oy:0,vx:0,vy:0} };
-  var AR_SPEED=170, AR_RANGE=66, AR_CD=420, AR_DASHCD=1150, arShake=0;
+  var AR_SPEED=170, AR_RANGE=66, AR_CD=420, AR_DASHCD=1150, AR_DMG=6, AR_DASH_DMG=11, arShake=0;
   function arImg(id){ var im=new Image(); im.src=fgKimg(id); im.onerror=function(){ im.onerror=null; im.src=fgKimg(id).replace(".jpg",".png"); }; return im; }
   function arResize(){ var c=$("arCanvas"); if(!c) return; var r=c.getBoundingClientRect(); c.width=Math.max(1,Math.round(r.width)); c.height=Math.max(1,Math.round(r.height));
     arn.scale=Math.min(c.width/arn.W, c.height/arn.H); arn.ox=(c.width-arn.W*arn.scale)/2; arn.oy=(c.height-arn.H*arn.scale)/2; }
   window.addEventListener("resize",function(){ if(arn.active) arResize(); });
   function arStart(d){
     LB.open=false; $("fgLobby").style.display="none"; $("fgCall").style.display="none"; clearInterval(LB.callTimer);
-    arn.active=true; arn.over=false; arn.room=d.room; arn.W=d.W||360; arn.H=d.H||540;
+    arn.active=true; arn.over=false; arn.ai=false; arn.room=d.room; arn.W=d.W||360; arn.H=d.H||540;
     arn.me.x=d.you.x; arn.me.y=d.you.y; arn.me.dir=d.you.dir||1; arn.me.hp=d.hp; arn.me.name=d.you.name; arn.me.img=arImg(d.you.avatarId); arn.me.atk=0; arn.me.cd=0; arn.me.dcd=0; arn.me.flash=0;
     arn.opp.x=arn.opp.tx=d.opp.x; arn.opp.y=arn.opp.ty=d.opp.y; arn.opp.dir=d.opp.dir||-1; arn.opp.hp=d.hp; arn.opp.name=d.opp.name; arn.opp.img=arImg(d.opp.avatarId); arn.opp.flash=0;
     $("arMeName").textContent=d.you.name||"나"; $("arOpName").textContent=d.opp.name||"상대";
@@ -2367,9 +2367,12 @@
   function arSend(){ try{ fgSock.emit("ar:move",{x:Math.round(arn.me.x),y:Math.round(arn.me.y),dir:arn.me.dir}); }catch(e){} }
   function arAttack(dash){ if(!arn.active||arn.over) return; var now=performance.now();
     if(dash){ if(now<arn.me.dcd) return; arn.me.dcd=now+AR_DASHCD; arn.me.atk=now+220;
-      arn.me.x=Math.max(0,Math.min(arn.W, arn.me.x+arn.me.dir*46)); arSend();
+      arn.me.x=Math.max(0,Math.min(arn.W, arn.me.x+arn.me.dir*46)); if(!arn.ai) arSend();
     } else { if(now<arn.me.cd) return; arn.me.cd=now+AR_CD; arn.me.atk=now+160; }
-    try{ fgSock.emit("ar:attack",{dash:!!dash}); }catch(e){}
+    if(arn.ai){ // AI전: 로컬 히트판정
+      var o=arn.opp, dist=Math.hypot(o.x-arn.me.x,o.y-arn.me.y), range=dash?AR_RANGE*1.35:AR_RANGE;
+      if(dist<=range){ o.hp=Math.max(0,o.hp-(dash?AR_DASH_DMG:AR_DMG)); o.flash=now+220; beep(880,0.07); $("arOpHP").style.width=Math.max(0,o.hp)+"%"; if(o.hp<=0) arAiEnd(true); }
+    } else { try{ fgSock.emit("ar:attack",{dash:!!dash}); }catch(e){} }
     beep(dash?300:520,0.06); vib(dash?[30,20]:20);
   }
   function arOnHit(d){ if(!arn.active) return; var now=performance.now();
@@ -2384,6 +2387,51 @@
     $("arResult").style.display="flex"; vib(d.win?[40,40,90]:[90,40,90]);
   }
   function arQuit(){ arn.active=false; arn.over=true; cancelAnimationFrame(arn.raf); $("arModal").style.display="none"; }
+  // ---- AI 대전 (클라 단독, 봇 상대) ----
+  function arAiLeft(){ return Math.max(0, 6-(S.arAiN||0)); }
+  function arStartAI(){
+    if(!PLAY_OK){ needWallet(); return; }
+    arn.active=true; arn.over=false; arn.ai=true; arn.room=null; arn.W=360; arn.H=540;
+    var myId=(typeof currentAvatarId==="function"&&currentAvatarId())||(profile.tokenIds&&profile.tokenIds[0])||1;
+    var botId=Math.floor(Math.random()*5000)+1;
+    arn.me.x=arn.W*0.5; arn.me.y=arn.H*0.76; arn.me.dir=-1; arn.me.hp=100; arn.me.name=NAME||"나"; arn.me.img=arImg(myId); arn.me.atk=0; arn.me.cd=0; arn.me.dcd=0; arn.me.flash=0;
+    arn.opp.x=arn.opp.tx=arn.W*0.5; arn.opp.y=arn.opp.ty=arn.H*0.24; arn.opp.dir=1; arn.opp.hp=100; arn.opp.name="도전자 #"+botId; arn.opp.img=arImg(botId); arn.opp.flash=0; arn.opp._cd=0; arn.opp._dcd=0; arn.opp._strafe=1; arn.opp._retreat=0;
+    $("arMeName").textContent=arn.me.name; $("arOpName").textContent=arn.opp.name;
+    $("arMeHP").style.width="100%"; $("arOpHP").style.width="100%";
+    $("arResult").style.display="none"; $("arModal").style.display="flex";
+    var hint=$("arCtrlHint"); if(hint){ hint.style.display="block"; hint.style.opacity="1"; hint.style.transition="opacity .8s"; setTimeout(function(){ if(hint) hint.style.opacity="0"; },3200); }
+    arResize(); arn.last=performance.now();
+    cancelAnimationFrame(arn.raf); arn.raf=requestAnimationFrame(arLoop);
+    beep(760,0.1); vib([30,20,40]);
+  }
+  function arBotHit(dash){ var now=performance.now();
+    arn.me.hp=Math.max(0, arn.me.hp-(dash?AR_DASH_DMG:AR_DMG));
+    arn.me.flash=now+220; arShake=9; vib([50,30,60]); beep(170,0.09);
+    $("arMeHP").style.width=Math.max(0,arn.me.hp)+"%";
+    if(arn.me.hp<=0) arAiEnd(false);
+  }
+  function arBotThink(t,dt){
+    if(arn.over) return; var o=arn.opp, m=arn.me;
+    var dx=m.x-o.x, dy=m.y-o.y, dist=Math.hypot(dx,dy)||1, nx=dx/dist, ny=dy/dist;
+    if(Math.abs(nx)>0.2) o.dir=nx>0?1:-1;
+    var spd=AR_SPEED*0.90;
+    if(t<(o._retreat||0)){ o.x=Math.max(0,Math.min(arn.W,o.x-nx*spd*dt)); o.y=Math.max(0,Math.min(arn.H,o.y-ny*spd*dt)); } // 공격 직후 잠깐 빠짐(카이팅)
+    else if(dist>AR_RANGE*0.85){ o.x=Math.max(0,Math.min(arn.W,o.x+nx*spd*dt)); o.y=Math.max(0,Math.min(arn.H,o.y+ny*spd*dt)); }
+    else { o.x=Math.max(0,Math.min(arn.W,o.x+o._strafe*ny*spd*0.6*dt)); o.y=Math.max(0,Math.min(arn.H,o.y-o._strafe*nx*spd*0.6*dt)); }
+    if(Math.random()<0.02) o._strafe=(Math.random()<0.5?1:-1);
+    // 근접 공격 (사거리 재확인 후 명중) + 공격 후 후퇴
+    if(dist<=AR_RANGE*0.92 && t>o._cd){ o._cd=t+430+Math.random()*120; var dash=Math.random()<0.3; o.atk=t+(dash?220:160); if(dash) o.x=Math.max(0,Math.min(arn.W,o.x+o.dir*40)); if(Math.hypot(m.x-o.x,m.y-o.y)<=(dash?AR_RANGE*1.35:AR_RANGE)) arBotHit(dash); o._retreat=t+180; }
+    // 중거리에서 가끔 대시 돌진
+    else if(dist>AR_RANGE && dist<AR_RANGE*2.5 && t>o._dcd && Math.random()<0.05){ o._dcd=t+AR_DASHCD*1.3; o.atk=t+220; o.x=Math.max(0,Math.min(arn.W,o.x+o.dir*48)); o.y=Math.max(0,Math.min(arn.H,o.y+ny*34)); if(Math.hypot(m.x-o.x,m.y-o.y)<=AR_RANGE*1.35) arBotHit(true); }
+  }
+  function arAiEnd(didWin){ arn.over=true; cancelAnimationFrame(arn.raf);
+    var reward=0;
+    if(didWin && arAiLeft()>0){ reward=Math.floor(Math.max(1, perTap()*10)); S.arAiN=(S.arAiN||0)+1; win(reward); }
+    $("arResultBig").textContent=didWin?"🏆 승리!":"💀 패배";
+    $("arResultBig").style.color=didWin?"#ffd54a":"#ff7a7a";
+    $("arResultSub").textContent=didWin?("₭"+fmt(reward)+" 획득"+(arAiLeft()<=0?" · 오늘 보상 끝":" · 남은 보상 "+arAiLeft()+"판")):"다시 도전!";
+    $("arResult").style.display="flex"; vib(didWin?[40,40,90]:[90,40,90]);
+  }
   function arLoop(t){
     if(!arn.active){ return; }
     var dt=Math.min(0.05,(t-arn.last)/1000); arn.last=t;
@@ -2393,9 +2441,12 @@
       arn.me.y=Math.max(0,Math.min(arn.H, arn.me.y+ny*AR_SPEED*sp*dt));
       if(Math.abs(nx)>0.2) arn.me.dir=nx>0?1:-1;
     }
-    if(t-arn.sendT>50){ arn.sendT=t; arSend(); }
-    arn.opp.x+=(arn.opp.tx-arn.opp.x)*Math.min(1,dt*14);
-    arn.opp.y+=(arn.opp.ty-arn.opp.y)*Math.min(1,dt*14);
+    if(arn.ai){ arBotThink(t,dt); }
+    else {
+      if(t-arn.sendT>50){ arn.sendT=t; arSend(); }
+      arn.opp.x+=(arn.opp.tx-arn.opp.x)*Math.min(1,dt*14);
+      arn.opp.y+=(arn.opp.ty-arn.opp.y)*Math.min(1,dt*14);
+    }
     arDraw(t);
     if(arn.active) arn.raf=requestAnimationFrame(arLoop);
   }
@@ -2415,7 +2466,7 @@
   }
   function arDrawFighter(ctx, f, t, ring, isMe){
     var R=22;
-    if(isMe && f.atk>t){ ctx.fillStyle="rgba(255,220,90,.5)"; ctx.beginPath(); ctx.moveTo(f.x,f.y); ctx.arc(f.x,f.y,AR_RANGE,(f.dir>0?-0.6:Math.PI-0.6),(f.dir>0?0.6:Math.PI+0.6)); ctx.closePath(); ctx.fill(); }
+    if(f.atk>t){ ctx.fillStyle=isMe?"rgba(255,220,90,.5)":"rgba(255,120,120,.45)"; ctx.beginPath(); ctx.moveTo(f.x,f.y); ctx.arc(f.x,f.y,AR_RANGE,(f.dir>0?-0.6:Math.PI-0.6),(f.dir>0?0.6:Math.PI+0.6)); ctx.closePath(); ctx.fill(); }
     var flashing=f.flash>t;
     ctx.save(); ctx.beginPath(); ctx.arc(f.x,f.y,R,0,6.29); ctx.closePath(); ctx.fillStyle="#241340"; ctx.fill();
     if(f.img && f.img.complete && f.img.naturalWidth){ ctx.clip(); ctx.drawImage(f.img,f.x-R,f.y-R,R*2,R*2); }
@@ -2435,8 +2486,8 @@
     window.addEventListener("mouseup",function(){ if(arn.joy.id==="m"){ arn.joy.id=null; arn.joy.vx=0; arn.joy.vy=0; } });
     function bind(btn,fn){ if(!btn) return; btn.addEventListener("touchstart",function(e){ e.preventDefault(); fn(); },{passive:false}); btn.addEventListener("mousedown",function(e){ e.preventDefault(); fn(); }); }
     bind($("arAtk"),function(){ arAttack(false); }); bind($("arDash"),function(){ arAttack(true); });
-    var ex=$("arExit"); if(ex) ex.onclick=function(){ if(confirm("기권할까요? 패배 처리됩니다.")){ try{ fgSock.emit("ar:leave"); }catch(e){} arQuit(); } };
-    var rc=$("arResultClose"); if(rc) rc.onclick=function(){ arQuit(); lbOpen(); };
+    var ex=$("arExit"); if(ex) ex.onclick=function(){ if(confirm("기권할까요?")){ if(!arn.ai){ try{ fgSock.emit("ar:leave"); }catch(e){} } arQuit(); } };
+    var rc=$("arResultClose"); if(rc) rc.onclick=function(){ var wasAi=arn.ai; arQuit(); if(!wasAi) lbOpen(); };
   })();
 
   // ===== ✈️ 콩즈 스카이 (슈팅·스테이지·아이템·보스) =====

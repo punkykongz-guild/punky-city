@@ -744,7 +744,7 @@ app.post("/api/idle/save", (req, res) => {
   // 게임 세이브 필드만 갱신 (인증·저축·로또·기기 필드는 절대 클라 세이브로 덮어쓰지 않음)
   const GAME_FIELDS = ["money", "lifetime", "stage", "levels", "souls", "avatarId", "lastSeen",
                        "bnDate", "bnCount", "mgDate", "moleN", "simonN",
-                       "szMeta", "szBest", "szN", "szRun", "tapN", "tapLv", "bothLv", "pjN"];
+                       "szMeta", "szBest", "szN", "szRun", "tapN", "tapLv", "bothLv", "pjN", "arAiN"];
   const p = db.players[name] || (db.players[name] = {});
   for (const f of GAME_FIELDS) if (f in save) p[f] = save[f];
   // rewardedStage/lastCollectDate 는 서버가 관리(중복 보상·수금 방지) → 클라값 무시
