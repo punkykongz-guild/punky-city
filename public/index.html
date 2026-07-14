@@ -3946,12 +3946,21 @@
     var h=$("heroImg"); if(!h || h.dataset.ai==="1") return; var tried=false;
     function go(){ var img=this;
       try{
-        var s=Math.min(512,img.naturalWidth||512), cv=document.createElement("canvas"); cv.width=s; cv.height=s; var ctx=cv.getContext("2d");
-        ctx.drawImage(img,0,0,s,s);
-        var d=ctx.getImageData(0,0,s,s), a=d.data, br=a[0],bg=a[1],bb=a[2]; // 좌상단=배경색
-        for(var i=0;i<a.length;i+=4){ var dr=a[i]-br,dg=a[i+1]-bg,db=a[i+2]-bb, dist=Math.sqrt(dr*dr+dg*dg+db*db); if(dist<58) a[i+3]=0; else if(dist<96) a[i+3]=Math.round(255*(dist-58)/38); }
+        var s=Math.min(512,img.naturalWidth||512), W=s,H=s, cv=document.createElement("canvas"); cv.width=W; cv.height=H; var ctx=cv.getContext("2d");
+        ctx.drawImage(img,0,0,W,H);
+        var d=ctx.getImageData(0,0,W,H), a=d.data;
+        // 배경색 = 네 모서리 평균
+        function px(i){ return [a[i],a[i+1],a[i+2]]; }
+        var c1=px(0),c2=px((W-1)*4),c3=px((H-1)*W*4),c4=px(((H-1)*W+(W-1))*4);
+        var br=(c1[0]+c2[0]+c3[0]+c4[0])/4, bgc=(c1[1]+c2[1]+c3[1]+c4[1])/4, bb=(c1[2]+c2[2]+c3[2]+c4[2])/4;
+        var TH=68*68, visited=new Uint8Array(W*H), stack=[];
+        function near(i){ var dr=a[i]-br,dg=a[i+1]-bgc,db=a[i+2]-bb; return dr*dr+dg*dg+db*db<TH; }
+        function push(x,y){ if(x<0||y<0||x>=W||y>=H) return; var p=y*W+x; if(visited[p]) return; if(near(p*4)){ visited[p]=1; a[p*4+3]=0; stack.push(p); } }
+        for(var x=0;x<W;x++){ push(x,0); push(x,H-1); }
+        for(var y=0;y<H;y++){ push(0,y); push(W-1,y); }
+        while(stack.length){ var p=stack.pop(), xx=p%W, yy=(p/W)|0; push(xx-1,yy); push(xx+1,yy); push(xx,yy-1); push(xx,yy+1); }
         ctx.putImageData(d,0,0);
-        h.style.backgroundImage="url("+cv.toDataURL("image/png")+")"; h.dataset.ai="c"; h.style.filter="none"; h.style.backgroundSize="contain"; h.style.backgroundPosition="center bottom"; h.style.backgroundRepeat="no-repeat";
+        h.style.backgroundImage="url("+cv.toDataURL("image/png")+")"; h.dataset.ai="c"; h.style.filter="drop-shadow(0 7px 9px rgba(0,0,0,.55))"; h.style.backgroundSize="contain"; h.style.backgroundPosition="center bottom"; h.style.backgroundRepeat="no-repeat";
       }catch(e){ tryGenericChar(); } // CORS 등 픽셀접근 실패 → 공용 마스코트
     }
     function fail(){ if(!tried){ tried=true; var im2=new Image(); im2.crossOrigin="anonymous"; im2.onload=go; im2.onerror=function(){ tryGenericChar(); }; im2.src=kimgOld(id,512); return; } tryGenericChar(); }
