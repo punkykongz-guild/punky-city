@@ -938,7 +938,7 @@ app.get("/api/avatar-url", (req, res) => {
   if (!id || !GEMINI_API_KEY) return res.json({ ok: false });
   const file = avatarFile(id, stage);
   if (fs.existsSync(file)) return res.json({ ok: true, ready: true, url: `/gen/avatar_${id}_${stage}.png` });
-  generateAvatar(id, stage, String(req.query.img || "")); // 1순위: AI 합성(유료). 없으면 클라 폴백(2순위)
+  // 클라 합성이 메인(무료·실시간). AI 자동생성 중단 → 유저 플레이해도 비용 0. AI는 관리자 요청시에만 수동 생성.
   res.json({ ok: true, ready: false });
 });
 
