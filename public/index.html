@@ -2871,10 +2871,10 @@
   })();
 
   // ===== ✈️ 콩즈 스카이 (슈팅·스테이지·아이템·보스) =====
-  var sky={active:false,score:0,lives:3,px:180,py:500,bullets:[],ebullets:[],enemies:[],items:[],stars:[],parts:[],pops:[],raf:0,lastShot:0,spawnT:0,t:0,stage:0,kills:0,quota:0,power:1,shield:0,boss:null,banner:"",bannerT:0,streak:0,mult:1,flash:0,shake:0};
+  var sky={active:false,score:0,lives:3,px:180,py:500,bullets:[],ebullets:[],enemies:[],items:[],stars:[],parts:[],pops:[],rings:[],raf:0,lastShot:0,spawnT:0,t:0,stage:0,kills:0,quota:0,power:1,shield:0,boss:null,banner:"",bannerT:0,streak:0,mult:1,flash:0,shake:0};
   function skyLeft(){ mgRoll(); return Math.max(0,5-(S.skyN||0)); }
   function refreshSkyLeft(){ var e=$("skyLeftT"); if(e) e.textContent="오늘 "+skyLeft()+"판"; }
-  $("skyBtn").onclick=function(){ showIntro("✈️ 콩즈 스카이","콩즈 전투기로 하늘을 지켜라! ✈️<br>움직이면 <b>자동 발사</b> 🔥 · 연속 격추로 <b>콤보 배율</b>↑<br><b>아이템</b> ⚡파워업 🛡실드 ❤️생명 💣폭탄<br>👾졸개 🦅추격기 🛸장갑함(여러발) 👿포격기 처치 → <b>보스</b>!<br>보스는 <b>3가지 패턴</b>·격파 시 다음 스테이지 🏆 · 하루 5판",openSky); };
+  $("skyBtn").onclick=function(){ showIntro("✈️ 콩즈 스카이","콩즈 전투기로 하늘을 지켜라! ✈️<br>움직이면 <b>자동 발사</b> 🔥 · 연속 격추 <b>콤보</b>↑<br><b>무기 8단계</b> ⚡파워업 · <b style='color:#ff8080'>💀고장(무기 -1)</b>은 피해라!<br>🛡실드 ❤️생명 💣폭탄 · 스테이지 오르면 <b>기체 진화</b> ✨<br>보스 격파 → 다음 스테이지 🏆 · 하루 5판",openSky); };
   function openSky(){
     if(!PLAY_OK){ needWallet(); return; }
     if(skyLeft()<=0){ toast("오늘 콩즈 스카이는 끝! 내일 또 ✈️"); return; }
@@ -2887,20 +2887,21 @@
     S.skyN=(S.skyN||0)+1; refreshSkyLeft();
     $("skyStart").style.display="none";
     var cv=$("skyCanvas"); cv.width=cv.clientWidth||360; cv.height=cv.clientHeight||560;
-    sky.active=true; sky.score=0; sky.lives=3; sky.bullets=[]; sky.ebullets=[]; sky.enemies=[]; sky.items=[]; sky.parts=[]; sky.pops=[];
+    sky.active=true; sky.score=0; sky.lives=3; sky.bullets=[]; sky.ebullets=[]; sky.enemies=[]; sky.items=[]; sky.parts=[]; sky.pops=[]; sky.rings=[];
     sky.px=cv.width/2; sky.py=cv.height*0.8; sky.lastShot=0; sky.spawnT=0; sky.t=0; sky.stage=0; sky.power=1; sky.shield=0; sky.boss=null; sky.streak=0; sky.mult=1; sky.flash=0; sky.shake=0;
-    sky.stars=[]; for(var i=0;i<50;i++) sky.stars.push({x:Math.random()*cv.width,y:Math.random()*cv.height,s:0.4+Math.random()*1.8});
+    sky.stars=[]; for(var i=0;i<70;i++) sky.stars.push({x:Math.random()*cv.width,y:Math.random()*cv.height,s:0.3+Math.random()*2.2,l:Math.random()<0.35?1:0}); // 2겹 패럴랙스
     nextStage(); updateSkyHud();
     cancelAnimationFrame(sky.raf); skyLoop();
   }
-  function nextStage(){ sky.stage++; sky.kills=0; sky.quota=12+sky.stage*6; sky.boss=null; sky.banner="STAGE "+sky.stage; sky.bannerT=sky.t+90; beep(700,0.12); }
+  function nextStage(){ var pt=skyTier(); sky.stage++; sky.kills=0; sky.quota=12+sky.stage*6; sky.boss=null; sky.banner="STAGE "+sky.stage; sky.bannerT=sky.t+90; beep(700,0.12);
+    if(skyTier()>pt){ setTimeout(function(){ if(sky.active){ sky.banner="✈️ 기체 진화! T"+skyTier(); sky.bannerT=sky.t+90; toast("✈️ 기체가 진화했다! T"+skyTier()+" — 연사·탄속 강화"); beep(1050,0.15); vib([30,30,50]); } },1500); } }
   function skyMove(cx,cy){ var cv=$("skyCanvas"),r=cv.getBoundingClientRect(); sky.px=Math.max(18,Math.min(cv.width-18,cx-r.left)); sky.py=Math.max(cv.height*0.25,Math.min(cv.height-28,cy-r.top)); }
   var _skc=$("skyCanvas");
   _skc.addEventListener("touchstart",function(e){ e.preventDefault(); if(e.touches[0]) skyMove(e.touches[0].clientX,e.touches[0].clientY); },{passive:false});
   _skc.addEventListener("touchmove",function(e){ e.preventDefault(); if(e.touches[0]) skyMove(e.touches[0].clientX,e.touches[0].clientY); },{passive:false});
   _skc.addEventListener("mousemove",function(e){ if(e.buttons) skyMove(e.clientX,e.clientY); });
   function updateSkyHud(){ $("skyScore").textContent=sky.score; $("skyLives").textContent="❤️".repeat(Math.max(0,sky.lives)); }
-  var ITEMICON={power:"⚡",shield:"🛡",life:"❤️",bomb:"💣"};
+  var ITEMICON={power:"⚡",shield:"🛡",life:"❤️",bomb:"💣",skull:"💀"};
   function skyEnemyDef(stage){
     var pool=[["grunt",5]];
     if(stage>=1) pool.push(["diver",2+stage*0.4]);
@@ -2909,74 +2910,117 @@
     var tot=0; pool.forEach(function(p){ tot+=p[1]; });
     var rr=Math.random()*tot, acc=0, ty="grunt";
     for(var i=0;i<pool.length;i++){ acc+=pool[i][1]; if(rr<acc){ ty=pool[i][0]; break; } }
-    var base=1.95+stage*0.27; // 난도↑↑
-    if(ty==="grunt") return {ty:ty,ico:"👾",hp:1,v:base,sc:1,drop:0.10,mode:"straight"};
-    if(ty==="diver") return {ty:ty,ico:"🦅",hp:1,v:base*1.35,sc:2,drop:0.12,mode:"home"};
-    if(ty==="tank")  return {ty:ty,ico:"🛸",hp:5+Math.floor(stage/1.5),v:base*0.62,sc:4,drop:0.30,mode:"straight"};
-    return {ty:"shooter",ico:"👿",hp:2,v:base*0.7,sc:3,drop:0.22,mode:"stop"};
+    var base=2.1+stage*0.3; // 난도↑↑↑ (3차)
+    if(ty==="grunt") return {ty:ty,ico:"👾",hp:(stage>=5?2:1),v:base,sc:1,drop:0.10,mode:"straight"};
+    if(ty==="diver") return {ty:ty,ico:"🦅",hp:1,v:base*1.4,sc:2,drop:0.12,mode:"home"};
+    if(ty==="tank")  return {ty:ty,ico:"🛸",hp:6+Math.floor(stage/1.3),v:base*0.62,sc:4,drop:0.30,mode:"straight"};
+    return {ty:"shooter",ico:"👿",hp:3,v:base*0.7,sc:3,drop:0.22,mode:"stop"};
   }
   function skySpawn(W,H){
     var d=skyEnemyDef(sky.stage);
     sky.enemies.push({x:22+Math.random()*(W-44),y:-24,v:d.v,hp:d.hp,mx:d.hp,ico:d.ico,sc:d.sc,drop:d.drop,mode:d.mode,ty:d.ty,fireT:Math.floor(Math.random()*50),stopY:H*(0.16+Math.random()*0.14)});
   }
-  function skyFire(){
-    var p=sky.power,x=sky.px,y=sky.py-18;
-    if(p<=1) sky.bullets.push({x:x,y:y,vx:0});
-    else if(p===2){ sky.bullets.push({x:x-8,y:y,vx:0}); sky.bullets.push({x:x+8,y:y,vx:0}); }
-    else if(p===3){ sky.bullets.push({x:x,y:y,vx:0}); sky.bullets.push({x:x-9,y:y+4,vx:-1.6}); sky.bullets.push({x:x+9,y:y+4,vx:1.6}); }
-    else if(p===4){ sky.bullets.push({x:x-8,y:y,vx:0}); sky.bullets.push({x:x+8,y:y,vx:0}); sky.bullets.push({x:x-13,y:y+5,vx:-2.3}); sky.bullets.push({x:x+13,y:y+5,vx:2.3}); }
-    else { for(var a=-2;a<=2;a++) sky.bullets.push({x:x+a*7,y:y+Math.abs(a)*3,vx:a*1.7}); }
+  function skyTier(){ return Math.min(4, 1+((sky.stage-1)/2|0)); } // 기체 티어: 스테이지 1-2=T1 ... 7+=T4
+  function skyFireInt(){ // 발사 간격: 무기레벨+기체 티어로 완만하게 (8→5프레임)
+    var byW=[9,9,8,8,7,7,6,6][Math.min(7,sky.power-1)];
+    return Math.max(5, byW-(skyTier()>=3?1:0));
+  }
+  function skyFire(){ // 무기 8단계 — 한 단계씩 완만하게 강해짐
+    var p=Math.min(8,sky.power), x=sky.px, y=sky.py-18, B=sky.bullets;
+    function b(dx,dy,vx,pierce){ B.push({x:x+dx,y:y+(dy||0),vx:vx||0,pierce:pierce||0}); }
+    if(p<=1){ b(0,0,0); }
+    else if(p===2){ b(-7,0,0); b(7,0,0); }
+    else if(p===3){ b(-7,0,0); b(7,0,0); }                          // 3: 2발+연사↑(간격에서)
+    else if(p===4){ b(0,-2,0); b(-9,3,-1.4); b(9,3,1.4); }
+    else if(p===5){ b(0,-2,0); b(-9,3,-1.4); b(9,3,1.4); }          // 5: 3발+연사↑
+    else if(p===6){ b(-7,0,0); b(7,0,0); b(-13,4,-2.1); b(13,4,2.1); }
+    else if(p===7){ b(-7,0,0); b(7,0,0); b(-13,4,-2.1); b(13,4,2.1); b(0,-3,0,1); } // 7: 4발+중앙 관통탄
+    else { for(var a=-2;a<=2;a++) b(a*7,Math.abs(a)*3,a*1.6,a===0?1:0); }           // 8: 5발 부채꼴+중앙 관통
   }
   function skyBoom(x,y,color,n){ for(var i=0;i<(n||7);i++){ var a=Math.random()*6.3,s=1+Math.random()*3.2; sky.parts.push({x:x,y:y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,col:color||"#ffb04a"}); } }
+  var SHIP_COL=[["#8a9db0","#5a6a78"],["#5ad0ff","#2a7ab0"],["#c07aff","#7a3ea8"],["#ffd54a","#c08a20"]]; // 기체 티어별 (T1 강철→T2 하늘→T3 보라→T4 황금)
+  function skyDrawShip(ctx,x,y,tier,t){
+    var c=SHIP_COL[tier-1]||SHIP_COL[0], w=13+tier*1.5, h=22+tier;
+    // 엔진 화염 (깜빡임)
+    var fl=7+tier*1.5+Math.sin(t*0.55)*2.5;
+    ctx.fillStyle="rgba(255,150,50,.85)"; ctx.beginPath(); ctx.moveTo(x-3.5,y+h*0.42); ctx.lineTo(x,y+h*0.42+fl); ctx.lineTo(x+3.5,y+h*0.42); ctx.closePath(); ctx.fill();
+    ctx.fillStyle="rgba(255,230,120,.9)"; ctx.beginPath(); ctx.moveTo(x-1.6,y+h*0.42); ctx.lineTo(x,y+h*0.42+fl*0.55); ctx.lineTo(x+1.6,y+h*0.42); ctx.closePath(); ctx.fill();
+    if(tier>=3){ ctx.globalAlpha=0.16+0.06*Math.sin(t*0.3); ctx.fillStyle=c[0]; ctx.beginPath(); ctx.arc(x,y,20+tier*2,0,6.3); ctx.fill(); ctx.globalAlpha=1; } // 오라
+    // 날개 (티어 클수록 넓게)
+    ctx.fillStyle=c[1]; ctx.beginPath(); ctx.moveTo(x,y-2); ctx.lineTo(x-w,y+h*0.34); ctx.lineTo(x-w*0.42,y+h*0.4); ctx.lineTo(x,y+h*0.18); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x,y-2); ctx.lineTo(x+w,y+h*0.34); ctx.lineTo(x+w*0.42,y+h*0.4); ctx.lineTo(x,y+h*0.18); ctx.closePath(); ctx.fill();
+    if(tier>=2){ ctx.fillStyle=c[0]; ctx.fillRect(x-w+1,y+h*0.2,3,h*0.2); ctx.fillRect(x+w-4,y+h*0.2,3,h*0.2); } // 윙팁
+    // 동체
+    ctx.fillStyle=c[0]; ctx.beginPath(); ctx.moveTo(x,y-h*0.55); ctx.quadraticCurveTo(x-6,y,x-4.5,y+h*0.42); ctx.lineTo(x+4.5,y+h*0.42); ctx.quadraticCurveTo(x+6,y,x,y-h*0.55); ctx.closePath(); ctx.fill();
+    // 콕핏
+    ctx.fillStyle=tier>=4?"#fff6d0":"#bfefff"; ctx.beginPath(); ctx.arc(x,y-h*0.12,3.2,0,6.3); ctx.fill();
+    if(tier>=4){ ctx.strokeStyle="rgba(255,220,120,.9)"; ctx.lineWidth=1.4; ctx.beginPath(); ctx.arc(x,y-h*0.12,5,0,6.3); ctx.stroke(); } // 황금 링
+  }
   function skyPop(x,y,txt,col){ sky.pops.push({x:x,y:y,txt:txt,life:1,col:col||"#fff"}); }
   function skyKill(en){
     sky.streak++; sky.mult=Math.min(5,1+Math.floor(sky.streak/8));
     var gain=en.sc*sky.mult; sky.score+=gain; sky.kills++; updateSkyHud();
-    skyBoom(en.x,en.y,"#ff9a3a",8); skyPop(en.x,en.y-14,"+"+gain+(sky.mult>1?" x"+sky.mult:""),sky.mult>1?"#ffd54a":"#fff");
+    skyBoom(en.x,en.y,"#ff9a3a",10); sky.rings.push({x:en.x,y:en.y,r:6,life:1}); skyPop(en.x,en.y-14,"+"+gain+(sky.mult>1?" x"+sky.mult:""),sky.mult>1?"#ffd54a":"#fff");
     beep(470+sky.score,0.04);
     if(Math.random()<en.drop) skyDropItem(en.x,en.y);
   }
-  function skyDropItem(x,y){ var r=Math.random(); var ty=r<0.5?"power":(r<0.72?"shield":(r<0.9?"bomb":"life")); sky.items.push({x:x,y:y,ty:ty}); }
+  function skyDropItem(x,y){ var r=Math.random(); var ty=r<0.40?"power":(r<0.58?"skull":(r<0.74?"shield":(r<0.90?"bomb":"life"))); sky.items.push({x:x,y:y,ty:ty}); }
   function skyGetItem(it){
-    if(it.ty==="power"){ sky.power=Math.min(5,sky.power+1); toast("⚡ 파워업! Lv."+sky.power); beep(950,0.1); }
+    if(it.ty==="power"){ sky.power=Math.min(8,sky.power+1); toast("⚡ 무기 강화! Lv."+sky.power); beep(950,0.1); skyPop(it.x,it.y-10,"⚡Lv."+sky.power,"#ffd54a"); }
+    else if(it.ty==="skull"){ var old=sky.power; sky.power=Math.max(1,sky.power-1); sky.flash=5; vib([40,30]); beep(140,0.18); toast(old>sky.power?"💀 무기 고장! Lv."+sky.power:"💀 으윽!"); skyPop(it.x,it.y-10,"💀 -1","#ff7a7a"); skyBoom(it.x,it.y,"#b06aff",6); }
     else if(it.ty==="shield"){ sky.shield=sky.t+360; toast("🛡 실드!"); beep(820,0.1); }
     else if(it.ty==="life"){ sky.lives=Math.min(5,sky.lives+1); updateSkyHud(); toast("❤️ 생명 +1"); beep(1000,0.1); }
     else { var g=0; sky.enemies.forEach(function(en){ g+=en.sc; skyBoom(en.x,en.y,"#ffd54a",6); }); sky.enemies=[]; sky.score+=g; if(sky.boss) sky.boss.hp-=10; sky.flash=8; sky.shake=10; updateSkyHud(); toast("💣 폭탄! +"+g); vib([30,30]); beep(200,0.2); }
   }
   function skyHit(){ if(sky.t<sky.shield) return; sky.lives--; sky.streak=0; sky.mult=1; sky.flash=6; sky.shake=8; skyBoom(sky.px,sky.py,"#ff5a5a",10); updateSkyHud(); beep(150,0.15); vib(40); sky.shield=sky.t+50; if(sky.lives<=0) endSky(); }
   function skyBossFire(bo,W,H){
-    bo.patT--; var maxPat=sky.stage>=4?3:(sky.stage>=2?2:1); if(bo.patT<=0){ bo.pattern=(bo.pattern+1)%maxPat; bo.patT=170; bo.fireT=0; }
+    bo.patT--; var maxPat=sky.stage>=4?3:(sky.stage>=2?2:1); if(bo.patT<=0){ bo.pattern=(bo.pattern+1)%maxPat; bo.patT=150; bo.fireT=0; }
     bo.fireT++;
-    if(bo.pattern===0){ if(bo.fireT>=Math.max(20,44-sky.stage*2)){ bo.fireT=0; var ang=Math.atan2(sky.py-bo.y,sky.px-bo.x); [-0.22,0,0.22].forEach(function(o){ sky.ebullets.push({x:bo.x,y:bo.y+22,vx:Math.cos(ang+o)*3.6,vy:Math.sin(ang+o)*3.6}); }); beep(300,0.03); } }
-    else if(bo.pattern===1){ if(bo.fireT>=Math.max(42,74-sky.stage*3)){ bo.fireT=0; var n=8+Math.min(6,sky.stage); for(var i=0;i<n;i++){ var a=(i/n)*6.283; sky.ebullets.push({x:bo.x,y:bo.y+8,vx:Math.cos(a)*2.6,vy:Math.abs(Math.sin(a))*1.6+2.0}); } beep(260,0.05); } }
-    else { if(bo.fireT>=13){ bo.fireT=0; sky.ebullets.push({x:bo.x,y:bo.y+20,vx:bo.dir*1.3,vy:3.4}); } }
+    if(bo.pattern===0){ if(bo.fireT>=Math.max(17,40-sky.stage*2)){ bo.fireT=0; var ang=Math.atan2(sky.py-bo.y,sky.px-bo.x); [-0.22,0,0.22].forEach(function(o){ sky.ebullets.push({x:bo.x,y:bo.y+22,vx:Math.cos(ang+o)*3.9,vy:Math.sin(ang+o)*3.9}); }); beep(300,0.03); } }
+    else if(bo.pattern===1){ if(bo.fireT>=Math.max(38,68-sky.stage*3)){ bo.fireT=0; var n=10+Math.min(8,sky.stage); for(var i=0;i<n;i++){ var a=(i/n)*6.283; sky.ebullets.push({x:bo.x,y:bo.y+8,vx:Math.cos(a)*2.8,vy:Math.abs(Math.sin(a))*1.7+2.2}); } beep(260,0.05); } }
+    else { if(bo.fireT>=11){ bo.fireT=0; sky.ebullets.push({x:bo.x,y:bo.y+20,vx:bo.dir*1.4,vy:3.7}); } }
   }
   function skyLoop(){
     if(!sky.active) return;
     var cv=$("skyCanvas"),ctx=cv.getContext("2d"),W=cv.width,H=cv.height; sky.t++;
     var sx=0,sy=0; if(sky.shake>0){ sky.shake--; sx=(Math.random()-0.5)*sky.shake; sy=(Math.random()-0.5)*sky.shake; }
     ctx.save(); ctx.translate(sx,sy);
-    ctx.fillStyle="#0a0e26"; ctx.fillRect(-12,-12,W+24,H+24);
-    ctx.fillStyle="rgba(255,255,255,.55)";
-    sky.stars.forEach(function(st){ st.y+=st.s; if(st.y>H){st.y=0;st.x=Math.random()*W;} ctx.fillRect(st.x,st.y,1.5,1.5); });
-    if(sky.t-sky.lastShot>=8){ sky.lastShot=sky.t; skyFire(); }
+    // 배경: 스테이지별 색조 그라디언트 + 흐르는 성운 + 2겹 패럴랙스 별
+    var PAL=[["#0a0e26","#141a3e"],["#0c1030","#241546"],["#130b2e","#3a1546"],["#0b1a2e","#14364e"],["#1a0b26","#46153a"]];
+    var pal=PAL[(sky.stage-1+PAL.length)%PAL.length]||PAL[0];
+    var g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,pal[0]); g.addColorStop(1,pal[1]);
+    ctx.fillStyle=g; ctx.fillRect(-12,-12,W+24,H+24);
+    ctx.globalAlpha=0.10; ctx.fillStyle="#8a5ad0"; ctx.beginPath(); ctx.arc(W*0.25+Math.sin(sky.t*0.004)*30,(sky.t*0.35)%(H+240)-120,110,0,6.3); ctx.fill();
+    ctx.fillStyle="#3ab0d0"; ctx.beginPath(); ctx.arc(W*0.75+Math.cos(sky.t*0.003)*26,(sky.t*0.22+H*0.6)%(H+240)-120,90,0,6.3); ctx.fill(); ctx.globalAlpha=1;
+    sky.stars.forEach(function(st){ st.y+=st.s*(st.l?1.6:0.8); if(st.y>H){st.y=0;st.x=Math.random()*W;} ctx.fillStyle=st.l?"rgba(255,255,255,.9)":"rgba(180,190,255,.4)"; ctx.fillRect(st.x,st.y,st.l?2:1.3,st.l?2.6:1.3); });
+    if(sky.t-sky.lastShot>=skyFireInt()){ sky.lastShot=sky.t; skyFire(); }
     if(!sky.boss){
       sky.spawnT++;
-      if(sky.spawnT>=Math.max(9,34-sky.stage*2.5) && sky.kills<sky.quota){ sky.spawnT=0; skySpawn(W,H); }
-      if(sky.kills>=sky.quota && sky.enemies.length===0){ var hp=64+sky.stage*30; sky.boss={x:W/2,y:70,hp:hp,max:hp,v:1.6+sky.stage*0.22,dir:1,fireT:0,pattern:0,patT:170}; sky.banner="💀 BOSS!"; sky.bannerT=sky.t+70; beep(200,0.2); }
+      if(sky.spawnT>=Math.max(7,30-sky.stage*2.8) && sky.kills<sky.quota){ sky.spawnT=0; skySpawn(W,H); }
+      if(sky.kills>=sky.quota && sky.enemies.length===0){ var hp=90+sky.stage*38; sky.boss={x:W/2,y:70,hp:hp,max:hp,v:1.7+sky.stage*0.24,dir:1,fireT:0,pattern:0,patT:150}; sky.banner="💀 BOSS!"; sky.bannerT=sky.t+70; beep(200,0.2); }
     }
-    ctx.fillStyle="#ffd54a";
-    sky.bullets=sky.bullets.filter(function(b){ b.y-=9; b.x+=(b.vx||0); if(b.y<-12) return false; ctx.fillRect(b.x-2,b.y,4,11); return true; });
-    ctx.fillStyle="#ff6a6a";
-    sky.ebullets=sky.ebullets.filter(function(b){ b.y+=b.vy; b.x+=b.vx; if(b.y>H+10||b.x<-10||b.x>W+10) return false; ctx.beginPath();ctx.arc(b.x,b.y,4,0,6.3);ctx.fill(); if(Math.abs(b.x-sky.px)<16&&Math.abs(b.y-sky.py)<16){ skyHit(); return false; } return true; });
-    ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.font="22px sans-serif";
-    sky.items=sky.items.filter(function(it){ it.y+=2.2; if(it.y>H+16) return false; if(Math.abs(it.x-sky.px)<24&&Math.abs(it.y-sky.py)<24){ skyGetItem(it); return false; } ctx.fillText(ITEMICON[it.ty],it.x,it.y); return true; });
+    var bSpd=9+(skyTier()>=2?1:0)+(skyTier()>=4?1:0); // 기체 진화 → 탄속 소폭↑
+    sky.bullets=sky.bullets.filter(function(b){ b.y-=bSpd; b.x+=(b.vx||0); if(b.y<-12) return false;
+      ctx.fillStyle=b.pierce?"rgba(160,240,255,.35)":"rgba(255,213,74,.30)"; ctx.fillRect(b.x-3,b.y-2,6,15); // 글로우
+      ctx.fillStyle=b.pierce?"#aef4ff":"#ffd54a"; ctx.fillRect(b.x-1.5,b.y,3,11);
+      return true; });
+    sky.ebullets=sky.ebullets.filter(function(b){ b.y+=b.vy; b.x+=b.vx; if(b.y>H+10||b.x<-10||b.x>W+10) return false;
+      ctx.fillStyle="rgba(255,90,90,.28)"; ctx.beginPath(); ctx.arc(b.x,b.y,7,0,6.3); ctx.fill();
+      ctx.fillStyle="#ff8080"; ctx.beginPath(); ctx.arc(b.x,b.y,3.6,0,6.3); ctx.fill();
+      ctx.fillStyle="#ffd0d0"; ctx.beginPath(); ctx.arc(b.x-1,b.y-1,1.4,0,6.3); ctx.fill();
+      if(Math.abs(b.x-sky.px)<16&&Math.abs(b.y-sky.py)<16){ skyHit(); return false; } return true; });
+    ctx.textAlign="center"; ctx.textBaseline="middle";
+    sky.items=sky.items.filter(function(it){ it.y+=2.2; if(it.y>H+16) return false; if(Math.abs(it.x-sky.px)<24&&Math.abs(it.y-sky.py)<24){ skyGetItem(it); return false; }
+      var bad=(it.ty==="skull");
+      ctx.globalAlpha=0.35+0.2*Math.sin(sky.t*0.2); ctx.strokeStyle=bad?"#ff6a6a":"#7fe0ff"; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(it.x,it.y,15,0,6.3); ctx.stroke(); ctx.globalAlpha=1;
+      ctx.font="22px sans-serif"; ctx.fillText(ITEMICON[it.ty],it.x,it.y+Math.sin(sky.t*0.15+it.x)*2);
+      return true; });
     ctx.font="26px sans-serif";
     sky.enemies=sky.enemies.filter(function(en){
-      if(en.mode==="home"){ en.y+=en.v; en.x+=Math.max(-1.2,Math.min(1.2,sky.px-en.x))*0.5; }
-      else if(en.mode==="stop"){ if(en.y<en.stopY) en.y+=en.v; else { en.fireT++; if(en.fireT>=55){ en.fireT=0; var an=Math.atan2(sky.py-en.y,sky.px-en.x); sky.ebullets.push({x:en.x,y:en.y+14,vx:Math.cos(an)*3.0,vy:Math.sin(an)*3.0}); } } }
+      if(en.mode==="home"){ en.y+=en.v; en.x+=Math.max(-1.5,Math.min(1.5,sky.px-en.x))*0.65; }
+      else if(en.mode==="stop"){ if(en.y<en.stopY) en.y+=en.v; else { en.fireT++; if(en.fireT>=45){ en.fireT=0; var an=Math.atan2(sky.py-en.y,sky.px-en.x); sky.ebullets.push({x:en.x,y:en.y+14,vx:Math.cos(an)*3.4,vy:Math.sin(an)*3.4}); } } }
       else en.y+=en.v;
-      for(var i=0;i<sky.bullets.length;i++){ var b=sky.bullets[i]; if(Math.abs(b.x-en.x)<18&&Math.abs(b.y-en.y)<18){ sky.bullets.splice(i,1); en.hp--; if(en.hp<=0){ skyKill(en); return false; } skyBoom(b.x,b.y,"#ffd54a",3); beep(320,0.02); break; } }
+      for(var i=0;i<sky.bullets.length;i++){ var b=sky.bullets[i]; if(Math.abs(b.x-en.x)<18&&Math.abs(b.y-en.y)<18){ if(b.pierce>0){ b.pierce--; } else { sky.bullets.splice(i,1); } en.hp--; if(en.hp<=0){ skyKill(en); return false; } skyBoom(b.x,b.y,"#ffd54a",3); beep(320,0.02); break; } }
       if(Math.abs(en.x-sky.px)<22&&Math.abs(en.y-sky.py)<22){ skyBoom(en.x,en.y,"#ff5a5a",6); skyHit(); return false; }
       if(en.y>H+22){ sky.streak=0; sky.mult=1; return false; }
       ctx.fillText(en.ico,en.x,en.y);
@@ -2987,15 +3031,21 @@
       var bo=sky.boss; bo.x+=bo.v*bo.dir; if(bo.x<30||bo.x>W-30) bo.dir*=-1;
       skyBossFire(bo,W,H);
       for(var i=0;i<sky.bullets.length;i++){ var b=sky.bullets[i]; if(Math.abs(b.x-bo.x)<34&&Math.abs(b.y-bo.y)<30){ sky.bullets.splice(i,1); bo.hp--; skyBoom(b.x,b.y,"#ffd54a",3); if(bo.hp<=0){ sky.score+=15+sky.stage*5; skyBoom(bo.x,bo.y,"#ff9a3a",20); sky.flash=10; sky.shake=12; updateSkyHud(); sky.boss=null; sky.banner="STAGE CLEAR! 🎉"; sky.bannerT=sky.t+80; beep(1000,0.2); vib([40,40,40]); setTimeout(function(){ if(sky.active) nextStage(); },1400); break; } } }
-      if(sky.boss){ ctx.font="52px sans-serif"; ctx.fillText("👹",bo.x,bo.y); ctx.fillStyle="#3a1a2a"; ctx.fillRect(W/2-70,10,140,8); ctx.fillStyle="#ff5a5a"; ctx.fillRect(W/2-70,10,140*Math.max(0,bo.hp/bo.max),8);
+      if(sky.boss){
+        ctx.globalAlpha=0.14+0.08*Math.sin(sky.t*0.2); ctx.fillStyle="#ff4a4a"; ctx.beginPath(); ctx.arc(bo.x,bo.y,40+4*Math.sin(sky.t*0.13),0,6.3); ctx.fill(); ctx.globalAlpha=1; // 위협 오라
+        ctx.font="52px sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText("👹",bo.x,bo.y);
+        ctx.fillStyle="#3a1a2a"; ctx.fillRect(W/2-70,10,140,8); ctx.fillStyle="#ff5a5a"; ctx.fillRect(W/2-70,10,140*Math.max(0,bo.hp/bo.max),8);
+        ctx.strokeStyle="rgba(255,255,255,.4)"; ctx.lineWidth=1; ctx.strokeRect(W/2-70,10,140,8);
         if(Math.abs(bo.x-sky.px)<32&&Math.abs(bo.y-sky.py)<30) skyHit(); }
     }
     sky.parts=sky.parts.filter(function(pt){ pt.x+=pt.vx; pt.y+=pt.vy; pt.vy+=0.05; pt.life-=0.045; if(pt.life<=0) return false; ctx.globalAlpha=Math.max(0,pt.life); ctx.fillStyle=pt.col; ctx.fillRect(pt.x-2,pt.y-2,4,4); return true; }); ctx.globalAlpha=1;
     sky.pops=sky.pops.filter(function(p){ p.y-=0.8; p.life-=0.02; if(p.life<=0) return false; ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.col; ctx.font="bold 14px sans-serif"; ctx.textAlign="center"; ctx.fillText(p.txt,p.x,p.y); return true; }); ctx.globalAlpha=1;
+    // 충격파 링
+    sky.rings=sky.rings.filter(function(r){ r.r+=2.6; r.life-=0.07; if(r.life<=0) return false; ctx.globalAlpha=Math.max(0,r.life)*0.8; ctx.strokeStyle="#ffca6a"; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(r.x,r.y,r.r,0,6.3); ctx.stroke(); return true; }); ctx.globalAlpha=1;
     if(sky.t<sky.shield){ ctx.strokeStyle="rgba(120,200,255,.85)"; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(sky.px,sky.py,24,0,6.3); ctx.stroke(); }
-    ctx.font="30px sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText("🦍",sky.px,sky.py); ctx.font="15px sans-serif"; ctx.fillText("🔥",sky.px,sky.py+17);
+    skyDrawShip(ctx,sky.px,sky.py,skyTier(),sky.t);
     ctx.restore();
-    ctx.fillStyle="rgba(255,255,255,.85)"; ctx.font="12px sans-serif"; ctx.textAlign="left"; ctx.textBaseline="alphabetic"; ctx.fillText("STAGE "+sky.stage+"  ⚡Lv."+sky.power,8,H-10);
+    ctx.fillStyle="rgba(255,255,255,.85)"; ctx.font="12px sans-serif"; ctx.textAlign="left"; ctx.textBaseline="alphabetic"; ctx.fillText("STAGE "+sky.stage+"  ⚔️무기 Lv."+sky.power+"  ✈️기체 T"+skyTier(),8,H-10);
     if(sky.mult>1){ ctx.fillStyle="#ffd54a"; ctx.font="bold 15px sans-serif"; ctx.textAlign="right"; ctx.fillText("COMBO x"+sky.mult,W-8,H-10); }
     if(sky.flash>0){ sky.flash--; ctx.fillStyle="rgba(255,255,255,"+(sky.flash*0.05)+")"; ctx.fillRect(0,0,W,H); }
     if(sky.t<sky.bannerT){ ctx.fillStyle="rgba(255,213,74,.95)"; ctx.font="bold 28px sans-serif"; ctx.textAlign="center"; ctx.fillText(sky.banner,W/2,H*0.4); }
