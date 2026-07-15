@@ -682,6 +682,22 @@
     <div id="sukaStart" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:3;background:rgba(8,4,20,.55);text-align:center;padding:20px"></div>
   </div>
 
+  <!-- 콩즈 헥사 (Hextris) -->
+  <div id="hexModal" style="position:fixed;inset:0;background:linear-gradient(180deg,#14183a,#0a0c1e);display:none;z-index:84;flex-direction:column">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;gap:8px">
+      <div style="font-weight:800">⬡ <span id="hexScore">0</span></div>
+      <div style="font-weight:800;color:var(--gold);font-size:13px">최고 <span id="hexBest">0</span></div>
+      <div style="font-size:12px;color:#9fb4e0" id="hexCombo"></div>
+      <button id="hexClose" style="background:#5a5a72;border:none;color:#fff;padding:6px 12px;border-radius:8px">나가기</button>
+    </div>
+    <canvas id="hexCanvas" style="flex:1;width:100%;touch-action:none;display:block"></canvas>
+    <div style="display:flex;gap:12px;padding:0 20px 20px;justify-content:center">
+      <button id="hexL" style="flex:1;max-width:150px;padding:16px;border-radius:14px;border:2px solid #4a5a9a;background:rgba(74,90,154,.35);color:#fff;font-size:26px;font-weight:800">↺</button>
+      <button id="hexR" style="flex:1;max-width:150px;padding:16px;border-radius:14px;border:2px solid #4a5a9a;background:rgba(74,90,154,.35);color:#fff;font-size:26px;font-weight:800">↻</button>
+    </div>
+    <div id="hexStart" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:3;background:rgba(8,4,20,.6);text-align:center;padding:20px"></div>
+  </div>
+
   <!-- 콩즈 디펜스 -->
   <div id="tdModal" style="position:fixed;inset:0;background:#0d1a12;display:none;z-index:84;flex-direction:column">
     <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;position:relative;z-index:2;gap:8px">
@@ -830,6 +846,11 @@
       <div class="big">🍉</div>
       <div style="flex:1"><h3 style="margin:0">콩즈 합체 <span class="muted" id="sukaLeftT">하루 5판</span> <span style="font-size:10px;background:#ffd54a;color:#201800;border-radius:4px;padding:0 4px">NEW</span></h3><div class="muted" style="font-size:12px">같은 콩즈끼리 닿으면 합체 진화! 🥚→…→⭐ 최종진화 도전 → ₭</div></div>
       <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="sukaBtn">플레이</button>
+    </div>
+    <div class="card arcadeItem" style="border:1px solid var(--gold)">
+      <div class="big">⬡</div>
+      <div style="flex:1"><h3 style="margin:0">콩즈 헥사 <span class="muted" id="hexLeftT">하루 5판</span> <span style="font-size:10px;background:#ffd54a;color:#201800;border-radius:4px;padding:0 4px">NEW</span></h3><div class="muted" style="font-size:12px">육각형 돌려 같은 색 3개↑ 맞추기! 꽉 차기 전에 → ₭</div></div>
+      <button class="bigBtn" style="width:auto;margin:0;padding:10px 14px;font-size:13px" id="hexBtn">플레이</button>
     </div>
     <div class="card arcadeItem">
       <div class="big">🔨</div>
@@ -1895,6 +1916,73 @@
     cv.addEventListener("mousemove",function(e){ if(suka.cur&&e.buttons){ suka.cur.x=px(e.clientX); suka.dropX=suka.cur.x; } });
     cv.addEventListener("mouseup",function(e){ sukaDrop(); });
   })();
+  // ===== ⬡ 콩즈 헥사 (Hextris) =====
+  var HX_COLORS=["#ff5a7a","#4ea8ff","#4ade80"];
+  var hx={active:false,over:false,stacks:[[],[],[],[],[],[]],rotSteps:0,rotDeg:0,fb:null,cx:170,cy:180,R:34,BH:22,DEATH:0,MAX:6,spd:2.2,spawnGap:70,spawnT:0,score:0,combo:0,raf:0,last:0};
+  function hexLeft(){ mgRoll(); return Math.max(0,5-(S.hexN||0)); }
+  function hexResize(){ var c=$("hexCanvas"); if(!c) return; var r=c.getBoundingClientRect(); c.width=Math.max(1,Math.round(r.width)); c.height=Math.max(1,Math.round(r.height));
+    hx.cx=c.width/2; hx.cy=c.height*0.46; var lim=Math.min(c.width,c.height*0.92);
+    hx.R=Math.max(26,lim*0.135); hx.BH=hx.R*0.54; hx.MAX=8; hx.DEATH=hx.R+hx.MAX*hx.BH; }
+  window.addEventListener("resize",function(){ if(hx.active) hexResize(); });
+  function hexOpen(){ mgRoll(); var lt=$("hexLeftT"); if(lt) lt.textContent="하루 "+hexLeft()+"판"; if(hexLeft()<=0){ toast("오늘 판 다 썼어요!"); return; } $("hexModal").style.display="flex"; hexResize(); $("hexBest").textContent=S.hexBest||0;
+    $("hexStart").style.display="flex"; $("hexStart").innerHTML='<h2>⬡ 콩즈 헥사</h2><p class="muted" style="max-width:290px;font-size:13px;line-height:1.6">위에서 떨어지는 색 블록을 <b>↺ ↻ 회전</b>으로 받아<br>같은 색 <b>3개 이상</b> 쌓으면 터져요! 🔥<br>육각이 꽉 차기 전에 최대한 버티기</p><button class="bigBtn" id="hexGo" style="max-width:220px">시작! ('+hexLeft()+'판)</button>'; $("hexGo").onclick=hexStart; }
+  function hexStart(){ mgRoll(); if(hexLeft()<=0){ $("hexModal").style.display="none"; return; } S.hexN=(S.hexN||0)+1; if(typeof refreshMgLeft==="function") refreshMgLeft();
+    hexResize(); hx.active=true; hx.over=false; hx.stacks=[[],[],[],[],[],[]]; hx.rotSteps=0; hx.rotDeg=0; hx.fb=null; hx.score=0; hx.combo=0; hx.spd=2.2; hx.spawnGap=70; hx.spawnT=0;
+    $("hexScore").textContent="0"; $("hexCombo").textContent=""; $("hexStart").style.display="none";
+    cancelAnimationFrame(hx.raf); hx.last=performance.now(); hx.raf=requestAnimationFrame(hexLoop); }
+  function hexTop(){ return ((hx.rotSteps%6)+6)%6; }
+  function hexRotate(d){ if(!hx.active||hx.over) return; hx.rotSteps+=d; beep(420,0.04); vib(8); }
+  function hexSpawn(){ hx.fb={c:Math.floor(Math.random()*HX_COLORS.length), dist:hx.DEATH+hx.BH*1.6}; }
+  function hexResolve(){ var cleared=0, pass=true;
+    while(pass){ pass=false;
+      for(var s=0;s<6;s++){ var st=hx.stacks[s];
+        for(var i=0;i<st.length;i++){ var j=i; while(j<st.length && st[j]===st[i]) j++; if(j-i>=3){ cleared+=(j-i); st.splice(i,j-i); pass=true; break; } }
+      }
+    }
+    if(cleared>0){ hx.combo++; hx.score+=cleared*10*hx.combo; $("hexScore").textContent=hx.score; $("hexCombo").textContent=hx.combo>1?("🔥 "+hx.combo+" COMBO"):""; beep(700+hx.combo*60,0.08); vib(15); }
+    else hx.combo=0;
+    return cleared;
+  }
+  function hexLand(){ hx.stacks[hexTop()].push(hx.fb.c); hx.fb=null; hexResolve();
+    for(var s=0;s<6;s++){ if(hx.R+hx.stacks[s].length*hx.BH >= hx.DEATH){ hexEnd(); return; } } }
+  function hexLoop(t){ if(!hx.active) return; var dt=Math.min(0.05,(t-hx.last)/1000); hx.last=t;
+    hx.rotDeg+=(-hx.rotSteps*60 - hx.rotDeg)*Math.min(1,dt*13);
+    if(!hx.over){
+      if(!hx.fb){ hx.spawnT+=dt*1000; if(hx.spawnT>=hx.spawnGap*4){ hx.spawnT=0; hexSpawn(); } }
+      if(hx.fb){ hx.fb.dist-=hx.spd*(dt*60); var landAt=hx.R+hx.stacks[hexTop()].length*hx.BH+hx.BH;
+        if(hx.fb.dist<=landAt){ hx.fb.dist=landAt; hexLand(); } }
+      hx.spd=Math.min(15,2.4+hx.score*0.0016); // 점점 빨라져 결국 한계(무한지속 방지)
+    }
+    hexDraw(t); hx.raf=requestAnimationFrame(hexLoop);
+  }
+  function hexDraw(t){ var c=$("hexCanvas"); if(!c) return; var ctx=c.getContext("2d"),W=c.width,H=c.height; ctx.clearRect(0,0,W,H);
+    ctx.save(); ctx.translate(hx.cx,hx.cy);
+    ctx.strokeStyle="rgba(255,90,90,.16)"; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(0,0,hx.DEATH,0,6.29); ctx.stroke();
+    var Rv=hx.R/Math.cos(Math.PI/6);
+    ctx.beginPath(); for(var k=0;k<6;k++){ var a=(k*60+30+hx.rotDeg)*Math.PI/180, dx=Math.sin(a)*Rv, dy=-Math.cos(a)*Rv; if(k===0)ctx.moveTo(dx,dy); else ctx.lineTo(dx,dy); } ctx.closePath(); ctx.fillStyle="#2a2f55"; ctx.fill(); ctx.strokeStyle="#4a5a9a"; ctx.lineWidth=2; ctx.stroke();
+    var bw=hx.R*0.98;
+    for(var s=0;s<6;s++){ var st=hx.stacks[s], ang=(s*60+hx.rotDeg)*Math.PI/180;
+      for(var j=0;j<st.length;j++){ var rad=hx.R+j*hx.BH+hx.BH/2;
+        ctx.save(); ctx.rotate(ang); ctx.translate(0,-rad); ctx.fillStyle=HX_COLORS[st[j]]; ctx.fillRect(-bw/2,-hx.BH/2+1,bw,hx.BH-2); ctx.strokeStyle="rgba(0,0,0,.28)"; ctx.lineWidth=1; ctx.strokeRect(-bw/2,-hx.BH/2+1,bw,hx.BH-2); ctx.restore();
+      }
+    }
+    if(hx.fb){ ctx.save(); ctx.translate(0,-hx.fb.dist); ctx.fillStyle=HX_COLORS[hx.fb.c]; ctx.fillRect(-bw/2,-hx.BH/2,bw,hx.BH); ctx.strokeStyle="rgba(255,255,255,.55)"; ctx.lineWidth=1.5; ctx.strokeRect(-bw/2,-hx.BH/2,bw,hx.BH); ctx.restore(); }
+    ctx.restore();
+  }
+  function hexEnd(){ hx.over=true; hx.active=false; cancelAnimationFrame(hx.raf);
+    if(hx.score>(S.hexBest||0)) S.hexBest=hx.score;
+    var reward=Math.floor(Math.min(hx.score,2500)*Math.max(1,perTap()*0.12)); win(reward); // 점수상한으로 보상 경제 안전
+    $("hexStart").style.display="flex"; $("hexStart").innerHTML='<h2>💥 게임 오버!</h2><p class="muted" style="font-size:15px">점수 <b style="color:var(--gold)">'+hx.score+'</b> · 최고 '+(S.hexBest||0)+'</p><p style="font-size:14px">₭'+fmt(reward)+' 획득!</p><button class="bigBtn" id="hexAgain" style="max-width:220px">'+(hexLeft()>0?"다시 ("+hexLeft()+"판)":"오늘 끝!")+'</button><button class="bigBtn" id="hexDone" style="max-width:220px;background:#5a5a72;margin-top:8px">나가기</button>';
+    var ag=$("hexAgain"); if(ag) ag.onclick=function(){ if(hexLeft()>0) hexStart(); else toast("오늘 판 다 썼어요!"); };
+    var dn=$("hexDone"); if(dn) dn.onclick=function(){ $("hexModal").style.display="none"; };
+  }
+  (function(){
+    var b=$("hexBtn"); if(b) b.onclick=function(){ if(!PLAY_OK){ needWallet(); return; } hexOpen(); };
+    var cl=$("hexClose"); if(cl) cl.onclick=function(){ hx.active=false; cancelAnimationFrame(hx.raf); $("hexModal").style.display="none"; };
+    function tap(btn,fn){ if(!btn) return; btn.addEventListener("touchstart",function(e){ e.preventDefault(); fn(); },{passive:false}); btn.addEventListener("mousedown",function(e){ e.preventDefault(); fn(); }); }
+    tap($("hexL"),function(){ hexRotate(1); }); tap($("hexR"),function(){ hexRotate(-1); });
+    window.addEventListener("keydown",function(e){ if(!hx.active) return; if(e.key==="ArrowLeft"){ hexRotate(1); e.preventDefault(); } else if(e.key==="ArrowRight"){ hexRotate(-1); e.preventDefault(); } });
+  })();
   // ===== 🔥 연승 콤보 (도박 미니게임 공용) =====
   var gStreak=0, gStreakBest=0;
   function comboWin(){
@@ -1979,7 +2067,7 @@
   $("rpsClose").onclick=function(){ $("rpsModal").style.display="none"; };
 
   // ===== 미니게임 일일제한 (두더지/기억력) =====
-  function mgRoll(){ if(S.mgDate!==todayKey()){ S.mgDate=todayKey(); S.moleN=0; S.simonN=0; S.skyN=0; S.k2N=0; S.k3N=0; S.rnN=0; S.tdN=0; S.szN=0; S.tapN=0; S.pjN=0; S.arAiN=0; S.sfAiN=0; S.sukaN=0; } }
+  function mgRoll(){ if(S.mgDate!==todayKey()){ S.mgDate=todayKey(); S.moleN=0; S.simonN=0; S.skyN=0; S.k2N=0; S.k3N=0; S.rnN=0; S.tdN=0; S.szN=0; S.tapN=0; S.pjN=0; S.arAiN=0; S.sfAiN=0; S.sukaN=0; S.hexN=0; } }
   function moleLeft(){ mgRoll(); return Math.max(0,5-(S.moleN||0)); }
   function simonLeft(){ mgRoll(); return Math.max(0,5-(S.simonN||0)); }
   function refreshMgLeft(){ var a=$("moleLeftT"),b=$("simonLeftT"); if(a)a.textContent="오늘 "+moleLeft()+"판"; if(b)b.textContent="오늘 "+simonLeft()+"판"; }
