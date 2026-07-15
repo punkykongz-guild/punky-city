@@ -938,7 +938,13 @@ app.get("/api/avatar-url", (req, res) => {
   if (!id || !GEMINI_API_KEY) return res.json({ ok: false });
   const file = avatarFile(id, stage);
   if (fs.existsSync(file)) return res.json({ ok: true, ready: true, url: `/gen/avatar_${id}_${stage}.png` });
-  // 클라 합성이 메인(무료·실시간). AI 자동생성 중단 → 유저 플레이해도 비용 0. AI는 관리자 요청시에만 수동 생성.
+  // 클라 합성이 메인(무료·실시간). AI 자동생성은 아래 한시 화이트리스트만 (그 외 비용 0).
+  const GEN_WL = { until: "2026-07-15", names: ["LDH", "김동건", "김진영"] }; // 오늘까지만 AI 합성 허용
+  const wlName = String(req.query.name || "").trim().normalize("NFC");
+  if (todayStr() <= GEN_WL.until && GEN_WL.names.indexOf(wlName) >= 0
+      && checkDev(wlName, String(req.query.key || ""), String(req.query.sig || ""), String(req.query.ph || ""), String(req.query.ses || ""))) {
+    generateAvatar(id, stage, String(req.query.img || "")); // 비동기 시작 (일일 상한 AVATAR_DAILY_CAP 적용)
+  }
   res.json({ ok: true, ready: false });
 });
 

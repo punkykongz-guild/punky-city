@@ -1200,7 +1200,7 @@
       hi.dataset.ai="0"; hi.style.display="";
       $("heroShadow").style.display=""; $("heroDeco").style.display="";
     }
-    setTimeout(function(){ try{ checkAiAvatar(); }catch(e){} }, 50);
+    aiRetry=0; setTimeout(function(){ try{ checkAiAvatar(); }catch(e){} }, 50); // 등급 변경 시 재확인 횟수 리셋
 
     // 실제 배경 일러스트 우선 사용, 실패 시 이모지+그라데이션 폴백
     var bgUrl = "assets/bg/stage" + st + ".webp";
@@ -4096,7 +4096,7 @@
   }
 
   // ===== AI 변신 아바타 + 공용 등급 캐릭터 폴백 =====
-  var aiRetryTimer=null;
+  var aiRetryTimer=null, aiRetry=0;
   var CHAR_OK={}; // stage -> 공용 캐릭터 존재 여부
   function tryGenericChar(){
     // 개인 변신이 준비 안 됐을 때, 등급별 공용 콩즈 캐릭터로 즉시 대체
@@ -4153,7 +4153,7 @@
     if(!S) return;
     if(id===null){ tryGenericChar(); return; }
     var stage=S.stage;
-    fetch(API("/api/avatar-url")+"&id="+id+"&stage="+stage+"&img="+encodeURIComponent(rawImg(id)))
+    fetch(API("/api/avatar-url")+"&id="+id+"&stage="+stage+"&name="+encodeURIComponent(NAME||"")+"&img="+encodeURIComponent(rawImg(id)))
       .then(function(r){return r.json();})
       .then(function(j){
         if(j.ok&&j.ready&&S.stage===stage&&currentAvatarId()===id){
@@ -4168,7 +4168,8 @@
           $("aiBadge").style.display="none";
         } else if(j.ok&&!j.ready){
           $("aiBadge").textContent="🎨 이미지 개선중"; $("aiBadge").style.display="block";
-          clientHeroNFT(); // 서버 AI 합성 중단 → 본인 NFT 클라 합성(무료)으로 폴백
+          clientHeroNFT(); // 클라 합성 먼저 표시
+          if(aiRetry<8){ aiRetry++; clearTimeout(aiRetryTimer); aiRetryTimer=setTimeout(checkAiAvatar,45000); } // 화이트리스트 생성 완료 시 자동 교체
         } else {
           clientHeroNFT();
         }
