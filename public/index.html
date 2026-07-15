@@ -3045,7 +3045,11 @@
       var comp="/gen/avatar_"+avatarId+"_"+st+".png";
       var probe=new Image();
       probe.onload=function(){ sc.style.backgroundImage="url("+comp+")"; }; // 합성 있으면 통째로
-      probe.onerror=function(){ var im=document.createElement("img"); setKimg(im,avatarId,300); im.style.cssText="position:absolute;bottom:-4%;left:50%;transform:translateX(-50%);height:82%;filter:drop-shadow(0 6px 12px rgba(0,0,0,.55))"; sc.appendChild(im); };
+      probe.onerror=function(){ // AI 합성 없음 → 클라 컷아웃(배경제거) 우선, 실패 시 raw NFT
+        var im=document.createElement("img");
+        im.style.cssText="position:absolute;bottom:-4%;left:50%;transform:translateX(-50%);height:82%;filter:drop-shadow(0 6px 12px rgba(0,0,0,.55))";
+        nftCutout(avatarId, function(url){ if(url){ im.src=url; } else { setKimg(im,avatarId,300); } sc.appendChild(im); });
+      };
       probe.src=comp;
     } else {
       av.textContent="🦍";
@@ -4107,9 +4111,12 @@
     p.onerror=function(){ CHAR_OK[st]=false; };
     p.src=url;
   }
-  function clientHeroNFT(){ // 서버 AI 합성 없을 때: 본인 NFT 배경제거해 씬 캐릭터로 (무료·클라 합성)
-    if(!S) return; var id=currentAvatarId(); if(id===null){ tryGenericChar(); return; }
-    var h=$("heroImg"); if(!h || h.dataset.ai==="1") return; var tried=false;
+  var NFT_CUT_CACHE={}; // id -> dataURL | "fail" (배경제거 컷아웃 캐시)
+  function nftCutout(id, cb){ // 본인 NFT 배경제거(테두리 플러드필) → dataURL 콜백. 실패 시 cb(null)
+    var c=NFT_CUT_CACHE[id];
+    if(c==="fail"){ cb(null); return; }
+    if(c){ cb(c); return; }
+    var tried=false;
     function go(){ var img=this;
       try{
         var s=Math.min(512,img.naturalWidth||512), W=s,H=s, cv=document.createElement("canvas"); cv.width=W; cv.height=H; var ctx=cv.getContext("2d");
@@ -4126,11 +4133,20 @@
         for(var y=0;y<H;y++){ push(0,y); push(W-1,y); }
         while(stack.length){ var p=stack.pop(), xx=p%W, yy=(p/W)|0; push(xx-1,yy); push(xx+1,yy); push(xx,yy-1); push(xx,yy+1); }
         ctx.putImageData(d,0,0);
-        h.style.backgroundImage="url("+cv.toDataURL("image/png")+")"; h.dataset.ai="c"; h.style.filter="drop-shadow(0 7px 9px rgba(0,0,0,.55))"; h.style.backgroundSize="contain"; h.style.backgroundPosition="center bottom"; h.style.backgroundRepeat="no-repeat";
-      }catch(e){ tryGenericChar(); } // CORS 등 픽셀접근 실패 → 공용 마스코트
+        var url=cv.toDataURL("image/png"); NFT_CUT_CACHE[id]=url; cb(url);
+      }catch(e){ NFT_CUT_CACHE[id]="fail"; cb(null); } // CORS 등 픽셀접근 실패
     }
-    function fail(){ if(!tried){ tried=true; var im2=new Image(); im2.crossOrigin="anonymous"; im2.onload=go; im2.onerror=function(){ tryGenericChar(); }; im2.src=kimgOld(id,512); return; } tryGenericChar(); }
+    function fail(){ if(!tried){ tried=true; var im2=new Image(); im2.crossOrigin="anonymous"; im2.onload=go; im2.onerror=function(){ NFT_CUT_CACHE[id]="fail"; cb(null); }; im2.src=kimgOld(id,512); return; } NFT_CUT_CACHE[id]="fail"; cb(null); }
     var img=new Image(); img.crossOrigin="anonymous"; img.onload=go; img.onerror=fail; img.src=kimg(id,512);
+  }
+  function clientHeroNFT(){ // 서버 AI 합성 없을 때: 본인 NFT 배경제거해 씬 캐릭터로 (무료·클라 합성)
+    if(!S) return; var id=currentAvatarId(); if(id===null){ tryGenericChar(); return; }
+    var h=$("heroImg"); if(!h || h.dataset.ai==="1") return;
+    nftCutout(id, function(url){
+      if(!url){ tryGenericChar(); return; }
+      if(!h || h.dataset.ai==="1") return;
+      h.style.backgroundImage="url("+url+")"; h.dataset.ai="c"; h.style.filter="drop-shadow(0 7px 9px rgba(0,0,0,.55))"; h.style.backgroundSize="contain"; h.style.backgroundPosition="center bottom"; h.style.backgroundRepeat="no-repeat";
+    });
   }
   function checkAiAvatar(){
     var id=currentAvatarId();
