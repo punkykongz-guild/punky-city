@@ -4088,9 +4088,14 @@
     if(id===null) return;
     setKbg($("avatar"),id,200); $("avatar").classList.remove("silhouette");
     var hero=$("heroImg");
-    hero.dataset.ai="0";
+    if(hero.dataset.ai!=="c") hero.dataset.ai="0"; // 컷아웃은 유지(새 컷아웃이 완성되면 교체됨)
     hero.style.display=""; $("heroShadow").style.display=""; $("heroDeco").style.display="";
-    setKbg(hero,id,600); hero.classList.remove("silhouette");
+    // raw NFT는 임시 플레이스홀더 — 컷아웃("c")/AI("1")가 이미 적용됐으면 덮어쓰지 않음 (레이스 방지)
+    (function(hid){ var u=kimg(hid,600); var p=new Image();
+      p.onload=function(){ if(hero.dataset.ai==="0") hero.style.backgroundImage="url("+u+")"; };
+      p.onerror=function(){ var u2=kimgOld(hid,600); var p2=new Image(); p2.onload=function(){ if(hero.dataset.ai==="0") hero.style.backgroundImage="url("+u2+")"; }; p2.src=u2; };
+      p.src=u; })(id);
+    hero.classList.remove("silhouette");
     lastSceneStage=-1; applyScene(); // 등급별 변신(필터/액세서리) 다시 적용
     checkAiAvatar(); // AI 변신 이미지 확인/생성
   }
@@ -4103,7 +4108,7 @@
     if(!S) return;
     var st=S.stage;
     var url="assets/char/stage"+st+".webp";
-    function apply(){ var h=$("heroImg"); if(h.dataset.ai!=="1"){ h.style.backgroundImage="url("+url+")"; h.dataset.ai="g"; h.style.filter="none"; } }
+    function apply(){ var h=$("heroImg"); if(h.dataset.ai!=="1"&&h.dataset.ai!=="c"){ h.style.backgroundImage="url("+url+")"; h.dataset.ai="g"; h.style.filter="none"; } }
     if(CHAR_OK[st]===true){ apply(); return; }
     if(CHAR_OK[st]===false) return;
     var p=new Image();
@@ -4136,8 +4141,12 @@
         var url=cv.toDataURL("image/png"); NFT_CUT_CACHE[id]=url; cb(url);
       }catch(e){ NFT_CUT_CACHE[id]="fail"; cb(null); } // CORS 등 픽셀접근 실패
     }
-    function fail(){ if(!tried){ tried=true; var im2=new Image(); im2.crossOrigin="anonymous"; im2.onload=go; im2.onerror=function(){ NFT_CUT_CACHE[id]="fail"; cb(null); }; im2.src=kimgOld(id,512); return; } NFT_CUT_CACHE[id]="fail"; cb(null); }
-    var img=new Image(); img.crossOrigin="anonymous"; img.onload=go; img.onerror=fail; img.src=kimg(id,512);
+    function fail(){ // 프록시 실패 → CDN(crossOrigin) 2단 폴백
+      if(!tried){ tried=true; var im2=new Image(); im2.crossOrigin="anonymous"; im2.onload=go; im2.onerror=fail; im2.src=kimg(id,512); return; }
+      if(tried===true){ tried=2; var im3=new Image(); im3.crossOrigin="anonymous"; im3.onload=go; im3.onerror=function(){ NFT_CUT_CACHE[id]="fail"; cb(null); }; im3.src=kimgOld(id,512); return; }
+      NFT_CUT_CACHE[id]="fail"; cb(null);
+    }
+    var img=new Image(); img.onload=go; img.onerror=fail; img.src="/api/nftimg?id="+id; // 같은 출처 프록시 우선(웹뷰 CORS 무관)
   }
   function clientHeroNFT(){ // 서버 AI 합성 없을 때: 본인 NFT 배경제거해 씬 캐릭터로 (무료·클라 합성)
     if(!S) return; var id=currentAvatarId(); if(id===null){ tryGenericChar(); return; }
@@ -4153,7 +4162,8 @@
     if(!S) return;
     if(id===null){ tryGenericChar(); return; }
     var stage=S.stage;
-    fetch(API("/api/avatar-url")+"&id="+id+"&stage="+stage+"&name="+encodeURIComponent(NAME||"")+"&img="+encodeURIComponent(rawImg(id)))
+    var isFirstTok = profile.tokenIds && profile.tokenIds.length && String(profile.tokenIds[0])===String(id); // AI 생성은 첫 번째 콩즈만
+    fetch(API("/api/avatar-url")+"&id="+id+"&stage="+stage+"&name="+encodeURIComponent(isFirstTok?(NAME||""):"")+"&img="+encodeURIComponent(rawImg(id)))
       .then(function(r){return r.json();})
       .then(function(j){
         if(j.ok&&j.ready&&S.stage===stage&&currentAvatarId()===id){

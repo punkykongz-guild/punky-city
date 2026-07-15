@@ -930,6 +930,23 @@ app.get("/api/avatar-debug", (req, res) => {
     deadKeys: geminiKeyDead.size, hasKey: !!GEMINI_API_KEY, files: genDir.slice(0, 20) });
 });
 
+// NFT 이미지 프록시 (같은 출처 → 웹뷰 CORS 무관하게 캔버스 픽셀접근 가능, 클라 컷아웃용)
+app.get("/api/nftimg", async (req, res) => {
+  const id = parseInt(req.query.id, 10);
+  if (!id || id < 1 || id > 99999) return res.status(400).end();
+  try {
+    const base = `https://punkykongz.com/nft/punkykongz/image/${id}`;
+    let r = await fetch(`https://cdn.helius-rpc.com/cdn-cgi/image/width=512/${base}.jpg`);
+    if (!r.ok) r = await fetch(`https://cdn.helius-rpc.com/cdn-cgi/image/width=512/${base}.png`);
+    if (!r.ok) r = await fetch(`${base}.png`);
+    if (!r.ok) return res.status(404).end();
+    const buf = Buffer.from(await r.arrayBuffer());
+    res.set("Content-Type", r.headers.get("content-type") || "image/png");
+    res.set("Cache-Control", "public, max-age=604800"); // 폰 캐시 7일
+    res.send(buf);
+  } catch (e) { res.status(502).end(); }
+});
+
 // 아바타 변신 이미지 조회 (없으면 백그라운드 생성 시작)
 app.get("/api/avatar-url", (req, res) => {
   if (!checkToken(req, res)) return;
