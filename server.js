@@ -1680,7 +1680,7 @@ app.get("/api/admin/inspect", async (req, res) => {
 });
 // ===== 🤖 카톡 ↔ 클로드 중계 큐 (관리자 전용) =====
 // 흐름: 카톡봇 ask → PC 브릿지가 pending 폴링 → Claude Code 실행 → answer → 카톡봇 reply 폴링
-if (!db.claudeQ) db.claudeQ = []; let claudeSeq = (db.claudeQ.reduce((m, q) => Math.max(m, q.id || 0), 0)) + 1;
+function claudeQ() { if (!Array.isArray(db.claudeQ)) db.claudeQ = []; return db.claudeQ; } // db가 시트복원으로 교체돼도 안전
 function claudeAsk(req, res) { // GET(카톡봇 Jsoup)·POST 겸용
   if (!checkToken(req, res)) return;
   const src = Object.assign({}, req.query, req.body || {});
@@ -1688,22 +1688,24 @@ function claudeAsk(req, res) { // GET(카톡봇 Jsoup)·POST 겸용
   if (ADMIN_NAMES.indexOf(name) < 0) return res.json({ ok: false, error: "관리자만 사용 가능해요" });
   const text = String(src.text || "").trim().slice(0, 2000);
   if (!text) return res.json({ ok: false, error: "내용 없음" });
-  const item = { id: claudeSeq++, from: name, text, t: Date.now(), answer: null, answeredAt: 0 };
-  db.claudeQ.push(item); while (db.claudeQ.length > 50) db.claudeQ.shift();
+  const Q = claudeQ();
+  const id = Q.reduce((m, q) => Math.max(m, q.id || 0), 0) + 1;
+  Q.push({ id, from: name, text, t: Date.now(), answer: null, answeredAt: 0 });
+  while (Q.length > 50) Q.shift();
   markDirty();
-  res.json({ ok: true, id: item.id });
+  res.json({ ok: true, id });
 }
 app.post("/api/claude/ask", claudeAsk);
 app.get("/api/claude/ask", claudeAsk);
 app.get("/api/claude/pending", (req, res) => {
   if (!checkToken(req, res)) return;
-  const item = db.claudeQ.find((q) => q.answer === null);
+  const item = claudeQ().find((q) => q.answer === null);
   res.json({ ok: true, item: item ? { id: item.id, from: item.from, text: item.text, t: item.t } : null });
 });
 app.post("/api/claude/answer", (req, res) => {
   if (!checkToken(req, res)) return;
   const id = parseInt(req.body.id, 10);
-  const item = db.claudeQ.find((q) => q.id === id);
+  const item = claudeQ().find((q) => q.id === id);
   if (!item) return res.json({ ok: false, error: "없음" });
   item.answer = String(req.body.answer || "").slice(0, 4000);
   item.answeredAt = Date.now();
@@ -1713,7 +1715,7 @@ app.post("/api/claude/answer", (req, res) => {
 app.get("/api/claude/reply", (req, res) => {
   if (!checkToken(req, res)) return;
   const after = parseInt(req.query.after, 10) || 0;
-  const items = db.claudeQ.filter((q) => q.id > after && q.answer !== null)
+  const items = claudeQ().filter((q) => q.id > after && q.answer !== null)
     .map((q) => ({ id: q.id, text: q.text, answer: q.answer }));
   res.json({ ok: true, items });
 });
