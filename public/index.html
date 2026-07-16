@@ -3053,7 +3053,7 @@
   }
   function endSky(){
     sky.active=false; cancelAnimationFrame(sky.raf);
-    var reward=Math.floor(sky.score*Math.max(1,perTap()*1.2));
+    var reward=Math.floor(Math.min(sky.score,3000)*Math.max(1,perTap()*1.2)); // 점수상한(개편으로 고득점 가능 → 보상 경제 안전)
     win(reward);
     $("skyStart").style.display="flex";
     $("skyStart").innerHTML='<h2>✈️ 스테이지 '+sky.stage+' · 격추 '+sky.score+'</h2><p class="muted" style="font-size:14px">₭'+fmt(reward)+' 획득!</p><button class="bigBtn" id="skyAgain" style="max-width:220px">'+(skyLeft()>0?"또 출격 ("+skyLeft()+"판)":"오늘 끝!")+'</button><button class="bigBtn" id="skyDone" style="max-width:220px;background:#5a5a72;margin-top:8px">나가기</button>';
