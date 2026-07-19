@@ -2023,6 +2023,7 @@
     if(best && bd<=130){ best.j=true; best.hit=true; var perf=bd<=55; if(perf){ rg.perfect++; rg.score+=100; } else { rg.good++; rg.score+=55; } rg.combo++; if(rg.combo>rg.maxCombo)rg.maxCombo=rg.combo; rg.score+=rg.combo*2; rg.life=Math.min(100,rg.life+2);
       $("rgScore").textContent=rg.score; $("rgCombo").textContent=rg.combo>2?(rg.combo+" COMBO"):"";
       rg.pops.push({lane:lane,txt:perf?"PERFECT":"GOOD",col:perf?"#ffd54a":"#4ade80",t:now+450}); beep(perf?900:650,0.05); vib(perf?12:8); }
+    else { rg.combo=0; rg.life-=3; $("rgCombo").textContent=""; rg.pops.push({lane:lane,txt:"헛스윙!",col:"#8a7aa8",t:now+380}); beep(180,0.04); if(rg.life<=0) rgEnd(); } // 스팸연타 방지: 빈 탭 페널티
   }
   function rgLoop(t){ if(!rg.active) return; var now=t-rg.startT;
     if(now>=rg.nextBeat){ rg.nextBeat+=rg.beatInt; beep(150,0.04); }
