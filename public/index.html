@@ -300,6 +300,11 @@
         <button class="bigBtn" id="admWipe" style="margin:0 0 5px;background:#7a3030">이 유저만 초기화</button>
         <div style="font-size:12px;color:#ffcf6a;margin:8px 0 6px;border-top:1px solid #4a3a6a;padding-top:8px">🎰 누적 로또</div>
         <button class="bigBtn" id="admLotto" style="margin:0;background:#7a5a20">누적 로또 팟 초기화</button>
+        <div style="font-size:12px;color:#8ad0ff;margin:8px 0 6px;border-top:1px solid #4a3a6a;padding-top:8px">✏️ 유저 개명 (게임 데이터 이전)</div>
+        <input id="admOldName" placeholder="현재 닉네임" style="width:100%;box-sizing:border-box;padding:7px;margin-bottom:5px;border-radius:8px;border:1px solid var(--line);background:#160b2e;color:#fff">
+        <input id="admNewName" placeholder="새 닉네임" style="width:100%;box-sizing:border-box;padding:7px;margin-bottom:6px;border-radius:8px;border:1px solid var(--line);background:#160b2e;color:#fff">
+        <button class="bigBtn" id="admRename" style="margin:0;background:#20607a">개명 실행</button>
+        <div class="muted" style="font-size:10.5px;margin-top:4px;line-height:1.5">⚠️ 실행 후 ①시트의 카톡대화명 셀도 직접 수정 ②그 유저 실제 카톡 프로필명도 새 이름으로 변경 ③유저는 카톡 [게임시작] 새 링크로 재접속(비번 재설정)</div>
       </div>
       <button class="bigBtn" id="setClose" style="margin-top:8px">닫기</button>
     </div>
@@ -4397,6 +4402,15 @@
     aw.onclick=function(){ if(!IS_ADMIN) return; var t=$("admTarget").value.trim(); if(!t){ toast("닉네임 입력"); return; }
       if(!confirm("["+t+"] 님을 초기화할까요? (₭·단계·사업 0으로, 로그인·지갑은 유지)")) return;
       admPost({target:t, reset:true}, "✅ ["+t+"] 초기화 완료!"); };
+    var ar2=$("admRename");
+    if(ar2) ar2.onclick=function(){ if(!IS_ADMIN) return;
+      var o=$("admOldName").value.trim(), n=$("admNewName").value.trim();
+      if(!o||!n){ toast("현재/새 닉네임 둘 다 입력"); return; }
+      if(!confirm("["+o+"] → ["+n+"] 개명할까요?\n(게임 데이터 이전 · 그 유저 비번은 초기화됨)")) return;
+      fetch(API("/api/admin/rename"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH,ses:SES,oldName:o,newName:n})})
+        .then(function(r){return r.json();})
+        .then(function(j){ if(j.ok) alert("✅ 개명 완료: "+j.oldName+" → "+j.newName+"\n\n남은 일:\n① 시트 카톡대화명 셀 수정\n② 그 유저 카톡 프로필명 변경\n③ 유저는 [게임시작] 새 링크로 재접속(비번 재설정)"); else alert("실패: "+(j.error||"?")); })
+        .catch(function(){ alert("서버 연결 실패"); }); };
     var al=$("admLotto");
     if(al) al.onclick=function(){ if(!IS_ADMIN) return;
       if(!confirm("누적 로또 팟을 현재 기준으로 초기화할까요?\n(팟 0원, 이번주 응모 전원 소멸 — 되돌릴 수 없음)")) return;

@@ -630,7 +630,7 @@ async function getOwnedTokenIds(wallet) {
 
 // 기기 잠금: 계정(이름)은 최초 접속 기기에 묶임 — 남의 링크로 플레이 방지
 const LINK_SECRET = process.env.LINK_SECRET || ""; // 카톡 봇 링크 서명 비밀키
-const ADMIN_NAMES = ["김동건"]; // 게임 내 '전체 초기화' 버튼 허용 관리자 계정 (본인 세션 검증)
+const ADMIN_NAMES = ["김동건", "풩퀴풩퀴"]; // 게임 내 관리자 계정 (본인 세션 검증) — 개명 대비 둘 다
 function validSig(name, ph, sig) {
   if (!LINK_SECRET) return true; // 미설정 시 기존 동작
   if (!sig) return false;
@@ -1690,6 +1690,27 @@ app.post("/api/admin/lottoreset", (req, res) => {
   markDirty(); backupDirty = true; backupToSheet().catch(() => {});
   console.log(`[lottoreset] ${name} → 로또 팟 ${before} → 0 (전원 응모 초기화)`);
   res.json({ ok: true, before, pot: 0 });
+});
+// 관리자(세션 인증): 유저 개명 — 게임 데이터를 새 닉네임으로 이전 (시트는 관리자가 직접 셀 수정 + 본인 카톡 프로필명도 변경 필요)
+app.post("/api/admin/rename", (req, res) => {
+  if (!checkToken(req, res)) return;
+  const name = String((req.body.name || "")).trim().normalize("NFC");
+  if (!checkDev(name, String(req.body.key || ""), String(req.body.sig || ""), String(req.body.ph || ""), String(req.body.ses || ""))) return res.json({ ok: false, error: "잠금(세션)" });
+  if (ADMIN_NAMES.indexOf(name) < 0) return res.json({ ok: false, error: "관리자 계정이 아닙니다" });
+  const oldN = String((req.body.oldName || "")).trim().normalize("NFC");
+  const newN = String((req.body.newName || "")).trim().normalize("NFC");
+  if (!oldN || !newN || oldN === newN) return res.json({ ok: false, error: "이름 입력 오류" });
+  if (!db.players[oldN]) return res.json({ ok: false, error: "대상 없음: " + oldN });
+  if (db.players[newN]) return res.json({ ok: false, error: "이미 존재하는 닉네임: " + newN });
+  db.players[newN] = db.players[oldN];
+  delete db.players[oldN];
+  // 비번은 이름과 묶여 해시돼 있어 이전 불가 → 초기화(다음 카톡링크 접속 때 새로 설정)
+  delete db.players[newN].pinHash; delete db.players[newN].ses; delete db.players[newN].sess;
+  if (db.fgWins && db.fgWins[oldN] != null) { db.fgWins[newN] = db.fgWins[oldN]; delete db.fgWins[oldN]; }
+  if (db.worm && db.worm[oldN] != null) { db.worm[newN] = (db.worm[newN] || 0) + db.worm[oldN]; delete db.worm[oldN]; }
+  markDirty(); backupDirty = true; backupToSheet().catch(() => {});
+  console.log(`[rename] ${name}: ${oldN} → ${newN}`);
+  res.json({ ok: true, oldName: oldN, newName: newN });
 });
 app.get("/api/admin/inspect", async (req, res) => {
   if (!LINK_SECRET || String(req.query.secret || "") !== LINK_SECRET) return res.status(403).json({ ok: false });
