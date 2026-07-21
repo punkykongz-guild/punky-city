@@ -4275,13 +4275,15 @@
         '② 관리자가 확인 후 승인 (시트에서 O)<br>'+
         '③ 자동 연결! 내 콩즈 등장 + 웰컴 <b>100P</b> 🎉</div>'+
         '<input id="wIn" placeholder="솔라나 지갑주소 붙여넣기" style="grid-column:1/-1;padding:10px;border-radius:8px;border:1px solid #444;background:#160d2c;color:#fff;font-size:12px">'+
+        '<input id="wBnb" placeholder="BNB(BSC) 지갑주소 0x... (선택)" style="grid-column:1/-1;padding:10px;border-radius:8px;border:1px solid #444;background:#160d2c;color:#fff;font-size:12px">'+
         '<button id="wGo" style="grid-column:1/-1;padding:11px;border:none;border-radius:8px;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;font-weight:800;cursor:pointer">🔗 등록 신청 (승인 후 연결)</button>';
       setTimeout(function(){
         $("wGo").onclick=function(){
-          var w=$("wIn").value.trim();
+          var w=$("wIn").value.trim(), bnb=$("wBnb").value.trim();
           if(!w){ toast("지갑주소를 입력해주세요"); return; }
+          if(bnb && !/^0x[0-9a-fA-F]{40}$/.test(bnb)){ toast("BNB 주소 형식이 아니에요 (0x + 40자리)"); return; }
           fetch(API("/api/wallet/apply"),{method:"POST",headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH,ses:SES,wallet:w})})
+            body:JSON.stringify({token:TOKEN,name:NAME,key:DEVKEY,sig:SIG,ph:PH,ses:SES,wallet:w,bnb:bnb})})
             .then(function(r){return r.json();})
             .then(function(j){ $("avatarModal").classList.remove("on"); modal("🔗 지갑 신청", j.message||"완료"); })
             .catch(function(){ toast("서버 연결 실패"); });

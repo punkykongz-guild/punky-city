@@ -1065,9 +1065,12 @@ app.post("/api/wallet/apply", async (req, res) => {
   const name = String((req.body.name || "")).trim().normalize("NFC");
   if (!checkDev(name, String((req.body.key || "")), String((req.body.sig || "")), String((req.body.ph || "")), String((req.body.ses || "")))) return res.json({ ok: false, error: "locked", message: LOCK_MSG, yours: findNameByKey(String(req.query.key || (req.body&&req.body.key) || "")) });
   const wallet = String((req.body.wallet || "")).trim();
+  const bnb = String((req.body.bnb || "")).trim();
   if (!name || !wallet) return res.json({ ok: false, message: "입력값 부족" });
+  if (bnb && !/^0x[0-9a-fA-F]{40}$/.test(bnb)) return res.json({ ok: false, message: "BNB 주소 형식이 올바르지 않아요 (0x + 40자리)" });
   const raw = await callBackend("wallet_apply", name, wallet);
-  res.json({ ok: true, message: raw || "서버 연결 실패 — 잠시 후 다시" });
+  if (bnb) { try { await callBackend("bnb_set", name, bnb); } catch (e) {} } // 별도 액션(구버전 백엔드와 호환)
+  res.json({ ok: true, message: (raw || "서버 연결 실패 — 잠시 후 다시") + (bnb ? "\n(BNB 주소도 접수됨)" : "") });
 });
 
 // 길드타워 현황
